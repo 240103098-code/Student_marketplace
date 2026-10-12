@@ -2,7 +2,7 @@
 
 A planned university-only marketplace where verified students list items and contact sellers externally.
 
-The Python scaffold and typed environment configuration are ready; marketplace features and runtime services remain planned. Python 3.11 or newer is supported (verified with Python 3.13.15). Create a virtual environment with `python -m venv .venv`, install the pinned configuration dependencies with `.venv/Scripts/python.exe -m pip install -r requirements.lock`, and run `.venv/Scripts/python.exe -m unittest discover -s tests -v` from the repository root on Windows. See the setup guide for other platforms and configuration details.
+The Python scaffold, typed configuration, PostgreSQL connection/session helpers, and empty Alembic baseline are ready; marketplace features and application services remain planned. Python 3.11 or newer is supported (verified with Python 3.13.15). Create a virtual environment with `python -m venv .venv`, install pinned dependencies with `.venv/Scripts/python.exe -m pip install -r requirements.lock`, and run `.venv/Scripts/python.exe -m unittest discover -s tests -v` from the repository root on Windows. Real PostgreSQL tests require an explicitly confirmed disposable database; see the setup guide for preparation, migrations, and other platforms.
 
 ## Project documents
 

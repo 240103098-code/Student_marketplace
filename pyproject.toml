@@ -3,4 +3,9 @@ name = "student-marketplace"
 version = "0.1.0"
 description = "Student Marketplace backend scaffold"
 requires-python = ">=3.11"
-dependencies = ["pydantic-settings==2.15.0"]
+dependencies = [
+    "pydantic-settings==2.15.0",
+    "SQLAlchemy==2.1.4",
+    "Alembic==1.20.0",
+    "psycopg[binary]==3.3.6",
+]

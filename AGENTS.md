@@ -2,8 +2,10 @@ Commands
 
 - Python 3.11 or newer is supported (verified with Python 3.13.15). Run these commands from the repository root on Windows; use `.venv/bin/python` on other platforms.
 - `python -m venv .venv` - create the isolated Python environment.
-- `.venv/Scripts/python.exe -m pip install -r requirements.lock` - install the pinned configuration dependencies.
-- `.venv/Scripts/python.exe -m unittest discover -s tests -v` - run bootstrap and configuration tests without external services or secrets.
+- `.venv/Scripts/python.exe -m pip install -r requirements.lock` - install the pinned Python dependencies.
+- `.venv/Scripts/python.exe -m unittest discover -s tests -v` - run service-free tests; real PostgreSQL tests are opt-in using the dedicated database contract in `_docs/local-setup.md`.
+- `.venv/Scripts/python.exe -m backend.database check` - explicitly check configured PostgreSQL connectivity.
+- `.venv/Scripts/python.exe -m alembic upgrade head` / `downgrade base` - apply/revert the empty database baseline; no application tables exist yet.
 - No backend or frontend service startup commands are available yet.
 
 Rules
