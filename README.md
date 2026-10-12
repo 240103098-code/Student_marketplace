@@ -11,6 +11,6 @@ A university-only marketplace for verified students to buy and sell items.
 
 ## Project tracking
 
-See [GitHub Issues](https://github.com/240103098-code/student-marketplace/issues) for the development backlog and [`_docs/tasks.md`](_docs/tasks.md) for the original planning document.
+See [GitHub Issues](https://github.com/240103098-code/student-marketplace/issues) for the development backlog.
 
 > Planning stage: no application code has been implemented yet.
