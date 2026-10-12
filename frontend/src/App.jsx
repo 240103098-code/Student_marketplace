@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { RegistrationForm, VerificationForm } from './AccountForms.jsx';
 
 const views = {
   '/': {
@@ -11,11 +12,11 @@ const views = {
   },
   '/register': {
     title: 'Create your account',
-    description: 'Registration with your sdu.edu.kz university email will be available here soon.',
+    description: 'Use your university email to create an account, then verify it with the code sent by email.',
   },
   '/verify': {
     title: 'Verify your university email',
-    description: 'Email verification will be available here soon. There is no code to enter in this preview.',
+    description: 'Enter your university email and the six-digit code from your inbox. You can edit the email or request a replacement.',
   },
   '/marketplace': {
     title: 'Marketplace',
@@ -35,6 +36,7 @@ export function App() {
   const [path, setPath] = useState(window.location.pathname);
   const heading = useRef(null);
   const previousPath = useRef(path);
+  const [verification, setVerification] = useState({ email: '', cooldowns: {} });
 
   useEffect(() => {
     const update = () => setPath(window.location.pathname);
@@ -52,7 +54,10 @@ export function App() {
   function navigate(event) {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
-    const nextPath = event.currentTarget.getAttribute('href');
+    goTo(event.currentTarget.getAttribute('href'));
+  }
+
+  function goTo(nextPath) {
     if (window.location.pathname !== nextPath) window.history.pushState(null, '', nextPath);
     setPath(nextPath);
   }
@@ -76,9 +81,14 @@ export function App() {
         </div>
       </header>
       <main id="main" className="main-content" tabIndex={-1}>
-        <div className="preview-label">Preview · Coming soon</div>
+        <div className="preview-label">{['/register', '/verify'].includes(path) ? 'University accounts' : 'Preview · Coming soon'}</div>
         <h1 ref={heading} tabIndex={-1}>{view.title}</h1>
         <p className="intro">{view.description}</p>
+        {path === '/register' && <RegistrationForm navigate={navigate} onRegistered={(email, deadline) => {
+          setVerification(previous => ({ email, cooldowns: { ...previous.cooldowns, [email]: deadline } }));
+          goTo('/verify');
+        }} />}
+        {path === '/verify' && <VerificationForm initialEmail={verification.email} cooldowns={verification.cooldowns} navigate={navigate} onCooldown={(email, deadline) => setVerification(previous => ({ email, cooldowns: { ...previous.cooldowns, [email]: deadline } }))} />}
         {path === '/' && (
           <div className="actions">
             <a className="button primary" href="/marketplace" onClick={navigate}>Explore marketplace</a>
@@ -88,7 +98,7 @@ export function App() {
         {!views[path] && <a className="button secondary" href="/" onClick={navigate}>Back to home</a>}
         <aside className="preview-note" aria-label="Preview information">
           <span className="note-dot" aria-hidden="true" />
-          <p>This is an early preview. Accounts, email verification, and listings are not available yet.</p>
+          <p>Registration and email verification are available. Sign-in screens and marketplace listings are still being prepared.</p>
         </aside>
       </main>
       <footer className="site-footer">Student Marketplace <span aria-hidden="true">·</span> For your university community</footer>

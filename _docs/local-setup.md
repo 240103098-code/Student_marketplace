@@ -2,7 +2,7 @@
 
 ## Current status
 
-The Python bootstrap, typed configuration loader, PostgreSQL engine/session helpers, connection-check command, account/code/refresh-session schema, registration API with configured SMTP verification-code delivery, and React preview shell are ready, with automated tests. The backend HTTP service supports registration, verification/resend, login, and minimal protected account access. One-time email activation and cooldown-limited resend are also ready; verified-user login/access JWTs and /auth/me are ready; secure refresh rotation/logout are ready; no listing endpoints or React authentication exist yet. Live internet inbox delivery remains unverified. Importing configuration/database helpers never starts services, connects, or creates tables. Frontend routes are placeholders and make no backend requests.
+The Python bootstrap, typed configuration loader, PostgreSQL engine/session helpers, connection-check command, account/code/refresh-session schema, registration API with configured SMTP verification-code delivery, and React preview shell are ready, with automated tests. The backend HTTP service supports registration, verification/resend, login, and minimal protected account access. One-time email activation and cooldown-limited resend are also ready; verified-user login/access JWTs and /auth/me are ready; secure refresh rotation/logout are ready; React registration/verification forms are ready; no listing endpoints or React login/session handling exist yet. Live internet inbox delivery remains unverified. Importing configuration/database helpers never starts services, connects, or creates tables. Frontend registration/verification routes call their existing API contracts; login and marketplace routes remain placeholders.
 
 ## Current layout
 
@@ -13,7 +13,7 @@ The Python bootstrap, typed configuration loader, PostgreSQL engine/session help
 - `backend/database.py`, `alembic.ini`, and `migrations/`: PostgreSQL infrastructure, the baseline, and account schema revision.
 - `tests/test_database.py` and `tests/test_database_integration.py`: unit checks and opt-in actual PostgreSQL baseline tests.
 - `backend/models.py` and `tests/test_models*`: account/code/refresh models, redacted representations, and actual PostgreSQL integrity tests.
-- `frontend/`: React/Vite preview shell, two component tests, and a resolved npm lockfile.
+- `frontend/`: React/Vite shell and registration/verification forms, eleven interaction tests, and a resolved npm lockfile.
 - `.env.example`: supported configuration names, formats, defaults, and placeholders.
 - `README.md`: project overview and links.
 - `AGENTS.md`: contribution rules and document references.
@@ -82,7 +82,7 @@ After configuring ignored runtime settings and starting your PostgreSQL database
 
 Open `http://127.0.0.1:8000/docs` or `/openapi.json`; stop with Ctrl+C. Startup was verified on loopback with Python 3.13.15, FastAPI 0.143.0, and uvicorn 0.54.0. The explicit runtime factory loads validated settings, creates lazy database infrastructure, and disposes owned resources on normal shutdown. Injected borrowed infrastructure remains its caller's responsibility.
 
-POST /auth/register validates strict email/password JSON fields and persists an unverified, unsuspended student with an Argon2id password hash. See [the API contract](api.md) for exact normalization, limits, responses, and safe errors. Registration now generates a cryptographically random six-digit code, stores only its keyed digest, and sends it by configured SMTP. Missing/incomplete settings or delivery errors return sanitized 503 and roll back the account/code transaction. Registration starts the account unverified; the verification endpoint activates it. Neither endpoint issues tokens. Frontend forms and API integration remain future work.
+POST /auth/register validates strict email/password JSON fields and persists an unverified, unsuspended student with an Argon2id password hash. See [the API contract](api.md) for exact normalization, limits, responses, and safe errors. Registration now generates a cryptographically random six-digit code, stores only its keyed digest, and sends it by configured SMTP. Missing/incomplete settings or delivery errors return sanitized 503 and roll back the account/code transaction. Registration starts the account unverified; the verification endpoint activates it. Neither endpoint issues tokens. Frontend registration and verification forms now use these contracts; login/session UI remains future work.
 
 The seven registration regression tests use an explicitly injected test sender and cover hash verification/mismatch, normalization, duplicate/concurrent uniqueness, rollback, domain/lookalike rejection, password boundaries without trimming/coercion, malformed/missing/extra inputs, and safe errors/logs. They use the same confirmed disposable database safeguards, migrate their schema, clean test records, and downgrade to baseline after completion. Dependency consistency and frontend regressions passed.
 
@@ -98,7 +98,7 @@ The normal full backend test command from the disposable PostgreSQL lifecycle al
 
 ## Email verification and resend
 
-Before frontend forms are implemented, use the documented backend `/docs` or API client to submit POST /auth/verify-email with the normalized email and six ASCII digits delivered to your own inbox. A usable registration code activates once, expires at ten minutes, and is invalidated on the fifth persisted wrong attempt. No login token or session is issued. POST /auth/resend-verification accepts only email and uses a sixty-second issuance cooldown with generic 202/Retry-After:60 for unknown, ineligible, or suppressed requests. SMTP failure is generic 503 and preserves an earlier usable code through rollback. See [the API contract](api.md) for all status/error bodies.
+Use the /verify form or documented backend API client to submit POST /auth/verify-email with the normalized email and six ASCII digits delivered to your own inbox. A usable registration code activates once, expires at ten minutes, and is invalidated on the fifth persisted wrong attempt. No login token or session is issued. POST /auth/resend-verification accepts only email and uses a sixty-second issuance cooldown with generic 202/Retry-After:60 for unknown, ineligible, or suppressed requests. SMTP failure is generic 503 and preserves an earlier usable code through rollback. See [the API contract](api.md) for all status/error bodies.
 
 Verification locks both user and code before comparing expiry/digest and commits wrong-attempt state before returning its HTTP error. Resend locks the user before reading current time/latest issuance and sending a replacement. Deterministic test-only clock/mail injection covers expiry at and just before ten minutes, cooldown at and just before sixty seconds, persisted five attempts, replay/purpose rejection, concurrent correct/wrong/resend requests, replacement collision rejection, and failed-send rollback. These tests are included in the same documented disposable PostgreSQL lifecycle; no new schema or dependency was needed. Live internet inbox delivery remains unverified without operator SMTP credentials.
 
@@ -122,7 +122,7 @@ For default FRONTEND_ORIGINS, use http://localhost:5173 and http://localhost:800
 
 Ten actual PostgreSQL session tests cover digest-only persistence, fixed expiry/rotation links, old-access preservation within a live family, replay/concurrent family revocation, scoped/idempotent logout, unrelated-user isolation, local/production cookie/deletion flags, read-only CSRF bootstrap, Origin/CSRF/CORS failures without mutation, old unbound-token rejection, and a freshly signed JWT denied by expired family state. No schema/dependency changes or external emails were required. A reusable user-wide revocation helper is available for later password/deletion/admin workflows; no such new endpoint was added here. See api.md for exact error/response contracts.
 
-## React preview shell
+## React shell and account forms
 
 Supported Node versions match `frontend/package.json`: 22.22.2+ on the 22.x line, 24.15.0+ on the 24.x line, or 26+. Verification used the available **Node 24.19.0** and **npm 12.2.0**. Use npm 12.2.0 or newer with a compatible Node version. No global tooling configuration was changed.
 
@@ -137,9 +137,9 @@ npm run dev
 
 Open `http://127.0.0.1:5173/` and stop the development server with Ctrl+C. It binds only to loopback with a strict port; an occupied 5173 reports an error rather than changing the URL. Known routes `/`, `/login`, `/register`, `/verify`, and `/marketplace` support direct opening/reload through Vite's SPA fallback; other routes display Page not found.
 
-Navigation uses ordinary links with client-side history, a shared header/main landmark, skip link, visible focus styles, and a wrapping mobile layout. The preview collects no passwords or codes, fabricates no listings or seller data, and simulates no authentication. Verified-only authorization remains future work; a visible marketplace link grants no access to real content.
+Navigation uses ordinary links with client-side history, a shared header/main landmark, skip link, visible focus styles, and a wrapping mobile layout. Registration and verification collect only their required inputs transiently and call the real API. The shell fabricates no listing/seller data and does not simulate login. Verified-only authorization remains future work; a visible marketplace link grants no access to real content.
 
-Direct dependencies are React/React DOM 19.3.0. Development dependencies are Vite 8.3.4, Vitest 5.0.4, Testing Library React 16.3.3, and jsdom 30.1.2. No routing, backend client, UI framework, or state library is added. `package-lock.json` pins the resolved dependency graph; `node_modules` and `dist` remain ignored. Two focused tests follow user-visible links and verify destination/not-found headings; the production build writes `frontend/dist`.
+Direct dependencies are React/React DOM 19.3.0. Development dependencies are Vite 8.3.4, Vitest 5.0.4, Testing Library React 16.3.3, and jsdom 30.1.2. No routing, backend client, UI framework, or state library is added. `package-lock.json` pins the resolved dependency graph; `node_modules` and `dist` remain ignored. Eleven focused tests cover shell links, registration/verification contracts, safe failures, pending-submit prevention, memory-only handoff, and timer-controlled resend behavior; the production build writes `frontend/dist`.
 
 npm was not available on PATH in the verification environment. Its official package was obtained from [the npm registry](https://registry.npmjs.org/npm/12.2.0), extracted to sibling `../npm-runtime/package`, outside this repository. To repeat that workspace-local setup without global installation, run from the repository root:
 
@@ -159,6 +159,16 @@ node ../../npm-runtime/package/bin/npm-cli.js run dev
 ```
 
 Dependency retrieval and local server connections required approved execution outside this environment's networking sandbox. Backend files and schemas were unchanged; the existing backend tests passed, while actual PostgreSQL integration tests are opt-in and remains separately documented below.
+
+### Frontend API origin and registration/verification
+
+Copy frontend/.env.example to ignored frontend/.env.local and set VITE_API_ORIGIN=http://localhost:8000 (or the same 127.0.0.1 hostname used in the browser). Restart Vite after changing configuration. This variable is a public API origin, never a place for JWT secrets, SMTP credentials, passwords, or codes. The fallback matches the browser's local hostname at port 8000. Use the same hostname for frontend/API and configure backend FRONTEND_ORIGINS to match the frontend exactly; requests use credentials:include for CORS/cookie compatibility.
+
+/register validates university email and an untrimmed 12–128-character password, posts only those fields, and navigates to /verify after 201. The normalized email and sixty-second resend cooldown are memory-only; no password/code/email query parameters or browser storage are used. /verify can be opened/reloaded directly and its email is editable. Six ASCII digits are required, verification success shows a sign-in link without authenticating, and the backend's generic failures get honest replacement/expiry guidance with no invented attempt count.
+
+Resend 202 never guarantees delivery: an eligible address may receive an email. Retry-After starts a readable sixty-second countdown; cooldowns remain in React memory while navigating. Pending requests disable overlapping actions; network/503 failures show safe retry feedback and do not add a new cooldown. Labels, autocomplete/inputmode, focus styles, native form Enter submission, and announced pending/error/success feedback support keyboard access. Timer text stays readable without announcing every second to screen readers.
+
+Eleven frontend tests and production build passed with existing dependencies, and all 81 backend tests passed including actual PostgreSQL/loopback SMTP regressions. No backend/dependency changes were required. Live internet university-inbox delivery still needs external provider credentials; no live email claim is made.
 
 ## PostgreSQL connection and migrations
 

@@ -1,7 +1,15 @@
 
 # Backend API
 
-Current capability: registration of an unverified student plus configured SMTP verification-code delivery. One-time verification and cooldown-limited resend are implemented below. Verified-user login, access JWTs, and the database-backed /auth/me guard are available below; secure refresh rotation/logout are available below; marketplace endpoints remain future work. The React preview does not call this API.
+## Registration and verification screens
+
+React /register and /verify now call the registration, verification, and resend contracts below. The shared HTTP helper sends credentialed JSON with exactly the required fields, displays safe status-based feedback, and never echoes arbitrary response text or network exceptions. VITE_API_ORIGIN selects the API origin; its local default matches localhost or 127.0.0.1 with port 8000. Configure matching FRONTEND_ORIGINS and use one hostname consistently.
+
+Registration holds the returned normalized email and a sixty-second resend deadline only in React memory, then navigates to /verify. A direct/reloaded verification route has an editable email input. Passwords/codes are never URL parameters or local/session-storage values. Successful verification shows a sign-in link without logging in. Generic failures explain ten-minute codes and replacement after five wrong attempts without inventing remaining counts or claiming a specific error reason.
+
+Resend treats 202 as the same generic eligible-address response and uses Retry-After (sixty seconds by contract) for a readable disabled-button countdown. Failed network/503 requests do not start a new cooldown and remain retryable. Pending controls prevent duplicate/overlapping submissions. Login/session React integration is still the next task, and live university-inbox delivery remains unverified without external SMTP setup.
+
+Current capability: registration of an unverified student plus configured SMTP verification-code delivery. One-time verification and cooldown-limited resend are implemented below. Verified-user login, access JWTs, and the database-backed /auth/me guard are available below; secure refresh rotation/logout are available below; marketplace endpoints remain future work. React registration/verification screens call their three public endpoints; login/session React integration remains future work.
 
 ## POST /auth/register
 
