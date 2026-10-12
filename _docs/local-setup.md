@@ -1,6 +1,6 @@
 # Local development setup
 
-This document describes the tools, project layout, and local startup workflow for Student Marketplace. **Current status:** the repository contains planning documents only. Backend and frontend apps, dependency manifests, tests, and database integrations are not yet committed. Do not treat commands for those components as runnable until their linked issues are implemented.
+This document describes the tools, project layout, and local startup workflow for Student Marketplace. **Current status:** the Python project bootstrap and one pytest smoke test are ready. Backend and frontend application features and database integrations are not yet implemented.
 
 ## Prerequisites
 
@@ -9,11 +9,11 @@ Install the following development tools:
 | Tool | Why it is needed | Status |
 | --- | --- | --- |
 | Git | Clone the repository and commit changes | Needed now |
-| Python and [uv](https://docs.astral.sh/uv/getting-started/installation/) | Backend environment and pytest, as required by `AGENTS.md` | Needed once [#1](https://github.com/240103098-code/student-marketplace/issues/1) sets up the Python project |
+| Python and [uv](https://docs.astral.sh/uv/getting-started/installation/) | Backend environment and pytest, as required by `AGENTS.md` | Needed now for the Python bootstrap and tests |
 | Node.js and npm | React frontend development | Needed once [#5](https://github.com/240103098-code/student-marketplace/issues/5) creates the app |
 | PostgreSQL | Local database server; `psql` or pgAdmin can be used to inspect it | Needed once [#8](https://github.com/240103098-code/student-marketplace/issues/8) adds database integration |
 
-**Versions:** No Python, Node.js, or PostgreSQL version ranges have been selected or pinned in this repository. Check compatibility against the project's dependency files when they are introduced; do not assume a specific version is officially supported today.
+**Versions:** Python 3.11 or newer is required by `pyproject.toml`; bootstrap verification used Python 3.13. The committed `uv.lock` records resolved Python dependencies. Node.js and PostgreSQL version ranges have not been selected yet.
 
 On Windows PowerShell (or a compatible terminal), check the tools you have:
 
@@ -42,6 +42,11 @@ This is the **current** repository layout:
 student-marketplace/
 ├── AGENTS.md
 ├── README.md
+├── pyproject.toml
+├── uv.lock
+├── backend/.gitkeep
+├── frontend/.gitkeep
+├── tests/test_home.py
 └── _docs/
     ├── plan.md
     ├── process.md
@@ -52,20 +57,20 @@ student-marketplace/
     └── team/
 ```
 
-The intended application directories are `backend/` and `frontend/` in the repository root. **Neither directory exists yet on the current remote branch.** The Python project/test scaffolding is tracked in [#1](https://github.com/240103098-code/student-marketplace/issues/1), the FastAPI app in [#3](https://github.com/240103098-code/student-marketplace/issues/3), and the React app in [#5](https://github.com/240103098-code/student-marketplace/issues/5). Refer to the corresponding issue for the final module paths and scripts.
+The intended application directories are `backend/` and `frontend/` in the repository root. Both directories contain tracked placeholders; application code is deferred to the following issues. The Python project/test scaffolding is tracked in [#1](https://github.com/240103098-code/student-marketplace/issues/1), the FastAPI app in [#3](https://github.com/240103098-code/student-marketplace/issues/3), and the React app in [#5](https://github.com/240103098-code/student-marketplace/issues/5). Refer to the corresponding issue for the final module paths and scripts.
 
-## Python dependencies and tests (after issue #1)
+## Python dependencies and tests
 
-The repository's `AGENTS.md` establishes `uv` and `pytest` as the intended backend workflow. **These commands are not runnable yet** because `pyproject.toml` and the test suite do not exist on the remote branch.
+The repository uses `uv` and `pytest`. Install uv using the linked official installation guide above, then `uv sync` creates a local `.venv` and installs the approved development test dependencies from `uv.lock`. No database, SMTP service, or secrets are needed for the bootstrap test.
 
-After issue #1 supplies them, run from the repository root:
+Run from the repository root:
 
 ```bash
 uv sync
 uv run pytest
 ```
 
-To run the example single-file test referenced in `AGENTS.md`, use `uv run pytest tests/test_home.py` **only once that test file exists**. Avoid installing unapproved dependencies; `AGENTS.md` requires asking before adding any dependency to `pyproject.toml`.
+To run the single-file smoke test referenced in `AGENTS.md`, use `uv run pytest tests/test_home.py`. Avoid installing unapproved dependencies; `AGENTS.md` requires asking before adding any dependency to `pyproject.toml`.
 
 ## Backend service (after issue #3)
 

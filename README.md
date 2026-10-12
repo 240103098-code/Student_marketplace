@@ -17,4 +17,6 @@ Read [the local development setup guide](_docs/local-setup.md) for prerequisites
 
 See [GitHub Issues](https://github.com/240103098-code/student-marketplace/issues) for the development backlog.
 
-> Planning stage: no application code has been implemented yet.
+The project bootstrap is ready: install Python 3.11 or newer and uv, then run
+`uv sync` and `uv run pytest` from the repository root. The initial suite contains
+one smoke test; backend and frontend application features are still planned.

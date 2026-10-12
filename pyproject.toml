@@ -1,0 +1,12 @@
+[project]
+name = "student-marketplace"
+version = "0.1.0"
+description = "A university-only student marketplace"
+requires-python = ">=3.11"
+dependencies = []
+
+[dependency-groups]
+dev = ["pytest>=8.3,<10"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
