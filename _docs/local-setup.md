@@ -67,10 +67,10 @@ Run from the repository root:
 
 ```bash
 uv sync
-uv run pytest
+uv run python -m pytest
 ```
 
-To run the single-file smoke test referenced in `AGENTS.md`, use `uv run pytest tests/test_home.py`. Avoid installing unapproved dependencies; `AGENTS.md` requires asking before adding any dependency to `pyproject.toml`.
+To run the single-file smoke test referenced in `AGENTS.md`, use `uv run python -m pytest tests/test_home.py`. Avoid installing unapproved dependencies; `AGENTS.md` requires asking before adding any dependency to `pyproject.toml`.
 
 ## Backend service (after issue #3)
 
