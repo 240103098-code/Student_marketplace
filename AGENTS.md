@@ -1,8 +1,7 @@
 Commands
 
-- `uv sync` - install dependencies
-- `uv run python -m pytest` - the whole suite
-- `uv run python -m pytest tests/test_home.py` - one test file
+- No application runtime or automated test commands are available yet.
+- Task 1 introduces the empty project and its first passing automated test; document the tested commands when implemented.
 
 Rules
 
