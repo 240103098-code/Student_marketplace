@@ -1,9 +1,9 @@
 # Student Marketplace — Project Requirements
 
-**Project:** Student Marketplace  
-**Status:** Requirements gathering in progress  
-**Last recorded decision:** Question 40 — Item condition options  
-**Next open decision:** Question 41 — Listing approval workflow  
+**Project:** Student Marketplace
+**Status:** MVP decision baseline recorded; implementation in progress
+**Last recorded decision:** 2026-10-12 — university domain and manual approval confirmed; implementation defaults authorized
+**Remaining setup:** Deployment-specific SMTP credentials and local service configuration
 
 ## 1. Project overview
 
@@ -29,7 +29,7 @@ The platform facilitates discovery and contact rather than transactions: sellers
 | ORM | **SQLAlchemy** |
 | Database migrations | **Alembic** |
 | Architecture | **Modular FastAPI monolith** |
-| Authentication | Email/password with university-email verification; JWT access and refresh tokens |
+| Authentication | Email/password with university-email verification; JWT access tokens and opaque refresh sessions |
 | Image storage | Uploaded files in the backend's **`uploads/`** directory; database stores file paths |
 | Development / demo | Run React, FastAPI, and PostgreSQL **locally** |
 
@@ -40,21 +40,40 @@ Backend modules / routers should cover **authentication, listings, users, and ad
 ### Registration
 
 1. User signs up with their **university email** and password.
-2. Backend checks that the email matches **one approved university domain**, defined in configuration.
-3. Backend sends a **real verification email** using SMTP or an email provider.
+2. Backend checks that the email matches exactly **sdu.edu.kz**, defined in configuration (subdomains are not eligible).
+3. Backend sends a **real verification email** using configurable SMTP.
 4. User enters the verification code to activate their account.
 5. User may enter a code incorrectly **up to five times**. After five incorrect attempts, the user must request a **new code**.
 6. Only verified users may browse or use the marketplace.
 
-**Email delivery decision:** real outgoing verification email, not terminal-only demo codes. SMTP / provider credentials must be configured securely via environment variables. No specific provider has yet been chosen.
+**Email delivery default:** configurable real SMTP with TLS/STARTTLS appropriate to the server. Hostname, port, sender, and credentials are external operational configuration; no SMTP account or live credentials are claimed to exist. Console-only code delivery does not satisfy the feature.
 
-**Not yet specified:** verification code length, code expiry time, resend cooldown, mail provider, and detailed abuse controls.
+### Email codes and passwords — authorized implementation defaults
 
-### Sessions
+- Cryptographically generated six-digit codes last ten minutes, with a sixty-second resend cooldown and at most five wrong attempts per code.
+- Replacement invalidates the previous code. Store codes hashed and separate registration and password-reset purposes.
+- Passwords accept 12–128 characters, have no forced composition rule, and use Argon2id hashing.
 
-- Use **JWT access tokens** and **refresh tokens**.
-- Refresh token handling should be secure, with support for **rotation and revocation**.
-- Exact token lifetimes, storage/transmission strategy, and logout implementation are technical-design details yet to be finalized.
+### Sessions — authorized implementation defaults
+
+- JWT access tokens last fifteen minutes; keep them in browser memory and transmit them in Authorization Bearer headers.
+- Opaque refresh sessions last seven days from login, rotate on each use, and revoke the token family on detected reuse. Store tokens hashed server-side; use HttpOnly SameSite=Lax cookies, with Secure required outside local HTTP development.
+- Logout, password reset/change, suspension, and account deletion revoke refresh sessions. Suspension also blocks new logins and existing protected requests.
+
+### Browser security — authorized implementation defaults
+
+- Allow only configured frontend origins with credentials; never use wildcard credentialed CORS.
+- Cookie-authenticated mutation endpoints require a matching allowed Origin and a CSRF token. Read-only GET requests never mutate state.
+- Exclude passwords, raw codes, tokens, and secrets from logs and committed files.
+
+### Abuse controls — authorized implementation defaults
+
+- Registration: ten attempts per IP per hour.
+- Login: ten failures per normalized email/IP pair per fifteen minutes.
+- Verification/password-reset code submissions: five failures per code.
+- Email-send requests: five per email per hour plus the sixty-second cooldown.
+- Recovery initiation: ten requests per IP per hour.
+- Limits return retry guidance without revealing account existence; recovery responses remain generic.
 
 ### Password management
 
@@ -64,8 +83,7 @@ Backend modules / routers should cover **authentication, listings, users, and ad
 ### Account deletion
 
 - Users can **permanently delete their own accounts**.
-- Their listings and personal information are also deleted, apart from records that must be retained for security or legal reasons.
-- Retention exceptions, if any, require a clear policy during implementation.
+- Authorized deletion default: remove identity, contacts, avatar, listings, listing photos, codes, sessions, and reports involving the deleted identity or listings. No personal-data retention exception is adopted for this local MVP.
 
 ## 4. User profiles
 
@@ -76,7 +94,9 @@ Each user has a **basic profile**:
 - Contact details, such as phone number, Telegram username, or another contact method
 - Verified university email (used for account identity)
 
-Users may edit their **name, profile photo, and contact details**. The verified university email **cannot be changed**.
+Users may edit their **name, profile photo, and contact details**. The verified university email **cannot be changed** and never becomes a public contact field.
+
+Authorized defaults: trimmed name is required and 1–100 characters. Contact fields are optional: phone up to 30 characters; Telegram username 5–32 letters, digits, or underscores; HTTPS external contact URL up to 2048 characters. At least one valid contact method must exist before listing submission.
 
 ## 5. Listings
 
@@ -86,18 +106,18 @@ Sellers can create listings with the following fields:
 
 | Field | Requirement |
 | --- | --- |
-| Title | Required listing title |
-| Description | Item description |
-| Price | Asking price |
-| Category | Choose from a **fixed predefined list** |
-| Condition | Choose **New** or **Used** |
-| Photos | Upload **up to 5 images** |
+| Title | Required, 3–120 characters |
+| Description | Required, 10–2000 characters |
+| Price | Required, nonnegative, up to 1,000,000,000 KZT with at most two decimal places |
+| Category | Required choice from the fixed predefined list |
+| Condition | Required **New** or **Used** |
+| Photos | Optional, zero to five images |
 
 The **first uploaded image** is displayed as the listing's main photo.
 
 ### Categories
 
-Use a predefined set of categories; examples agreed upon include:
+Authorized implementation defaults use currency **KZT** and this complete category set:
 
 - Electronics
 - Clothing
@@ -105,7 +125,11 @@ Use a predefined set of categories; examples agreed upon include:
 - Furniture
 - Other
 
-**Note:** This is an example set, not yet a finalized exhaustive list.
+These limits, categories, currency, and contact rules are implementation defaults adopted under the user's authorization, not individually selected user decisions.
+
+### Images — authorized implementation defaults
+
+Avatar and listing uploads accept JPEG, PNG, and WebP only, with a maximum five MiB per file and twenty megapixels. Validate decoded image content, reject SVG and unsupported content, and generate safe filenames. Store files beneath backend `uploads/` and paths in PostgreSQL; preserve listing photo order with the first uploaded image as main photo. Image access requires verified authorization.
 
 ### Item conditions
 
@@ -123,13 +147,15 @@ Sellers may edit **only**:
 - Price
 - Description
 
-They **cannot edit title, photos, category, or condition** after publishing. To change those, they must delete the listing and create a new one.
+Price/description edits retain the existing approval. They **cannot edit title, photos, category, or condition** after publishing. To change those, they must delete the listing and create a new one.
 
 > This limited-editing decision supersedes an earlier general idea that listings would be editable without specifying restrictions.
 
 ### Listing status and lifecycle
 
-- **Active:** visible to verified marketplace users.
+- **Pending:** every newly submitted listing is private to its seller and admins until manual admin approval.
+- **Active:** approved listings are visible to verified marketplace users; approval sets the publication date.
+- **Rejected:** private to the seller and admins with a short rejection reason; sellers delete and recreate rather than edit immutable fields.
 - **Sold:** seller marks the item as sold; it disappears from public search and browsing but remains stored in the seller's account.
 - **Deleted:** seller removes the listing.
 - **No automatic expiration:** listings remain active until marked sold or deleted.
@@ -139,6 +165,7 @@ They **cannot edit title, photos, category, or condition** after publishing. To 
 
 Sellers have a dedicated **My Listings** page where they can:
 
+- View pending and rejected listings with rejection reasons
 - View active listings
 - View sold listings
 - Edit permitted fields (price and description)
@@ -195,6 +222,7 @@ Admins can:
 
 - View users
 - View listings
+- Approve or reject pending listings with a short rejection reason
 - Remove inappropriate listings
 - Suspend user accounts
 - Review user-submitted listing reports
@@ -207,15 +235,11 @@ Admins can:
 
 This is a **simple reporting system**. The MVP does not require an advanced report-status tracking system for reporters or long-form evidence submissions.
 
-### Publication approval — **NOT DECIDED**
+### Publication approval — confirmed manual approval
 
-Question 41 was asked but not yet answered:
+The user explicitly selected mandatory manual admin approval before initial publication. New listings start Pending; only admins may approve them, setting their publication date. Only approved Active listings appear in student browsing and search. Rejected listings remain private to their seller and admins with a short rejection reason. Published price/description edits retain approval, and admin removal remains available.
 
-- **A. Automatic publishing:** listings become visible immediately; admins act on reports afterward.
-- **B. Manual approval:** every listing needs admin approval before becoming visible.
-- **C. Hybrid:** listings appear immediately, but suspicious ones are flagged for review.
-
-**Current status:** Awaiting a decision. The earlier recommendation was **A**, but it has **not been selected** by the user.
+Admin provisioning is an authorized implementation default: a local CLI promotes an existing verified account. There is no public role-assignment endpoint. Suspension blocks new logins and existing protected requests.
 
 ## 9. MVP feature checklist
 
@@ -249,15 +273,15 @@ Question 41 was asked but not yet answered:
 - [ ] Review listing reports
 - [ ] Remove inappropriate listings
 - [ ] Suspend accounts
-- [ ] Implement chosen listing-publication approval policy (**open decision**)
+- [ ] Approve/reject pending listings before initial publication
 
 ### Technical
 
 - [ ] Set up React frontend
 - [ ] Set up modular FastAPI backend
 - [ ] Set up PostgreSQL, SQLAlchemy, and Alembic
-- [ ] Configure one approved university email domain
-- [ ] Set up SMTP / real-email provider
+- [ ] Configure exactly sdu.edu.kz without subdomains
+- [ ] Set up configurable real SMTP with TLS/STARTTLS
 - [ ] Implement JWT access + refresh tokens with secure rotation/revocation
 - [ ] Store uploaded photos in backend `uploads/` and paths in PostgreSQL
 - [ ] Run frontend, backend, and database locally
@@ -277,24 +301,15 @@ Question 41 was asked but not yet answered:
 - Advanced report tracking and reporting against users (as opposed to listings)
 - Online production deployment in the initial local demo
 
-## 11. Outstanding details / implementation decisions
+## 11. Decision baseline and remaining operational setup
 
-The following have **not** been fully specified and should not be treated as selected requirements:
+The user explicitly selected **sdu.edu.kz** (no subdomains) and **mandatory manual admin approval**. All numerical validation, code, password, session, image, browser-security, contact, deletion, admin-provisioning, SMTP, and abuse-control rules above are user-authorized implementation defaults. They are active requirements; they are not individually selected historical user answers.
 
-1. **Question 41:** auto-publish, manual approval, or hybrid moderation.
-2. Exact university email domain.
-3. Final full category list.
-4. SMTP/email provider, verification-code expiry, resend cooldown, and code length.
-5. JWT lifetimes and exact secure refresh-token storage approach.
-6. Photo file types, individual size limits, and image validation.
-7. Whether any listing fields besides title are mandatory and their input validation rules.
-8. Admin assignment / creation process and exact admin permissions.
-9. Precise deletion and security/audit data-retention rules.
-10. Automated tests and production deployment approach (if/when needed).
+No MVP product-policy choice remains open in this baseline. SMTP hostname, port, sender, credentials, and local service configuration remain external operator setup. Do not fabricate or commit these values or claim that live infrastructure already exists. Production deployment remains excluded from the initial local MVP; relevant tasks will add implementation and automated verification.
 
 ---
 
-## 12. Decision history (questions 1–40)
+## 12. Decision history (questions 1–41 and current baseline)
 
 The requirements above consolidate earlier choices. The following maps the established choices into a compact record; the original question numbers for decisions **1–25** are not all available in this transcript, so they are recorded by topic rather than assigning possibly inaccurate numbers.
 
@@ -324,8 +339,8 @@ The requirements above consolidate earlier choices. The following maps the estab
 | Backend design | Modular monolith with routers |
 | Approved email | One configurable domain |
 | Database layer | SQLAlchemy + Alembic |
-| Session mechanism | JWT access + refresh tokens |
-| **Q26: Verification delivery** | **Real emails via SMTP or provider** |
+| Session mechanism | JWT access + opaque refresh sessions (current baseline) |
+| **Q26: Verification delivery** | **Real emails; configurable SMTP selected in current baseline** |
 | **Q27: Verification failures** | **5 attempts, then request a new code** |
 | **Q28: Photo limit** | **Up to 5 per listing** |
 | **Q29: Contact method** | **Display contact details + Contact Seller button** |
@@ -340,6 +355,8 @@ The requirements above consolidate earlier choices. The following maps the estab
 | **Q38: Delete account** | **Permanent self-service deletion** |
 | **Q39: Listing edits** | **Price and description only** |
 | **Q40: Item condition** | **New / Used** |
-| **Q41: Approval** | **Not yet answered** |
+| **Q41: Approval** | Previously unanswered; superseded on 2026-10-12 by mandatory manual admin approval |
+| Current explicit domain choice | Exactly sdu.edu.kz, no subdomains |
+| Current implementation baseline | Technical defaults above adopted under user authorization on 2026-10-12 |
 
-*This document distinguishes confirmed choices from recommendations and unresolved technical details.*
+*Earlier unanswered approval, category-example, token/code/image, and retention statements are superseded by the current baseline. SMTP credentials remain operational setup, not an unresolved product policy.*
