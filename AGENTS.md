@@ -1,7 +1,8 @@
 Commands
 
-- No application runtime or automated test commands are available yet.
-- Task 1 introduces the empty project and its first passing automated test; document the tested commands when implemented.
+- Python 3.11 or newer is supported; the bootstrap has no third-party dependencies or installation step.
+- `python -m unittest discover -s tests -v` - run the single bootstrap smoke test from the repository root (verified with Python 3.13.15).
+- No backend or frontend service startup commands are available yet.
 
 Rules
 

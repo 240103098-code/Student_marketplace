@@ -1,0 +1,6 @@
+[project]
+name = "student-marketplace"
+version = "0.1.0"
+description = "Empty bootstrap for Student Marketplace"
+requires-python = ">=3.11"
+dependencies = []
