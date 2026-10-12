@@ -29,3 +29,13 @@ Rules
 - The engineer does not close the issue
 - QA does not fix the code, only outputs PASS or FAIL
 - The orchestrator closes the issue only after QA outputs PASS
+
+Dependency authorization
+
+The user has granted standing approval to add and install the minimal
+dependencies required for agreed Student Marketplace backlog issues, including
+their resolved dependencies. Document each dependency change in the issue's
+implementation report and keep manifests and lockfiles updated. Earlier issue
+boilerplate asking for dependency approval is satisfied by this authorization
+for dependencies within that scope. Unresolved product choices still require
+user input; the PM, engineer, and independent QA lifecycle remains unchanged.

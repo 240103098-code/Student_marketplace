@@ -6,8 +6,11 @@ Commands
 
 Rules
 
-- Dependencies are added in `pyproject.toml`. Do not add one without
-  asking
+- Use the minimal dependencies needed to implement approved backlog issues.
+  Add Python dependencies in `pyproject.toml` and frontend dependencies in
+  `frontend/package.json`; keep the corresponding lockfiles updated.
+- The user grants standing approval to add and install dependencies needed for
+  those issues. Document dependency changes in the implementation report.
 
 ## Documents
 
