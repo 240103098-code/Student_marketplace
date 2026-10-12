@@ -1,6 +1,6 @@
 # Local development setup
 
-This document describes the tools, project layout, and local startup workflow for Student Marketplace. **Current status:** the Python project bootstrap and one pytest smoke test are ready. A minimal FastAPI backend and health endpoint are ready; frontend application features and database integrations are not yet implemented.
+This document describes the tools, project layout, and local startup workflow for Student Marketplace. **Current status:** the Python project bootstrap and one pytest smoke test are ready. A minimal FastAPI backend and health endpoint are ready; a minimal React shell is ready. Marketplace frontend features and database integrations are not yet implemented.
 
 ## Prerequisites
 
@@ -10,10 +10,10 @@ Install the following development tools:
 | --- | --- | --- |
 | Git | Clone the repository and commit changes | Needed now |
 | Python and [uv](https://docs.astral.sh/uv/getting-started/installation/) | Backend environment and pytest, as required by `AGENTS.md` | Needed now for the Python bootstrap and tests |
-| Node.js and npm | React frontend development | Needed once [#5](https://github.com/240103098-code/student-marketplace/issues/5) creates the app |
+| Node.js and npm | React frontend development | Needed now for the React shell |
 | PostgreSQL | Local database server; `psql` or pgAdmin can be used to inspect it | Needed once [#8](https://github.com/240103098-code/student-marketplace/issues/8) adds database integration |
 
-**Versions:** Python 3.11 or newer is required by `pyproject.toml`; bootstrap verification used Python 3.13. The committed `uv.lock` records resolved Python dependencies. Node.js and PostgreSQL version ranges have not been selected yet.
+**Versions:** Python 3.11 or newer is required by `pyproject.toml`; bootstrap verification used Python 3.13. The committed `uv.lock` records resolved Python dependencies. The frontend requires Node.js 22.22.2+ on the 22.x line or 24.15.0+, and npm 12.2.0+; verification used Node.js 24.19.0 and npm 12.2.0. The committed npm lockfile records resolved frontend dependencies. PostgreSQL versions remain unselected.
 
 On Windows PowerShell (or a compatible terminal), check the tools you have:
 
@@ -44,8 +44,11 @@ student-marketplace/
 ├── README.md
 ├── pyproject.toml
 ├── uv.lock
-├── backend/.gitkeep
-├── frontend/.gitkeep
+├── backend/main.py
+├── frontend/package.json
+├── frontend/package-lock.json
+├── frontend/index.html
+├── frontend/src/main.js
 ├── tests/test_home.py
 └── _docs/
     ├── plan.md
@@ -57,7 +60,7 @@ student-marketplace/
     └── team/
 ```
 
-The intended application directories are `backend/` and `frontend/` in the repository root. Both directories contain tracked placeholders; application code is deferred to the following issues. The Python project/test scaffolding is tracked in [#1](https://github.com/240103098-code/student-marketplace/issues/1), the FastAPI app in [#3](https://github.com/240103098-code/student-marketplace/issues/3), and the React app in [#5](https://github.com/240103098-code/student-marketplace/issues/5). Refer to the corresponding issue for the final module paths and scripts.
+The intended application directories are `backend/` and `frontend/` in the repository root. The backend contains a minimal FastAPI app and the frontend contains a minimal React shell. The Python project/test scaffolding is tracked in [#1](https://github.com/240103098-code/student-marketplace/issues/1), the FastAPI app in [#3](https://github.com/240103098-code/student-marketplace/issues/3), and the React app in [#5](https://github.com/240103098-code/student-marketplace/issues/5). Refer to the corresponding issue for the final module paths and scripts.
 
 ## Python dependencies and tests
 
@@ -96,18 +99,31 @@ marketplace endpoints are not implemented yet.
 Run the full suite with `uv run python -m pytest`, including the health endpoint
 test. Database integration is a separate task in [#8](https://github.com/240103098-code/student-marketplace/issues/8).
 
-## Frontend service (after issue #5)
+## Frontend service
 
-**Not implemented yet:** there is no `frontend/package.json` or React development server. Once issue #5 creates the app, the expected npm workflow from `frontend/` is:
+Run from the repository root:
 
 ```bash
 cd frontend
-npm install
+npm ci
 npm run dev
+```
+
+Open `http://127.0.0.1:5173/`. The plain React page displays the heading
+`Student Marketplace` and the same browser title. The strict-port script reports
+an error if port 5173 is already occupied. Stop the server with Ctrl+C.
+
+Build production assets from `frontend/`:
+
+```bash
 npm run build
 ```
 
-Use the actual package scripts committed by issue #5 if they differ. Frontend test setup is tracked separately in [#6](https://github.com/240103098-code/student-marketplace/issues/6); do not claim that an `npm test` command exists before it is added.
+Generated assets are written to `frontend/dist/` and ignored by Git. Both the
+shell and production build run without the backend or production secrets; the
+page makes no backend requests. React, React DOM, and Vite are the only direct
+frontend dependencies. Frontend test tooling is tracked separately in
+[#6](https://github.com/240103098-code/student-marketplace/issues/6).
 
 ## PostgreSQL (after issue #8)
 
