@@ -35,7 +35,7 @@ The persisted account is unverified, unsuspended, and has role student. A six-di
 | 500 | `{"detail":"Registration is temporarily unavailable."}` | Unexpected database failure |
 | 503 | `{"detail":"Verification email is temporarily unavailable."}` | Missing SMTP settings or delivery failure; new account/code rolled back |
 
-SMTP delivery uses configured real transport with verified TLS/STARTTLS before authentication, a ten-second network timeout, and connection cleanup. Delivery failures roll back the caller transaction, including new account/code state and replacement invalidation. Duplicate registration does not send another message. Code issuance can be reused internally for replacement and password-reset purpose; resend is available below, while password-reset endpoints remain future work.
+SMTP delivery uses configured real transport with verified TLS/STARTTLS before authentication, a ten-second network timeout, and connection cleanup. Delivery failures roll back the caller transaction, including new account/code state and replacement invalidation. Duplicate registration does not send another message. Code issuance can be reused internally for replacement and password-reset purpose; resend and password-reset endpoints are documented below.
 
 Uniqueness is enforced by PostgreSQL, including concurrent requests; the transaction rolls back on conflict and later requests can still succeed. Responses and application logs do not echo submitted passwords, validation inputs, hashes, URLs, or database credentials. Database exceptions are converted to a generic response rather than driver details. Abuse controls belong to the later security task.
 
@@ -149,3 +149,20 @@ Requires the same verified, active session-bound Bearer guard. Accept exactly `c
 The service locks the acting account, rechecks access/family eligibility after waiting, verifies the current Argon2id hash, writes a new Argon2id hash, and revokes all refresh families in one transaction. Login rechecks its previously verified hash under the same account lock before session creation; rotation also uses that lock. A pre-change credential cannot leave an active session after the change. Other accounts, email/flags/role, and profile fields are untouched. Responses and logs do not expose passwords, hashes, or credentials.
 
 The protected /account/password screen has current/new/confirmation inputs; confirmation is client-only. Confirmed 204 clears password inputs and in-memory authentication and explains that all sessions were revoked before returning to sign-in. Wrong-current/network/server failures preserve an honest retry state and make no success claim; access failures hide protected content. Forgotten-password recovery is not implemented by this endpoint.
+
+
+## POST /auth/forgot-password
+
+Public endpoint accepting exactly the strict normalized university `email`. Only verified, unsuspended existing accounts can receive a six-digit password_reset-purpose code. Unknown/deleted/unverified/suspended accounts remain unchanged. Reset issuance takes the account lock, has a sixty-second cooldown from the latest reset issuance, and stores only the user/purpose-bound keyed digest with ten-minute expiry. Successful replacement invalidates earlier usable reset codes independently of registration codes.
+
+Every valid request receives 202 with Retry-After:60 and `{"detail":"If this address is eligible, a password-reset email may arrive. Retry after 60 seconds."}`. This is identical for eligible issuance, cooldown suppression, unknown/ineligible accounts, and SMTP failure, including missing provider settings. Delivery failure rolls back the attempted new code and earlier-code invalidation. The response never guarantees delivery. Invalid request fields/types/email receive sanitized 422 `{"detail":"Invalid recovery request."}`; unexpected database failure uses generic 500 authentication-unavailable feedback.
+
+## POST /auth/reset-password
+
+Public endpoint accepting exactly strict `email`, a secret `code` of six ASCII digits without trimming/coercion, and strict secret `new_password` of 12–128 characters with spaces preserved. Invalid inputs receive sanitized 422 `{"detail":"Invalid password-reset request."}`. Unknown/ineligible users, incorrect/expired/consumed/invalidated/exhausted/purpose-mismatched codes share 400 `{"detail":"Password-reset code is invalid or unavailable."}`.
+
+Wrong well-formed attempts against the current usable reset code commit even when the router returns 400; the fifth invalidates it. Account/code locks serialize attempts, issuance and consumption. Time is sampled after locking; expiry is inclusive at ten minutes. A successful code is consumed once, a new Argon2id password hash is written, and every refresh family is revoked in one transaction. Any transaction failure rolls back all three changes and returns sanitized 500. Verification/identity/profile and other accounts are preserved. Login's under-lock verified-hash check and refresh's account lock prevent pre-reset credentials from creating an active old session after reset.
+
+Success returns 204 with matching refresh-cookie deletion and no JWT/automatic login. Old passwords and previous access/refresh credentials fail immediately; the new password signs in normally. Plaintext reset codes, passwords, hashes and tokens are never returned or logged.
+
+The public /forgot-password and /reset-password forms are reachable from sign-in. The first gives generic eligible-address feedback and a sixty-second cooldown; only email/cooldown remain in React memory across navigation. Direct reset allows email re-entry. Code/password/confirmation stay in form memory, and only email/code/new_password are submitted. Confirmed success clears secrets/auth state and returns to sign-in with all-session revocation guidance. Failures give safe recovery guidance without revealing status or claiming success. Mutations are never automatically replayed.

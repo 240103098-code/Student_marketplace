@@ -29,6 +29,7 @@ export function LoginForm({ navigate, onSignedIn }) {
     {error && <p className="form-feedback error" role="alert">{error}</p>}
     {pending && <p className="form-feedback" role="status">Confirming your sign-in…</p>}
     <button className="button primary" disabled={pending}>{pending ? 'Signing in…' : 'Sign in'}</button>
+    <a href="/forgot-password" onClick={navigate}>Forgot your password?</a>
     <a href="/verify" onClick={navigate}>Need to verify your email?</a>
   </form>;
 }

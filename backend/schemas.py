@@ -69,3 +69,11 @@ class ChangePasswordRequest(BaseModel):
 
     current_password: SecretStr = Field(strict=True, min_length=12, max_length=128)
     new_password: SecretStr = Field(strict=True, min_length=12, max_length=128)
+
+
+class ForgotPasswordRequest(UniversityEmailRequest):
+    pass
+
+
+class ResetPasswordRequest(VerifyEmailRequest):
+    new_password: SecretStr = Field(strict=True, min_length=12, max_length=128)

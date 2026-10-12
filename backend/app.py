@@ -44,7 +44,7 @@ def create_app(settings: Settings, database: Database | None = None, *, sender=N
     @app.exception_handler(RequestValidationError)
     async def validation_error(request: Request, error: RequestValidationError):
         # FastAPI's default error includes raw inputs; never return those.
-        detail = {"/auth/register": "Invalid registration request.", "/auth/login": "Invalid login request.", "/auth/change-password": "Invalid password-change request."}.get(request.url.path, "Invalid verification request.")
+        detail = {"/auth/register": "Invalid registration request.", "/auth/login": "Invalid login request.", "/auth/change-password": "Invalid password-change request.", "/auth/forgot-password": "Invalid recovery request.", "/auth/reset-password": "Invalid password-reset request."}.get(request.url.path, "Invalid verification request.")
         return JSONResponse(status_code=422, content={"detail": detail})
 
     @app.exception_handler(SQLAlchemyError)

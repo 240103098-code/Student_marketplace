@@ -99,6 +99,12 @@ export function createSessionClient(notify) {
         return await requestJson(path, { headers: { Authorization: `Bearer ${renewed}` } });
       } catch (error) { clear(expiredMessage); throw error; }
     },
+    async resetPassword(email, code, newPassword) {
+      const result = await requestJson('/auth/reset-password', { method: 'POST',
+        payload: { email, code, new_password: newPassword } });
+      if (result.status !== 204) throw new ApiError('response');
+      clear('Your password was reset and all sessions were revoked. Please sign in again.');
+    },
     async changePassword(currentPassword, newPassword) {
       if (refreshFlight) await refreshFlight;
       if (!token) throw new ApiError('session');
@@ -136,6 +142,6 @@ export function AuthProvider({ children }) {
     client.current.restore();
     return () => client.current.dispose();
   }, []);
-  return <AuthContext.Provider value={{ ...state, login: client.current.login, logout: client.current.logout, get: client.current.get, changePassword: client.current.changePassword }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ ...state, login: client.current.login, logout: client.current.logout, get: client.current.get, changePassword: client.current.changePassword, resetPassword: client.current.resetPassword }}>{children}</AuthContext.Provider>;
 }
 export function useAuth() { return useContext(AuthContext); }

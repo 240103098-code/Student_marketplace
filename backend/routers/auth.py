@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
 from backend.registration import DuplicateEmailError, register_student
-from backend.schemas import RegistrationRequest, RegistrationResponse, VerifyEmailRequest, ResendVerificationRequest, LoginRequest, AccessTokenResponse, ChangePasswordRequest
+from backend.schemas import RegistrationRequest, RegistrationResponse, VerifyEmailRequest, ResendVerificationRequest, LoginRequest, AccessTokenResponse, ChangePasswordRequest, ForgotPasswordRequest, ResetPasswordRequest
 from backend.mail import EmailDeliveryError
 from backend.verification import verify_registration_code, resend_registration_code
 from backend.authentication import AuthenticationError, authenticate_student, require_verified_user
@@ -113,6 +113,32 @@ def change_password(payload: ChangePasswordRequest, request: Request, user=Depen
         raise HTTPException(status_code=400, detail="Current password is incorrect.") from None
     except AuthenticationError:
         raise authentication_required() from None
+    response = Response(status_code=204)
+    clear_refresh_cookie(response, request.app.state.settings)
+    return response
+
+
+@router.post("/forgot-password", status_code=202)
+def forgot_password(payload: ForgotPasswordRequest, request: Request, response: Response):
+    from backend.recovery import request_password_reset
+
+    try:
+        request_password_reset(request.app.state.database, payload.email,
+            request.app.state.settings, request.app.state.email_sender, clock=request.app.state.clock)
+    except EmailDeliveryError:
+        pass  # Issuance transaction rolled back; response never reveals eligibility/delivery.
+    response.headers["Retry-After"] = "60"
+    return {"detail": "If this address is eligible, a password-reset email may arrive. Retry after 60 seconds."}
+
+
+@router.post("/reset-password", status_code=204)
+def reset_password(payload: ResetPasswordRequest, request: Request):
+    from backend.recovery import reset_student_password
+
+    if not reset_student_password(request.app.state.database, payload.email,
+        payload.code.get_secret_value(), payload.new_password.get_secret_value(),
+        request.app.state.settings, clock=request.app.state.clock):
+        raise HTTPException(status_code=400, detail="Password-reset code is invalid or unavailable.")
     response = Response(status_code=204)
     clear_refresh_cookie(response, request.app.state.settings)
     return response

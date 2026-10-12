@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AuthProvider, useAuth } from './Auth.jsx';
+import { RecoveryRequestForm, ResetPasswordForm } from './RecoveryForms.jsx';
 import { PasswordForm } from './PasswordForm.jsx';
 import { LoginForm } from './LoginForm.jsx';
 import { RegistrationForm, VerificationForm } from './AccountForms.jsx';
@@ -27,6 +28,9 @@ const views = {
   },
 };
 
+views['/forgot-password'] = { title: 'Recover your password', description: 'Request a reset code with your university email. Only eligible verified accounts can receive one.' };
+views['/reset-password'] = { title: 'Reset password', description: 'Enter your university email, recovery code, and a new password. Codes last ten minutes.' };
+
 const protectedPaths = ['/marketplace', '/profile', '/my-listings', '/account/password'];
 export function safeReturnPath(path) { return protectedPaths.includes(path) ? path : '/marketplace'; }
 views['/account/password'] = { title: 'Change password', description: 'Confirm your current password to set a new one. This signs out every session for your account.' };
@@ -52,6 +56,7 @@ function AppShell() {
   const [path, setPath] = useState(window.location.pathname);
   const heading = useRef(null);
   const previousPath = useRef(path);
+  const [recovery, setRecovery] = useState({ email: '', cooldowns: {} });
   const [verification, setVerification] = useState({ email: '', cooldowns: {} });
 
   useEffect(() => {
@@ -127,6 +132,8 @@ function AppShell() {
         {logoutError && <p role="alert" className="form-feedback error">{logoutError}</p>}
         {logoutPending && <p role="status">Confirming sign-out...</p>}
         {guarded && <p role="status">Checking your session...</p>}
+        {path === '/forgot-password' && <RecoveryRequestForm initialEmail={recovery.email} cooldowns={recovery.cooldowns} navigate={navigate} onRequested={(email, deadline) => setRecovery(previous => ({ email, cooldowns: { ...previous.cooldowns, [email]: deadline } }))} />}
+        {path === '/reset-password' && <ResetPasswordForm initialEmail={recovery.email} navigate={navigate} onReset={() => goTo('/login')} />}
         {path === '/account/password' && !guarded && <PasswordForm onChanged={() => goTo('/login')} />}
         {path === '/login' && <LoginForm navigate={navigate} onSignedIn={() => goTo(safeReturnPath(returnPath))} />}
         {path === '/register' && <RegistrationForm navigate={navigate} onRegistered={(email, deadline) => {
