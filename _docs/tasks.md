@@ -1,10 +1,49 @@
-# Student Marketplace — canonical MVP backlog
+# Student Marketplace — active MVP backlog
 
-The university-only React + FastAPI + PostgreSQL marketplace retains its full MVP scope: verified students buy and sell items, while payments and pickup happen outside the platform. This consolidation groups related backend, frontend, and verification work into cohesive packages; a package may require several focused commits.
+This is the inventory of the **34 remaining open GitHub issues**, followed by their full scope summaries and prerequisites in dependency order. GitHub IDs are stable and are not renumbered. The linked survivor issues contain every required original acceptance criterion.
 
-**Consolidation target:** 103 original issues become 39 canonical records: five completed historical issues and 34 open implementation packages. The 98 previously open issues become 34 open issues, a 65.3% reduction. The 64 superseded issues close administratively as `not_planned`; their scope moves into surviving issues. Those closures do not mean the work was implemented or passed QA.
+The university-only React + FastAPI + PostgreSQL marketplace retains its full MVP scope: verified students buy and sell items, while payments and pickup happen outside the platform. Cohesive work packages may require several focused commits.
 
-Completed #1–#5 history remains unchanged. Issue #6 stays open; its paused uncommitted frontend work is preserved and is not counted as completed. GitHub survivor bodies carry every original acceptance criterion. The summaries below retain source scope and traceability; completing a summary alone does not replace satisfying the full linked criteria.
+Completed issues and superseded records are archived in [backlog history](backlog-history.md), including the complete original-to-canonical mapping. They are not active work. References to completed prerequisites remain valid. Issue #6's paused frontend changes remain uncommitted and do not count as completion.
+
+## Remaining issues in ascending GitHub ID order
+
+| Issue | Exact GitHub title |
+| --- | --- |
+| [#6](https://github.com/240103098-code/student-marketplace/issues/6) | 6. Set up frontend automated tests |
+| [#7](https://github.com/240103098-code/student-marketplace/issues/7) | 7. Add backend environment configuration |
+| [#8](https://github.com/240103098-code/student-marketplace/issues/8) | 8. PostgreSQL sessions and Alembic migrations |
+| [#10](https://github.com/240103098-code/student-marketplace/issues/10) | 10. Account, verification-code, and refresh-session data models |
+| [#13](https://github.com/240103098-code/student-marketplace/issues/13) | 13. Listing, photo, category, and report data models |
+| [#16](https://github.com/240103098-code/student-marketplace/issues/16) | 16. Agree on remaining MVP configuration values |
+| [#17](https://github.com/240103098-code/student-marketplace/issues/17) | 17. University registration validation and password hashing |
+| [#20](https://github.com/240103098-code/student-marketplace/issues/20) | 20. SMTP delivery and registration verification lifecycle |
+| [#24](https://github.com/240103098-code/student-marketplace/issues/24) | 24. Create JWT access tokens |
+| [#25](https://github.com/240103098-code/student-marketplace/issues/25) | 25. Login and verified-user authorization |
+| [#26](https://github.com/240103098-code/student-marketplace/issues/26) | 26. Refresh rotation, logout, and session revocation |
+| [#29](https://github.com/240103098-code/student-marketplace/issues/29) | 29. Configure browser session security |
+| [#30](https://github.com/240103098-code/student-marketplace/issues/30) | 30. Current-user profile read and restricted editing APIs |
+| [#32](https://github.com/240103098-code/student-marketplace/issues/32) | 32. Safe image validation, storage, and avatar uploads |
+| [#33](https://github.com/240103098-code/student-marketplace/issues/33) | 33. Password change and email recovery APIs and screens |
+| [#36](https://github.com/240103098-code/student-marketplace/issues/36) | 36. Permanent account deletion API and confirmation screen |
+| [#37](https://github.com/240103098-code/student-marketplace/issues/37) | 37. Listing validation, creation API, form, and photo uploader |
+| [#41](https://github.com/240103098-code/student-marketplace/issues/41) | 41. Marketplace browsing, search, filters, cards, and homepage |
+| [#46](https://github.com/240103098-code/student-marketplace/issues/46) | 46. Listing details, photo gallery, and safe seller contact |
+| [#48](https://github.com/240103098-code/student-marketplace/issues/48) | 48. Seller listing management APIs and My Listings actions |
+| [#52](https://github.com/240103098-code/student-marketplace/issues/52) | 52. Chosen publication policy and conditional admin approval UI |
+| [#53](https://github.com/240103098-code/student-marketplace/issues/53) | 53. Listing reporting API and student interaction |
+| [#54](https://github.com/240103098-code/student-marketplace/issues/54) | 54. Admin authorization, controlled provisioning, and navigation |
+| [#56](https://github.com/240103098-code/student-marketplace/issues/56) | 56. Admin user listing and suspension APIs and controls |
+| [#57](https://github.com/240103098-code/student-marketplace/issues/57) | 57. Admin listing overview and removal APIs and controls |
+| [#58](https://github.com/240103098-code/student-marketplace/issues/58) | 58. Admin report queue and review APIs and UI |
+| [#62](https://github.com/240103098-code/student-marketplace/issues/62) | 62. Set up React routes and shared page layout |
+| [#63](https://github.com/240103098-code/student-marketplace/issues/63) | 63. Frontend API client, route guards, and logout |
+| [#64](https://github.com/240103098-code/student-marketplace/issues/64) | 64. Registration and verification screens |
+| [#66](https://github.com/240103098-code/student-marketplace/issues/66) | 66. Build login form |
+| [#87](https://github.com/240103098-code/student-marketplace/issues/87) | 87. Profile details and editing screens |
+| [#98](https://github.com/240103098-code/student-marketplace/issues/98) | 98. End-to-end authentication, selling, and moderation journeys |
+| [#101](https://github.com/240103098-code/student-marketplace/issues/101) | 101. Responsive accessibility and deletion/upload safety verification |
+| [#103](https://github.com/240103098-code/student-marketplace/issues/103) | 103. Prepare a repeatable local demo |
 
 ## Product decisions and delivery rules
 
@@ -17,16 +56,6 @@ Use `uv run python -m pytest` for backend tests; use `npm test` and `npm run bui
 The standing dependency authorization in AGENTS.md covers minimal dependencies for approved backlog scope; report additions and update manifests and lockfiles. No unattended or endless implementation run is promised.
 
 Publication package #52 is required for every selected policy. Source #97 contributes approval UI only when manual/hybrid review is chosen; automatic publication removes that conditional UI branch, not #52 or its publication-safety verification.
-
-## Completed history
-
-| Issue | Completed work |
-| --- | --- |
-| [#1](https://github.com/240103098-code/student-marketplace/issues/1) | Create an empty project with a passing test; independently verified and closed |
-| [#2](https://github.com/240103098-code/student-marketplace/issues/2) | Document local prerequisites and startup commands; independently verified and closed |
-| [#3](https://github.com/240103098-code/student-marketplace/issues/3) | Initialize the FastAPI application; independently verified and closed |
-| [#4](https://github.com/240103098-code/student-marketplace/issues/4) | Set up backend test fixtures; independently verified and closed |
-| [#5](https://github.com/240103098-code/student-marketplace/issues/5) | Initialize the React application; independently verified and closed |
 
 ## Open packages in dependency order
 
@@ -375,53 +404,3 @@ Verify browse visibility under the chosen automatic/manual/hybrid policy and rej
 **Goal:** Run the complete MVP locally from documented steps.
 
 The final demo depends on both end-to-end journeys #98 and responsive/deletion/upload verification #101; document real SMTP separately from fake test delivery and keep credentials local.
-
-## Complete original-to-canonical mapping
-
-Each original ID from 1 through 103 appears exactly once below. Every source ID maps to the canonical issue in its row. Rows #1–#5 are completed history; all other rows remain open packages. Noncanonical IDs are superseded records, retained on GitHub with replacement links and `not_planned` closure reasons.
-
-| Canonical issue | Original issue IDs mapped here | Record |
-| --- | --- | --- |
-| [#1](https://github.com/240103098-code/student-marketplace/issues/1) | [#1](https://github.com/240103098-code/student-marketplace/issues/1) | Completed history |
-| [#2](https://github.com/240103098-code/student-marketplace/issues/2) | [#2](https://github.com/240103098-code/student-marketplace/issues/2) | Completed history |
-| [#3](https://github.com/240103098-code/student-marketplace/issues/3) | [#3](https://github.com/240103098-code/student-marketplace/issues/3) | Completed history |
-| [#4](https://github.com/240103098-code/student-marketplace/issues/4) | [#4](https://github.com/240103098-code/student-marketplace/issues/4) | Completed history |
-| [#5](https://github.com/240103098-code/student-marketplace/issues/5) | [#5](https://github.com/240103098-code/student-marketplace/issues/5) | Completed history |
-| [#6](https://github.com/240103098-code/student-marketplace/issues/6) | [#6](https://github.com/240103098-code/student-marketplace/issues/6) | Open package |
-| [#7](https://github.com/240103098-code/student-marketplace/issues/7) | [#7](https://github.com/240103098-code/student-marketplace/issues/7) | Open package |
-| [#8](https://github.com/240103098-code/student-marketplace/issues/8) | [#8](https://github.com/240103098-code/student-marketplace/issues/8), [#9](https://github.com/240103098-code/student-marketplace/issues/9) | Open package |
-| [#10](https://github.com/240103098-code/student-marketplace/issues/10) | [#10](https://github.com/240103098-code/student-marketplace/issues/10), [#11](https://github.com/240103098-code/student-marketplace/issues/11), [#12](https://github.com/240103098-code/student-marketplace/issues/12) | Open package |
-| [#13](https://github.com/240103098-code/student-marketplace/issues/13) | [#13](https://github.com/240103098-code/student-marketplace/issues/13), [#14](https://github.com/240103098-code/student-marketplace/issues/14), [#15](https://github.com/240103098-code/student-marketplace/issues/15) | Open package |
-| [#16](https://github.com/240103098-code/student-marketplace/issues/16) | [#16](https://github.com/240103098-code/student-marketplace/issues/16) | Open package |
-| [#17](https://github.com/240103098-code/student-marketplace/issues/17) | [#17](https://github.com/240103098-code/student-marketplace/issues/17), [#18](https://github.com/240103098-code/student-marketplace/issues/18), [#19](https://github.com/240103098-code/student-marketplace/issues/19) | Open package |
-| [#20](https://github.com/240103098-code/student-marketplace/issues/20) | [#20](https://github.com/240103098-code/student-marketplace/issues/20), [#21](https://github.com/240103098-code/student-marketplace/issues/21), [#22](https://github.com/240103098-code/student-marketplace/issues/22), [#23](https://github.com/240103098-code/student-marketplace/issues/23) | Open package |
-| [#24](https://github.com/240103098-code/student-marketplace/issues/24) | [#24](https://github.com/240103098-code/student-marketplace/issues/24) | Open package |
-| [#25](https://github.com/240103098-code/student-marketplace/issues/25) | [#25](https://github.com/240103098-code/student-marketplace/issues/25), [#28](https://github.com/240103098-code/student-marketplace/issues/28) | Open package |
-| [#26](https://github.com/240103098-code/student-marketplace/issues/26) | [#26](https://github.com/240103098-code/student-marketplace/issues/26), [#27](https://github.com/240103098-code/student-marketplace/issues/27) | Open package |
-| [#29](https://github.com/240103098-code/student-marketplace/issues/29) | [#29](https://github.com/240103098-code/student-marketplace/issues/29) | Open package |
-| [#30](https://github.com/240103098-code/student-marketplace/issues/30) | [#30](https://github.com/240103098-code/student-marketplace/issues/30), [#31](https://github.com/240103098-code/student-marketplace/issues/31) | Open package |
-| [#32](https://github.com/240103098-code/student-marketplace/issues/32) | [#32](https://github.com/240103098-code/student-marketplace/issues/32), [#38](https://github.com/240103098-code/student-marketplace/issues/38), [#39](https://github.com/240103098-code/student-marketplace/issues/39) | Open package |
-| [#62](https://github.com/240103098-code/student-marketplace/issues/62) | [#62](https://github.com/240103098-code/student-marketplace/issues/62) | Open package |
-| [#63](https://github.com/240103098-code/student-marketplace/issues/63) | [#63](https://github.com/240103098-code/student-marketplace/issues/63), [#67](https://github.com/240103098-code/student-marketplace/issues/67), [#68](https://github.com/240103098-code/student-marketplace/issues/68) | Open package |
-| [#66](https://github.com/240103098-code/student-marketplace/issues/66) | [#66](https://github.com/240103098-code/student-marketplace/issues/66) | Open package |
-| [#33](https://github.com/240103098-code/student-marketplace/issues/33) | [#33](https://github.com/240103098-code/student-marketplace/issues/33), [#34](https://github.com/240103098-code/student-marketplace/issues/34), [#35](https://github.com/240103098-code/student-marketplace/issues/35), [#69](https://github.com/240103098-code/student-marketplace/issues/69), [#70](https://github.com/240103098-code/student-marketplace/issues/70), [#71](https://github.com/240103098-code/student-marketplace/issues/71) | Open package |
-| [#37](https://github.com/240103098-code/student-marketplace/issues/37) | [#37](https://github.com/240103098-code/student-marketplace/issues/37), [#40](https://github.com/240103098-code/student-marketplace/issues/40), [#81](https://github.com/240103098-code/student-marketplace/issues/81), [#82](https://github.com/240103098-code/student-marketplace/issues/82) | Open package |
-| [#48](https://github.com/240103098-code/student-marketplace/issues/48) | [#48](https://github.com/240103098-code/student-marketplace/issues/48), [#49](https://github.com/240103098-code/student-marketplace/issues/49), [#50](https://github.com/240103098-code/student-marketplace/issues/50), [#51](https://github.com/240103098-code/student-marketplace/issues/51), [#83](https://github.com/240103098-code/student-marketplace/issues/83), [#84](https://github.com/240103098-code/student-marketplace/issues/84), [#85](https://github.com/240103098-code/student-marketplace/issues/85), [#86](https://github.com/240103098-code/student-marketplace/issues/86) | Open package |
-| [#87](https://github.com/240103098-code/student-marketplace/issues/87) | [#87](https://github.com/240103098-code/student-marketplace/issues/87), [#88](https://github.com/240103098-code/student-marketplace/issues/88) | Open package |
-| [#36](https://github.com/240103098-code/student-marketplace/issues/36) | [#36](https://github.com/240103098-code/student-marketplace/issues/36), [#89](https://github.com/240103098-code/student-marketplace/issues/89) | Open package |
-| [#41](https://github.com/240103098-code/student-marketplace/issues/41) | [#41](https://github.com/240103098-code/student-marketplace/issues/41), [#42](https://github.com/240103098-code/student-marketplace/issues/42), [#43](https://github.com/240103098-code/student-marketplace/issues/43), [#44](https://github.com/240103098-code/student-marketplace/issues/44), [#45](https://github.com/240103098-code/student-marketplace/issues/45), [#72](https://github.com/240103098-code/student-marketplace/issues/72), [#73](https://github.com/240103098-code/student-marketplace/issues/73), [#74](https://github.com/240103098-code/student-marketplace/issues/74), [#75](https://github.com/240103098-code/student-marketplace/issues/75), [#76](https://github.com/240103098-code/student-marketplace/issues/76), [#77](https://github.com/240103098-code/student-marketplace/issues/77) | Open package |
-| [#46](https://github.com/240103098-code/student-marketplace/issues/46) | [#46](https://github.com/240103098-code/student-marketplace/issues/46), [#47](https://github.com/240103098-code/student-marketplace/issues/47), [#78](https://github.com/240103098-code/student-marketplace/issues/78), [#79](https://github.com/240103098-code/student-marketplace/issues/79), [#80](https://github.com/240103098-code/student-marketplace/issues/80) | Open package |
-| [#54](https://github.com/240103098-code/student-marketplace/issues/54) | [#54](https://github.com/240103098-code/student-marketplace/issues/54), [#55](https://github.com/240103098-code/student-marketplace/issues/55), [#91](https://github.com/240103098-code/student-marketplace/issues/91) | Open package |
-| [#52](https://github.com/240103098-code/student-marketplace/issues/52) | [#52](https://github.com/240103098-code/student-marketplace/issues/52), [#97](https://github.com/240103098-code/student-marketplace/issues/97) | Open package |
-| [#53](https://github.com/240103098-code/student-marketplace/issues/53) | [#53](https://github.com/240103098-code/student-marketplace/issues/53), [#90](https://github.com/240103098-code/student-marketplace/issues/90) | Open package |
-| [#56](https://github.com/240103098-code/student-marketplace/issues/56) | [#56](https://github.com/240103098-code/student-marketplace/issues/56), [#61](https://github.com/240103098-code/student-marketplace/issues/61), [#92](https://github.com/240103098-code/student-marketplace/issues/92), [#93](https://github.com/240103098-code/student-marketplace/issues/93) | Open package |
-| [#57](https://github.com/240103098-code/student-marketplace/issues/57) | [#57](https://github.com/240103098-code/student-marketplace/issues/57), [#60](https://github.com/240103098-code/student-marketplace/issues/60), [#94](https://github.com/240103098-code/student-marketplace/issues/94), [#95](https://github.com/240103098-code/student-marketplace/issues/95) | Open package |
-| [#58](https://github.com/240103098-code/student-marketplace/issues/58) | [#58](https://github.com/240103098-code/student-marketplace/issues/58), [#59](https://github.com/240103098-code/student-marketplace/issues/59), [#96](https://github.com/240103098-code/student-marketplace/issues/96) | Open package |
-| [#64](https://github.com/240103098-code/student-marketplace/issues/64) | [#64](https://github.com/240103098-code/student-marketplace/issues/64), [#65](https://github.com/240103098-code/student-marketplace/issues/65) | Open package |
-| [#98](https://github.com/240103098-code/student-marketplace/issues/98) | [#98](https://github.com/240103098-code/student-marketplace/issues/98), [#99](https://github.com/240103098-code/student-marketplace/issues/99), [#100](https://github.com/240103098-code/student-marketplace/issues/100) | Open package |
-| [#101](https://github.com/240103098-code/student-marketplace/issues/101) | [#101](https://github.com/240103098-code/student-marketplace/issues/101), [#102](https://github.com/240103098-code/student-marketplace/issues/102) | Open package |
-| [#103](https://github.com/240103098-code/student-marketplace/issues/103) | [#103](https://github.com/240103098-code/student-marketplace/issues/103) | Open package |
-
-## Administrative consolidation audit
-
-Before supersession closures, independent QA checks full 1–103 coverage, exactly one survivor per source, preserved acceptance criteria, acyclic canonical prerequisites, unchanged completed history, and untouched application work. Update survivor bodies first; only then post replacement comments and close the 64 superseded records as `not_planned`. Verify the resulting 34-open-issue count and links. Administrative audit PASS authorizes consolidation, not implementation completion.
