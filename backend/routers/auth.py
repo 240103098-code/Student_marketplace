@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
 from backend.registration import DuplicateEmailError, register_student
-from backend.schemas import RegistrationRequest, RegistrationResponse, VerifyEmailRequest, ResendVerificationRequest, LoginRequest, AccessTokenResponse
+from backend.schemas import RegistrationRequest, RegistrationResponse, VerifyEmailRequest, ResendVerificationRequest, LoginRequest, AccessTokenResponse, ChangePasswordRequest
 from backend.mail import EmailDeliveryError
 from backend.verification import verify_registration_code, resend_registration_code
 from backend.authentication import AuthenticationError, authenticate_student, require_verified_user
@@ -50,7 +50,7 @@ def login(payload: LoginRequest, request: Request, response: Response):
     validate_origin(request.app.state.settings, request.headers.get("origin"))
     try:
         user = authenticate_student(request.app.state.database, payload.email, payload.password.get_secret_value())
-        grant = new_login_session(request.app.state.database, user.id, request.app.state.settings, clock=request.app.state.clock)
+        grant = new_login_session(request.app.state.database, user.id, request.app.state.settings, clock=request.app.state.clock, verified_password_hash=user.password_hash)
     except AuthenticationError:
         raise HTTPException(status_code=401, detail="Invalid credentials or account unavailable.", headers={"WWW-Authenticate": "Bearer"}) from None
     token = issue_access_token(request.app.state.settings, user.id, grant.family_id, clock=request.app.state.clock)
@@ -95,6 +95,24 @@ def refresh(request: Request, response: Response):
 def logout(request: Request):
     submitted = mutation_csrf(request)
     logout_session(request.app.state.database, request.cookies.get(COOKIE_NAME), submitted, request.app.state.settings, clock=request.app.state.clock)
+    response = Response(status_code=204)
+    clear_refresh_cookie(response, request.app.state.settings)
+    return response
+
+
+@router.post("/change-password", status_code=204)
+def change_password(payload: ChangePasswordRequest, request: Request, user=Depends(require_verified_user)):
+    from backend.passwords import WrongCurrentPassword, change_student_password
+
+    try:
+        change_student_password(request.app.state.database, user.id,
+            request.headers["authorization"].split(" ", 1)[1],
+            payload.current_password.get_secret_value(), payload.new_password.get_secret_value(),
+            request.app.state.settings, clock=request.app.state.clock)
+    except WrongCurrentPassword:
+        raise HTTPException(status_code=400, detail="Current password is incorrect.") from None
+    except AuthenticationError:
+        raise authentication_required() from None
     response = Response(status_code=204)
     clear_refresh_cookie(response, request.app.state.settings)
     return response

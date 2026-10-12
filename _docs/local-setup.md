@@ -233,3 +233,10 @@ Open /login to sign in with a previously verified disposable university account.
 Keep frontend VITE_API_ORIGIN and backend FRONTEND_ORIGINS on the same hostname as described above. Requests include browser credentials; CSRF and Bearer values stay in memory. Sign out waits for the API to confirm revocation; a failed network/server response shows retry guidance and does not claim success. Registration/verification remain accessible. Shared GET recovery retries once; mutations are not automatically replayed.
 
 Twenty-three frontend interaction tests and the production build passed, together with all 81 existing backend tests against the isolated PostgreSQL/loopback SMTP fixtures. No backend or dependency changes were needed. External SMTP credentials and real university inbox delivery remain operator setup; browser sessions do not supply a demo verification bypass.
+
+
+## Change your password
+
+After verified sign-in, use **Change password** in navigation or open /account/password. Enter your current password, a 12–128-character new password, and matching confirmation; spaces are preserved, and only current_password/new_password are sent. Confirmed success revokes every session on the account, removes the matching browser cookie, clears the form/auth state, and returns to sign-in. Use the new password afterward. An incorrect current password or network/server failure shows retry feedback without claiming change or sign-out. This screen does not implement forgotten-password email recovery.
+
+Verification passed with 27 frontend interaction tests, production build, and all 88 backend tests with real disposable PostgreSQL/controlled SMTP, including seven password-change persistence/boundary/rollback/isolation/concurrency cases. No dependencies or schema changes were required. External SMTP/inbox setup remains outstanding as documented above.

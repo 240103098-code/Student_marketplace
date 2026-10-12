@@ -131,4 +131,21 @@ The React provider restores each page load using credentialed GET /auth/csrf, PO
 
 Shared authenticated **GET** requests include credentials and Bearer authorization. Simultaneous 401 responses share one refresh; each original GET retries at most once. Already-renewed credentials are reused instead of replaying rotation. Failed refresh, repeated rejection, and 403 stop recovery and remove protected access with session-expired/unavailable feedback. Unsafe mutations, refresh, login, and logout are never automatically replayed.
 
-Only exact /marketplace, /profile, and /my-listings are valid internal return destinations, held in memory. Unknown paths and /admin remain unavailable even for verified students. Sign-out waits for server 204 before clearing client state; network/server failure retains access and explicitly asks for retry without claiming revocation. These pages are placeholders until their own issues implement content.
+Only exact /marketplace, /profile, /my-listings, and /account/password are valid internal return destinations, held in memory. Unknown paths and /admin remain unavailable even for verified students. Sign-out waits for server 204 before clearing client state; network/server failure retains access and explicitly asks for retry without claiming revocation. Marketplace/profile/My Listings remain placeholders until their own issues implement content; the password screen is available below.
+
+
+## POST /auth/change-password
+
+Requires the same verified, active session-bound Bearer guard. Accept exactly `current_password` and `new_password`, strict secret strings of 12–128 characters with spaces preserved. There is no caller-supplied account identifier. This Bearer-authenticated mutation is submitted explicitly and never automatically retried by the browser client; ambient cookies alone cannot authorize it.
+
+| Status | Response | Meaning |
+| --- | --- | --- |
+| 204 | Empty body; matching refresh-cookie deletion | Password changed and every account session revoked |
+| 400 | `{"detail":"Current password is incorrect."}` | Current password proof failed; hash/sessions unchanged |
+| 401 | `{"detail":"Authentication required."}` | Missing/expired/revoked access or current account/session ineligibility |
+| 422 | `{"detail":"Invalid password-change request."}` | Missing/extra fields, wrong types, or length violation |
+| 500 | `{"detail":"Authentication is temporarily unavailable."}` | Database failure; transaction rolled back |
+
+The service locks the acting account, rechecks access/family eligibility after waiting, verifies the current Argon2id hash, writes a new Argon2id hash, and revokes all refresh families in one transaction. Login rechecks its previously verified hash under the same account lock before session creation; rotation also uses that lock. A pre-change credential cannot leave an active session after the change. Other accounts, email/flags/role, and profile fields are untouched. Responses and logs do not expose passwords, hashes, or credentials.
+
+The protected /account/password screen has current/new/confirmation inputs; confirmation is client-only. Confirmed 204 clears password inputs and in-memory authentication and explains that all sessions were revoked before returning to sign-in. Wrong-current/network/server failures preserve an honest retry state and make no success claim; access failures hide protected content. Forgotten-password recovery is not implemented by this endpoint.

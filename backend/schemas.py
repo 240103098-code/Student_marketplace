@@ -62,3 +62,10 @@ class RegistrationResponse(BaseModel):
     id: int
     email: str
     verified: bool
+
+
+class ChangePasswordRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", hide_input_in_errors=True)
+
+    current_password: SecretStr = Field(strict=True, min_length=12, max_length=128)
+    new_password: SecretStr = Field(strict=True, min_length=12, max_length=128)

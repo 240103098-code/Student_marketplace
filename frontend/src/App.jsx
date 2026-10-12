@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AuthProvider, useAuth } from './Auth.jsx';
+import { PasswordForm } from './PasswordForm.jsx';
 import { LoginForm } from './LoginForm.jsx';
 import { RegistrationForm, VerificationForm } from './AccountForms.jsx';
 
@@ -26,8 +27,9 @@ const views = {
   },
 };
 
-const protectedPaths = ['/marketplace', '/profile', '/my-listings'];
+const protectedPaths = ['/marketplace', '/profile', '/my-listings', '/account/password'];
 export function safeReturnPath(path) { return protectedPaths.includes(path) ? path : '/marketplace'; }
+views['/account/password'] = { title: 'Change password', description: 'Confirm your current password to set a new one. This signs out every session for your account.' };
 views['/profile'] = { title: 'Profile', description: 'Your profile tools are being prepared.' };
 views['/my-listings'] = { title: 'My Listings', description: 'Your listing tools are being prepared.' };
 
@@ -111,6 +113,7 @@ function AppShell() {
             {auth.status === 'authenticated' && <>
               <a href="/profile" onClick={navigate}>Profile</a>
               <a href="/my-listings" onClick={navigate}>My Listings</a>
+              <a href="/account/password" onClick={navigate}>Change password</a>
               <button className="button secondary" onClick={signOut} disabled={logoutPending}>{logoutPending ? 'Signing out...' : 'Sign out'}</button>
             </>}
           </nav>
@@ -124,6 +127,7 @@ function AppShell() {
         {logoutError && <p role="alert" className="form-feedback error">{logoutError}</p>}
         {logoutPending && <p role="status">Confirming sign-out...</p>}
         {guarded && <p role="status">Checking your session...</p>}
+        {path === '/account/password' && !guarded && <PasswordForm onChanged={() => goTo('/login')} />}
         {path === '/login' && <LoginForm navigate={navigate} onSignedIn={() => goTo(safeReturnPath(returnPath))} />}
         {path === '/register' && <RegistrationForm navigate={navigate} onRegistered={(email, deadline) => {
           setVerification(previous => ({ email, cooldowns: { ...previous.cooldowns, [email]: deadline } }));

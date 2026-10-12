@@ -68,10 +68,10 @@ def revoke_user_sessions(session, user_id, now):
         RefreshSession.revoked_at.is_(None)).values(revoked_at=now))
 
 
-def new_login_session(database, user_id, settings, *, clock):
+def new_login_session(database, user_id, settings, *, clock, verified_password_hash):
     with database.session() as session:
         user = session.scalar(select(User).where(User.id == user_id).with_for_update())
-        if user is None or not user.verified or user.suspended:
+        if user is None or not user.verified or user.suspended or not hmac.compare_digest(user.password_hash, verified_password_hash):
             raise AuthenticationError("Invalid credentials or account unavailable")
         now = clock()
         raw = secrets.token_urlsafe(48)
