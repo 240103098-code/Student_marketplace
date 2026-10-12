@@ -108,7 +108,7 @@ After login or a page reload, credentialed GET /auth/csrf reads the cookie and r
 
 POST /auth/refresh and /auth/logout require an exact configured Origin and X-CSRF-Token. Known session cookies require a constant-time family-bound match before any state change; missing/disallowed Origin or missing/malformed/mismatched CSRF returns 403 `{"detail":"Request origin or CSRF token is invalid."}`. Use browser credentials:include for cookie-bearing requests. Login rejects a supplied disallowed Origin while API clients may omit Origin on password login.
 
-Credentialed CORS allows only FRONTEND_ORIGINS, GET/POST, and Authorization/Content-Type/X-CSRF-Token; it exposes Retry-After and never uses a wildcard origin. Use the same hostname for local frontend and API so SameSite=Lax works: for the default origin, open frontend at http://localhost:5173 and API at http://localhost:8000. Alternatively configure http://127.0.0.1:5173 and use 127.0.0.1 consistently. Both services bind loopback.
+Credentialed CORS allows only FRONTEND_ORIGINS, GET/POST/PATCH, and Authorization/Content-Type/X-CSRF-Token; it exposes Retry-After and never uses a wildcard origin. Use the same hostname for local frontend and API so SameSite=Lax works: for the default origin, open frontend at http://localhost:5173 and API at http://localhost:8000. Alternatively configure http://127.0.0.1:5173 and use 127.0.0.1 consistently. Both services bind loopback.
 
 ## POST /auth/refresh
 
@@ -166,3 +166,14 @@ Wrong well-formed attempts against the current usable reset code commit even whe
 Success returns 204 with matching refresh-cookie deletion and no JWT/automatic login. Old passwords and previous access/refresh credentials fail immediately; the new password signs in normally. Plaintext reset codes, passwords, hashes and tokens are never returned or logged.
 
 The public /forgot-password and /reset-password forms are reachable from sign-in. The first gives generic eligible-address feedback and a sixty-second cooldown; only email/cooldown remain in React memory across navigation. Direct reset allows email re-entry. Code/password/confirmation stay in form memory, and only email/code/new_password are submitted. Confirmed success clears secrets/auth state and returns to sign-in with all-session revocation guidance. Failures give safe recovery guidance without revealing status or claiming success. Mutations are never automatically replayed.
+
+
+## Own-profile endpoints: GET /users/me and PATCH /users/me
+
+Both endpoints use the existing current verified, unsuspended, session-bound Bearer guard; cookie possession alone is insufficient. No caller-supplied identifier selects an account. GET returns exactly id, email, verified, name, phone, telegram_username, and external_contact_url. Existing unset personal/contact fields are null, without fabricated defaults. /auth/me retains its original id/email/verified-only contract. Avatar paths and all security fields are excluded.
+
+PATCH accepts a nonempty object containing only name, phone, telegram_username, and external_contact_url. Omitted fields remain unchanged; explicit contact null clears that field. Supplied name cannot be null: it is trimmed, nonblank, and 1–100 characters. Phone is `+` followed by 7–15 ASCII digits; Telegram username is 5–32 ASCII letters/digits/underscores. Blank non-null contact strings and wrong types are invalid. External contact URL is at most 2048 characters, HTTPS with a syntactically valid DNS/IP hostname and valid optional port, no credentials, whitespace or control characters. Unsafe schemes are rejected.
+
+Profile editing can leave every contact empty; at least one valid contact is required only by future listing submission. Email/id/role/verified/suspended/password/hash/avatar/session fields and all other unknown keys are forbidden. No partial write occurs on invalid input. The acting account is locked/reloaded and access/family eligibility is rechecked after waiting; a stale guard cannot update an account that became ineligible or revoked. Email, eligibility, role, password, avatar, sessions, and all other accounts remain unchanged.
+
+Successful GET/PATCH returns 200 with the same public own-profile shape. Missing/expired/revoked/ineligible authentication returns the existing sanitized 401 authentication-required contract. Invalid PATCH returns 422 `{"detail":"Invalid profile request."}`; database failure returns 500 `{"detail":"Profile is temporarily unavailable."}` and rolls back the whole update. Credentialed CORS explicitly permits PATCH only for configured frontend origins. These endpoints provide backend profile support; React editing and avatar uploads belong to subsequent issues.

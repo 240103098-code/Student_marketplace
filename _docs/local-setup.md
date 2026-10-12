@@ -249,3 +249,10 @@ From /login choose **Forgot your password?**, or open /forgot-password. Use your
 Open /reset-password via the code link or directly and enter your email, six ASCII digits, and a new 12–128-character password with confirmation. Codes expire after ten minutes; five incorrect attempts require replacement. Successful reset consumes the code and changes the password while revoking all account sessions, clears form/auth state and returns to sign-in without automatically logging in. The old password/tokens no longer work. Registration codes and verification status are independent; recovery cannot activate an unverified account.
 
 All 100 backend tests passed with the isolated PostgreSQL and controlled loopback SMTP fixtures, including twelve new recovery delivery/purpose/generic-response/rollback/attempt/expiry/concurrency/session-isolation cases. All 31 frontend tests and production build passed, including four recovery-form interaction tests. No new dependencies or schema changes were required; test PostgreSQL was stopped after verification.
+
+
+## Backend own-profile support
+
+With verified session-bound Bearer access, GET /users/me reads only your basic profile and PATCH /users/me edits supplied name/contact fields. Empty patches and identity/security/avatar fields are rejected. Name is trimmed and required when supplied; optional phone/Telegram/HTTPS contact values may be cleared with null. Omitted fields are preserved, and initial unset profiles remain null. Profile editing may leave contacts empty; the contact prerequisite belongs to listing submission. See API notes for exact formats and sanitized statuses. Configured credentialed CORS permits PATCH.
+
+This issue supplies backend endpoints only; the /profile browser page remains a placeholder, and avatar uploads are not implemented. Verification passed with 109 backend tests using actual isolated PostgreSQL/controlled SMTP, including nine profile read/ownership/format/partial-update/security/rollback/stale-guard/CORS cases, plus all 31 frontend tests and production build. No frontend, dependency, or schema change was required.

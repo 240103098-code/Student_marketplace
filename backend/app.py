@@ -13,6 +13,7 @@ from backend.database import Database
 from backend.mail import SmtpSender
 from backend.email_codes import utc_now
 from backend.routers.auth import router
+from backend.routers.users import router as users_router
 from backend.sessions import CsrfError
 
 
@@ -34,7 +35,7 @@ def create_app(settings: Settings, database: Database | None = None, *, sender=N
     app.state.email_sender = SmtpSender(settings) if sender is None else sender
     app.state.clock = utc_now if clock is None else clock
     app.add_middleware(CORSMiddleware, allow_origins=settings.frontend_origins,
-        allow_credentials=True, allow_methods=["GET", "POST"],
+        allow_credentials=True, allow_methods=["GET", "POST", "PATCH"],
         allow_headers=["Authorization", "Content-Type", "X-CSRF-Token"], expose_headers=["Retry-After"])
 
     @app.exception_handler(CsrfError)
@@ -44,13 +45,14 @@ def create_app(settings: Settings, database: Database | None = None, *, sender=N
     @app.exception_handler(RequestValidationError)
     async def validation_error(request: Request, error: RequestValidationError):
         # FastAPI's default error includes raw inputs; never return those.
-        detail = {"/auth/register": "Invalid registration request.", "/auth/login": "Invalid login request.", "/auth/change-password": "Invalid password-change request.", "/auth/forgot-password": "Invalid recovery request.", "/auth/reset-password": "Invalid password-reset request."}.get(request.url.path, "Invalid verification request.")
+        detail = {"/auth/register": "Invalid registration request.", "/auth/login": "Invalid login request.", "/auth/change-password": "Invalid password-change request.", "/auth/forgot-password": "Invalid recovery request.", "/auth/reset-password": "Invalid password-reset request.", "/users/me": "Invalid profile request."}.get(request.url.path, "Invalid verification request.")
         return JSONResponse(status_code=422, content={"detail": detail})
 
     @app.exception_handler(SQLAlchemyError)
     async def database_error(request: Request, error: SQLAlchemyError):
-        detail = "Registration is temporarily unavailable." if request.url.path == "/auth/register" else "Verification is temporarily unavailable." if request.url.path in {"/auth/verify-email", "/auth/resend-verification"} else "Authentication is temporarily unavailable."
+        detail = "Registration is temporarily unavailable." if request.url.path == "/auth/register" else "Verification is temporarily unavailable." if request.url.path in {"/auth/verify-email", "/auth/resend-verification"} else "Profile is temporarily unavailable." if request.url.path == "/users/me" else "Authentication is temporarily unavailable."
         return JSONResponse(status_code=500, content={"detail": detail})
 
     app.include_router(router)
+    app.include_router(users_router)
     return app
