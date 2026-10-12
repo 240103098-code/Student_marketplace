@@ -8,7 +8,7 @@ Commands
 - `.venv/Scripts/python.exe -m alembic upgrade head` / `downgrade base` - apply/revert migrations. Current head creates account/code/refresh tables; use downgrades only on disposable data.
 - From `frontend`, `npm ci`, `npm run test -- --run`, and `npm run build` install/test/build the React preview shell; `npm run dev` serves it at http://127.0.0.1:5173/ (Ctrl+C to stop).
 - Frontend verification uses Node 24.19.0 and npm 12.2.0; see `_docs/local-setup.md` for supported versions and workspace-local npm.
-- No backend HTTP service startup command is available yet.
+- `.venv/Scripts/python.exe -m uvicorn backend.main:create_runtime_app --factory --host 127.0.0.1 --port 8000` - start the configured registration-only backend; stop with Ctrl+C. Apply migrations first.
 
 Rules
 

@@ -2,7 +2,7 @@
 
 ## Current status
 
-The Python bootstrap, typed configuration loader, PostgreSQL engine/session helpers, connection-check command, account/code/refresh-session schema, and React preview shell are ready, with automated tests. No FastAPI HTTP service, listing schema, email transport, or authentication/marketplace workflow exists yet. Importing configuration/database helpers never starts services, connects, or creates tables. Frontend routes are placeholders and make no backend requests.
+The Python bootstrap, typed configuration loader, PostgreSQL engine/session helpers, connection-check command, account/code/refresh-session schema, unverified-student registration API, and React preview shell are ready, with automated tests. The backend HTTP service currently supports registration only. No listing schema, email transport, activation, login, token issuance, or marketplace authorization exists yet. Importing configuration/database helpers never starts services, connects, or creates tables. Frontend routes are placeholders and make no backend requests.
 
 ## Current layout
 
@@ -35,7 +35,7 @@ python -m venv .venv
 .venv/Scripts/python.exe -m unittest discover -s tests -v
 ```
 
-On Linux or macOS, use `.venv/bin/python` instead of `.venv/Scripts/python.exe`. Activation is optional. The default run has twenty service-free tests and skips two PostgreSQL integration classes. Unit tests inject synthetic isolated settings and need no .env, real credentials, network, database, SMTP, or running service. Opt in to nine actual PostgreSQL tests using the preparation below.
+On Linux or macOS, use `.venv/bin/python` instead of `.venv/Scripts/python.exe`. Activation is optional. The default run has twenty-two service-free tests and skips three PostgreSQL integration classes. Unit tests inject synthetic isolated settings and need no .env, real credentials, network, database, SMTP, or running service. Opt in to sixteen actual PostgreSQL tests using the preparation below.
 
 In a restricted Windows environment whose temporary directory is not writable, first create a workspace temporary directory and direct this terminal's TEMP and TMP to it before the commands above:
 
@@ -45,9 +45,9 @@ $env:TEMP = (Resolve-Path .venv/tmp).Path
 $env:TMP = $env:TEMP
 ```
 
-The pip workflow adds pydantic-settings 2.15.0 with its six resolved configuration dependencies, plus SQLAlchemy 2.1.4, Alembic 1.20.0, and psycopg[binary] 3.3.6. Database transitive additions are psycopg-binary 3.3.6, Mako 1.4.3, MarkupSafe 3.0.4, and tzdata 2026.5. All versions are pinned in `requirements.lock`; keep the manifest and export aligned when approved dependencies change. No FastAPI, email transport, JWT, or frontend libraries are installed yet.
+The pip workflow adds pydantic-settings 2.15.0 with its six resolved configuration dependencies, plus SQLAlchemy 2.1.4, Alembic 1.20.0, and psycopg[binary] 3.3.6. Database transitive additions are psycopg-binary 3.3.6, Mako 1.4.3, MarkupSafe 3.0.4, and tzdata 2026.5. All versions are pinned in `requirements.lock`; keep the manifest and export aligned when approved dependencies change. Registration adds FastAPI 0.143.0, uvicorn 0.54.0, argon2-cffi 25.1.0, email-validator 2.3.0, and httpx 0.28.1 with their required resolved dependencies, all pinned in requirements.lock. No email transport or JWT feature library has been added.
 
-The planned complete application uses React, FastAPI, PostgreSQL, SQLAlchemy, Alembic, and JWT authentication. The current React shell is described below; the FastAPI HTTP service and authentication remain future work.
+The planned complete application uses React, FastAPI, PostgreSQL, SQLAlchemy, Alembic, and JWT authentication. The current React shell is described below; activation, login, and authenticated marketplace access remain future work.
 
 ## Local configuration
 
@@ -70,7 +70,21 @@ SMTP is optional during early setup. Before enabling email delivery, call `setti
 - [Task 8](https://github.com/240103098-code/Student_marketplace/issues/8) configures real verification-email delivery.
 - [Task 40](https://github.com/240103098-code/Student_marketplace/issues/40) verifies and documents the complete local MVP demonstration.
 
-Backend HTTP service startup commands are not available yet. Keep passwords, SMTP credentials, JWT secrets, local .env files, uploads, and credential files out of Git. The configuration contract is implemented above; the decision baseline is recorded in [the plan](plan.md).
+The registration-only backend startup command is documented below. Keep passwords, SMTP credentials, JWT secrets, local .env files, uploads, and credential files out of Git. The configuration contract is implemented above; the decision baseline is recorded in [the plan](plan.md).
+
+## Registration-only backend service
+
+After configuring ignored runtime settings and starting your PostgreSQL database, apply `.venv/Scripts/python.exe -m alembic upgrade head`. Then run this tested command from the repository root:
+
+```powershell
+.venv/Scripts/python.exe -m uvicorn backend.main:create_runtime_app --factory --host 127.0.0.1 --port 8000
+```
+
+Open `http://127.0.0.1:8000/docs` or `/openapi.json`; stop with Ctrl+C. Startup was verified on loopback with Python 3.13.15, FastAPI 0.143.0, and uvicorn 0.54.0. The explicit runtime factory loads validated settings, creates lazy database infrastructure, and disposes owned resources on normal shutdown. Injected borrowed infrastructure remains its caller's responsibility.
+
+POST /auth/register validates strict email/password JSON fields and persists an unverified, unsuspended student with an Argon2id password hash. See [the API contract](api.md) for exact normalization, limits, responses, and safe errors. Registration does not send email, generate codes, activate the account, or issue tokens. Frontend forms and API integration remain future work.
+
+The seven PostgreSQL API tests cover hash verification/mismatch, normalization, duplicate/concurrent uniqueness, rollback, domain/lookalike rejection, password boundaries without trimming/coercion, malformed/missing/extra inputs, and safe errors/logs. They use the same confirmed disposable database safeguards, migrate their schema, clean test records, and downgrade to baseline after completion. Dependency consistency and frontend regressions passed.
 
 ## React preview shell
 
@@ -134,7 +148,7 @@ The check returns a nonzero exit code and a sanitized message on connection fail
 
 `email_codes` stores only a digest, registration or password_reset purpose, user FK, timezone-aware creation/expiry, zero-to-five wrong attempts, and nullable consumption/invalidation timestamps. Its composite user/purpose index supports purpose-specific lookup. `refresh_sessions` stores only a unique token digest, user FK, UUID family, timezone-aware creation/expiry/revocation, and nullable unique predecessor/successor IDs. Its user/family index supports revocation queries; digest uniqueness supplies lookup indexing. UUID defaults use PostgreSQL's built-in gen_random_uuid().
 
-Deleting a user cascades to their codes and sessions. Session lineage FKs use SET NULL on deletion, so no dangling predecessor/successor references remain. Family matching and rotation/reuse/revocation behavior are later service responsibilities; this task provides their representation only. Expired, revoked, consumed, and invalidated records remain representable. Repr methods omit password hashes and digests. No plaintext password/code/token fields, HTTP endpoints, login, verification, or refresh flow have been implemented.
+Deleting a user cascades to their codes and sessions. Session lineage FKs use SET NULL on deletion, so no dangling predecessor/successor references remain. Family matching and rotation/reuse/revocation behavior are later service responsibilities; this task provides their representation only. Expired, revoked, consumed, and invalidated records remain representable. Repr methods omit password hashes and digests. No plaintext password/code/token fields, login, verification, or refresh flow exist; the registration endpoint stores only password hashes.
 
 Models register the shared SQLAlchemy metadata without loading configuration or connecting. The original migration is unchanged, and revision 0002 follows it. Integration tests require an initially empty confirmed disposable database, create only their account schema, clean test records, and downgrade to baseline afterward; they never reset an arbitrary application database. No new dependency was required for this schema task.
 
@@ -163,4 +177,4 @@ try {
 }
 ```
 
-For a previously prepared dedicated cluster, omit only the CREATE DATABASE line. This environment required approved execution outside the networking sandbox for loopback clients and the single start/test/stop lifecycle. All **29 backend tests passed with no skips**, including nine actual PostgreSQL checks: baseline/connection/session regression tests and six account-schema integrity/roundtrip tests. The historical baseline test targets 0001_baseline explicitly; the new schema test targets head, so both migration contracts remain covered. Frontend tests and production build also passed. The temporary server was stopped after verification. QA can repeat this exact lifecycle using the retained sibling runtime, without creating any system service.
+For a previously prepared dedicated cluster, omit only the CREATE DATABASE line. This environment required approved execution outside the networking sandbox for loopback clients and the single start/test/stop lifecycle. All **38 backend tests passed with no skips**, including sixteen actual PostgreSQL checks: baseline/connection/session regressions, six account-schema integrity/roundtrip tests, and seven registration HTTP/persistence tests. The historical baseline test targets 0001_baseline explicitly; the new schema test targets head, so both migration contracts remain covered. Frontend tests and production build also passed. The temporary server was stopped after verification. QA can repeat this exact lifecycle using the retained sibling runtime, without creating any system service.
