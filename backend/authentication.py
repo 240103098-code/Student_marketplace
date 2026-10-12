@@ -6,7 +6,7 @@ from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 
-from backend.models import User
+from backend.models import User, RefreshSession
 from backend.tokens import AccessTokenError, validate_access_token
 
 
@@ -37,11 +37,17 @@ def require_verified_user(request: Request, credentials: HTTPAuthorizationCreden
     if credentials is None:
         raise authentication_required()
     try:
-        user_id = validate_access_token(request.app.state.settings, credentials.credentials, clock=request.app.state.clock)
+        user_id, family_id = validate_access_token(request.app.state.settings, credentials.credentials, clock=request.app.state.clock)
     except AccessTokenError:
         raise authentication_required() from None
     with request.app.state.database.session() as session:
         user = session.get(User, user_id)
         if user is None or not user.verified or user.suspended:
+            raise authentication_required()
+        active = session.scalar(select(RefreshSession.id).where(
+            RefreshSession.user_id == user.id, RefreshSession.family_id == family_id,
+            RefreshSession.revoked_at.is_(None), RefreshSession.expires_at > request.app.state.clock(),
+        ).limit(1))
+        if active is None:
             raise authentication_required()
         return user

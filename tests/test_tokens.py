@@ -2,6 +2,7 @@ import base64
 from datetime import datetime, timedelta, timezone
 import json
 import unittest
+import uuid
 
 import jwt
 
@@ -14,7 +15,8 @@ class AccessTokenTest(unittest.TestCase):
         self.now = datetime(2026, 10, 12, 12, 0, tzinfo=timezone.utc)
         self.settings = load_settings(environ={"DATABASE_URL": "postgresql://test_user@localhost/test_database", "JWT_SECRET_KEY": "TEST_ONLY_MARKER_" + "x" * 40}, env_file=None)
         self.key = self.settings.jwt_secret_key.get_secret_value()
-        self.claims = {"iss": ISSUER, "aud": AUDIENCE, "sub": "123", "type": "access", "iat": int(self.now.timestamp()), "exp": int(self.now.timestamp()) + 900, "jti": "a" * 32}
+        self.family = uuid.UUID(hex="b" * 32)
+        self.claims = {"iss": ISSUER, "aud": AUDIENCE, "sub": "123", "type": "access", "iat": int(self.now.timestamp()), "exp": int(self.now.timestamp()) + 900, "jti": "a" * 32, "sid": self.family.hex}
 
     def validate(self, token):
         return validate_access_token(self.settings, token, clock=lambda: self.now)
@@ -23,15 +25,15 @@ class AccessTokenTest(unittest.TestCase):
         return jwt.encode(self.claims if claims is None else claims, self.key, algorithm=kwargs.pop("algorithm", "HS256"), **kwargs)
 
     def test_issued_claims_and_exact_expiry_boundary(self):
-        token = issue_access_token(self.settings, 123, clock=lambda: self.now)
+        token = issue_access_token(self.settings, 123, self.family, clock=lambda: self.now)
         claims = jwt.decode(token, options={"verify_signature": False})
         self.assertEqual(set(claims), set(self.claims))
         self.assertEqual(claims["exp"] - claims["iat"], 900)
         self.assertEqual(claims["iss"], ISSUER)
         self.assertEqual(claims["aud"], AUDIENCE)
-        self.assertEqual(self.validate(token), 123)
+        self.assertEqual(self.validate(token), (123, self.family))
         self.now += timedelta(seconds=900) - timedelta(microseconds=1)
-        self.assertEqual(self.validate(token), 123)
+        self.assertEqual(self.validate(token), (123, self.family))
         self.now += timedelta(microseconds=1)
         with self.assertRaises(AccessTokenError):
             self.validate(token)
@@ -59,7 +61,7 @@ class AccessTokenTest(unittest.TestCase):
             {"type": "refresh"}, {"sub": 123}, {"sub": "-1"}, {"sub": "0"},
             {"sub": "001"}, {"sub": "1.5"}, {"sub": str(2**63)}, {"sub": "１２３"},
             {"iat": True}, {"exp": "99999999999"}, {"jti": ""}, {"jti": 1},
-            {"password": "SENSITIVE_CLAIM_MARKER"}, {"exp": self.claims["exp"] + 3600}]
+            {"password": "SENSITIVE_CLAIM_MARKER"}, {"exp": self.claims["exp"] + 3600}, {"sid": ""}, {"sid": 1}]
         for index, mutation in enumerate(mutations):
             with self.subTest(case=index), self.assertRaises(AccessTokenError):
                 self.validate(self.encoded(self.claims | mutation))

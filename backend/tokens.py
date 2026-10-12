@@ -10,19 +10,20 @@ from backend.email_codes import utc_now
 
 ISSUER = "student-marketplace"
 AUDIENCE = "student-marketplace-students"
-REQUIRED_CLAIMS = {"iss", "aud", "sub", "type", "iat", "exp", "jti"}
+REQUIRED_CLAIMS = {"iss", "aud", "sub", "type", "iat", "exp", "jti", "sid"}
 
 
 class AccessTokenError(Exception):
     pass
 
 
-def issue_access_token(settings, user_id, *, clock=utc_now):
+def issue_access_token(settings, user_id, family_id, *, clock=utc_now):
     issued_at = int(clock().timestamp())
     duration = settings.jwt_access_minutes * 60
     claims = {
         "iss": ISSUER, "aud": AUDIENCE, "sub": str(user_id), "type": "access",
         "iat": issued_at, "exp": issued_at + duration, "jti": uuid.uuid4().hex,
+        "sid": family_id.hex,
     }
     return jwt.encode(claims, settings.jwt_secret_key.get_secret_value(), algorithm="HS256")
 
@@ -56,6 +57,8 @@ def validate_access_token(settings, token, *, clock=utc_now):
             raise AccessTokenError()
         if not isinstance(claims["jti"], str) or not re.fullmatch(r"[0-9a-f]{32}", claims["jti"]):
             raise AccessTokenError()
-        return user_id
+        if not isinstance(claims["sid"], str) or not re.fullmatch(r"[0-9a-f]{32}", claims["sid"]):
+            raise AccessTokenError()
+        return user_id, uuid.UUID(hex=claims["sid"])
     except (jwt.InvalidTokenError, ValueError, TypeError, OverflowError, AccessTokenError):
         raise AccessTokenError("Access token is invalid or expired") from None

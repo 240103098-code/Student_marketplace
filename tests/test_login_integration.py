@@ -53,7 +53,7 @@ class LoginPostgreSQLTest(unittest.TestCase):
     def login(self, email="student@sdu.edu.kz", password=PASSWORD):
         return self.client.post("/auth/login", json={"email": email, "password": password})
 
-    def test_login_claims_guard_and_access_only_state(self):
+    def test_login_claims_guard_and_session_bound_state(self):
         user = self.user()
         response = self.login(" STUDENT@SDU.EDU.KZ ")
         self.assertEqual(response.status_code, 200)
@@ -61,17 +61,17 @@ class LoginPostgreSQLTest(unittest.TestCase):
         self.assertEqual(set(body), {"access_token", "token_type", "expires_in"})
         self.assertEqual(body["token_type"], "bearer")
         self.assertEqual(body["expires_in"], 900)
-        self.assertNotIn("set-cookie", response.headers)
+        self.assertIn("set-cookie", response.headers)
         claims = jwt.decode(body["access_token"], options={"verify_signature": False})
-        self.assertEqual(set(claims), {"iss", "aud", "sub", "type", "iat", "exp", "jti"})
+        self.assertEqual(set(claims), {"iss", "aud", "sub", "type", "iat", "exp", "jti", "sid"})
         self.assertEqual((claims["iss"], claims["aud"], claims["sub"], claims["type"]), (ISSUER, AUDIENCE, str(user.id), "access"))
         self.assertEqual(claims["exp"] - claims["iat"], 900)
         protected = self.client.get("/auth/me", headers={"Authorization": "Bearer " + body["access_token"]})
         self.assertEqual(protected.status_code, 200)
         self.assertEqual(protected.json(), {"id": user.id, "email": "student@sdu.edu.kz", "verified": True})
         with self.database.session() as session:
-            for model in (EmailCode, RefreshSession):
-                self.assertEqual(session.scalar(select(func.count()).select_from(model)), 0)
+            self.assertEqual(session.scalar(select(func.count()).select_from(EmailCode)), 0)
+            self.assertEqual(session.scalar(select(func.count()).select_from(RefreshSession)), 1)
         self.sender.send_code.assert_not_called()
 
     def test_unknown_wrong_unverified_and_suspended_share_safe_rejection(self):

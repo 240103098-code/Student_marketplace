@@ -1,7 +1,7 @@
 
 # Backend API
 
-Current capability: registration of an unverified student plus configured SMTP verification-code delivery. One-time verification and cooldown-limited resend are implemented below. Verified-user login, access JWTs, and the database-backed /auth/me guard are available below; refresh sessions and marketplace endpoints remain future work. The React preview does not call this API.
+Current capability: registration of an unverified student plus configured SMTP verification-code delivery. One-time verification and cooldown-limited resend are implemented below. Verified-user login, access JWTs, and the database-backed /auth/me guard are available below; secure refresh rotation/logout are available below; marketplace endpoints remain future work. The React preview does not call this API.
 
 ## POST /auth/register
 
@@ -65,7 +65,7 @@ Local verification used actual SMTP protocol/MIME on an isolated loopback fixtur
 
 Accept exactly `email` and `password`, using the same strict normalized university-email and untrimmed 12–128-character SecretStr password contract as registration. Unknown fields (including caller-supplied duration/claims), missing fields, wrong types, and malformed input return 422 `{"detail":"Invalid login request."}`. Argon2 verifies the stored password hash.
 
-Unknown email, incorrect password, unverified account, and suspended account all return 401 `{"detail":"Invalid credentials or account unavailable."}` with `WWW-Authenticate: Bearer`. A successful eligible login returns 200 with only access_token, token_type=bearer, and expires_in=900 by default (JWT_ACCESS_MINUTES times sixty). No refresh record, cookie, verification code, or email is created. The response token is sensitive: do not print or log it; future browser handling keeps it in memory.
+Unknown email, incorrect password, unverified account, and suspended account all return 401 `{"detail":"Invalid credentials or account unavailable."}` with `WWW-Authenticate: Bearer`. A successful eligible login returns 200 with only access_token, token_type=bearer, and expires_in=900 by default (JWT_ACCESS_MINUTES times sixty). A digest-only refresh session and secure cookie are also created as described below; no verification code or email is sent. The response token is sensitive: do not print or log it; future browser handling keeps it in memory.
 
 The access JWT uses only HS256 with the configured JWT_SECRET_KEY and these exact required claims:
 
@@ -78,13 +78,40 @@ The access JWT uses only HS256 with the configured JWT_SECRET_KEY and these exac
 | iat | Issuance time, integer UTC seconds |
 | exp | iat plus configured access minutes times sixty |
 | jti | Random UUID hex identifier |
+| sid | Session-family UUID hex identifier |
 
 Tokens contain no email, password/hash, code, profile/contact data, role, or eligibility flags. Validation uses an explicit HS256 allowlist, required issuer/audience/claims, strict canonical claim types and subject/id bounds, and the same configured duration. It rejects extra claims, malformed/incorrect signatures or algorithms, missing claims, wrong issuer/audience/purpose, expiry at its exact boundary, and future issued-at time. Signature/issuer/audience validation stays in PyJWT; explicit UTC-clock time checks allow deterministic tests without bypassing those checks.
 
 ## GET /auth/me
 
-Send `Authorization: Bearer <access token>`; no cookie authentication is available yet. The shared require_verified_user dependency validates the token and reloads current account state from PostgreSQL on every request. Deleted/missing, unverified, or suspended accounts are rejected even while a signed token is unexpired. Success returns only id, normalized email, and verified=true; no profile editing or listing data is implemented here.
+Send `Authorization: Bearer <access token>`; access authorization uses Bearer; refresh/logout use their protected cookie contract below. The shared require_verified_user dependency validates the token and reloads current account and active session-family state from PostgreSQL on every request. Deleted/missing, unverified, or suspended accounts are rejected even while a signed token is unexpired. Success returns only id, normalized email, and verified=true; no profile editing or listing data is implemented here.
 
 Missing/malformed Bearer credentials, invalid/expired tokens, and current ineligibility return 401 `{"detail":"Authentication required."}` with `WWW-Authenticate: Bearer`. Unexpected database errors on login/me return generic 500 `{"detail":"Authentication is temporarily unavailable."}`. Error responses and application logs do not echo credentials, tokens, raw validation input, or driver details.
 
-Current authentication is access-only: refresh rotation/cookies/logout/session-based revocation are the next task. Account suspension, unverification, and deletion already take effect through the database-backed guard. React login/protected navigation and full profile workflows remain future work.
+Current access tokens are session-family bound. Old access-only tokens lacking sid no longer authorize requests. Account suspension, unverification, deletion, family revocation, and fixed family expiry take effect through the database-backed guard. React login/protected navigation and full profile workflows remain future work.
+
+## Refresh cookie, CSRF bootstrap, and CORS
+
+Login creates a random opaque refresh credential, stores only its digest, and sets the host-only `refresh_token` cookie with Path=/auth, HttpOnly, SameSite=Lax, and Secure in production. Development/test may use the documented non-Secure local HTTP exception. Refresh credentials are never JSON fields or logged/stored plaintext. The family's expiry is seven days from login (REFRESH_SESSION_DAYS); rotation preserves it.
+
+Access JWTs now require sid, a UUID-family hex identifier, in addition to all previously required claims. The guard reloads both current account eligibility and an active, unexpired session in that user's family. Valid within-family access survives rotation, but logout/replay/family expiry denies even an unexpired access JWT. No profile/credential data is added to claims.
+
+After login or a page reload, credentialed GET /auth/csrf reads the cookie and returns only `{"csrf_token":"<session-bound HMAC>"}` with Cache-Control:no-store. This helper is read-only: it never rotates, creates, extends, or revokes a session. Missing/invalid/revoked/expired/ineligible cookie state receives safe 401. A supplied disallowed Origin receives safe 403. The CSRF value is bound to user and family; it remains stable across rotation within that family.
+
+POST /auth/refresh and /auth/logout require an exact configured Origin and X-CSRF-Token. Known session cookies require a constant-time family-bound match before any state change; missing/disallowed Origin or missing/malformed/mismatched CSRF returns 403 `{"detail":"Request origin or CSRF token is invalid."}`. Use browser credentials:include for cookie-bearing requests. Login rejects a supplied disallowed Origin while API clients may omit Origin on password login.
+
+Credentialed CORS allows only FRONTEND_ORIGINS, GET/POST, and Authorization/Content-Type/X-CSRF-Token; it exposes Retry-After and never uses a wildcard origin. Use the same hostname for local frontend and API so SameSite=Lax works: for the default origin, open frontend at http://localhost:5173 and API at http://localhost:8000. Alternatively configure http://127.0.0.1:5173 and use 127.0.0.1 consistently. Both services bind loopback.
+
+## POST /auth/refresh
+
+The refresh credential is read only from the cookie, never a JSON token field. With valid Origin/CSRF and eligible active session state, return the same access_token/token_type/expires_in JSON contract as login and set a replacement cookie. The predecessor is revoked and linked to its successor in one transaction; the successor preserves the family and original expiry. Account row locks serialize rotation, with refreshed row state after waiting.
+
+Consumed-predecessor reuse revokes the whole user-scoped family and commits before returning 401 `{"detail":"Authentication required."}`. Concurrent use produces at most one successful rotation; the replay request then revokes that family, including the winner. Revoked, expired, malformed, unknown, or missing refresh cookies never create a session. Unexpected database failures return the existing generic authentication 500 contract. Responses/errors/logs contain no refresh credential or digest.
+
+## POST /auth/logout
+
+With valid Origin and CSRF, revoke only the presented cookie's user-scoped family and return 204. Clear the cookie with matching name, host-only domain behavior, path, HttpOnly/SameSite/Secure attributes. Repeated, expired, or already-revoked known cookies remain idempotent with their family-bound CSRF.
+
+Absent, malformed, or unknown cookies identify no family and cause no database mutation; for this state-free idempotent case an allowed Origin and well-formed CSRF header are still required, but there is no known session to bind against. Clear the cookie and return 204 without affecting any other user's/family's state. Missing/invalid Origin or CSRF shape still returns 403.
+
+User-wide transactional revocation is exposed for later password/reset/deletion/admin workflows; those endpoints remain out of scope here. No schema/dependency change was needed for rotation/logout. Prior access-only tests/contracts were migrated to require sid, one login session, and the secure refresh cookie while retaining signature/claim/eligibility checks.
