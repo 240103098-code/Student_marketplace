@@ -2,7 +2,7 @@
 
 ## Current status
 
-The Python bootstrap, typed configuration loader, PostgreSQL engine/session helpers, connection-check command, and empty Alembic baseline are ready, with automated tests. No FastAPI or frontend service, account/listing schema, email transport, or marketplace feature exists yet. Importing configuration/database helpers never starts services, connects, or creates tables.
+The Python bootstrap, typed configuration loader, PostgreSQL engine/session helpers, connection-check command, empty Alembic baseline, and React preview shell are ready, with automated tests. No FastAPI HTTP service, account/listing schema, email transport, or marketplace feature exists yet. Importing configuration/database helpers never starts services, connects, or creates tables. Frontend routes are placeholders and make no backend requests.
 
 ## Current layout
 
@@ -12,6 +12,7 @@ The Python bootstrap, typed configuration loader, PostgreSQL engine/session help
 - `backend/config.py` and `tests/test_config.py`: explicit settings loading and isolated configuration tests.
 - `backend/database.py`, `alembic.ini`, and `migrations/`: PostgreSQL infrastructure and the empty baseline revision.
 - `tests/test_database.py` and `tests/test_database_integration.py`: unit checks and opt-in actual PostgreSQL integration tests.
+- `frontend/`: React/Vite preview shell, two component tests, and a resolved npm lockfile.
 - `.env.example`: supported configuration names, formats, defaults, and placeholders.
 - `README.md`: project overview and links.
 - `AGENTS.md`: contribution rules and document references.
@@ -45,7 +46,7 @@ $env:TMP = $env:TEMP
 
 The pip workflow adds pydantic-settings 2.15.0 with its six resolved configuration dependencies, plus SQLAlchemy 2.1.4, Alembic 1.20.0, and psycopg[binary] 3.3.6. Database transitive additions are psycopg-binary 3.3.6, Mako 1.4.3, MarkupSafe 3.0.4, and tzdata 2026.5. All versions are pinned in `requirements.lock`; keep the manifest and export aligned when approved dependencies change. No FastAPI, email transport, JWT, or frontend libraries are installed yet.
 
-The future application uses React, FastAPI, PostgreSQL, SQLAlchemy, Alembic, and JWT authentication. Node.js and npm installation requirements will be documented when the React task establishes them.
+The planned complete application uses React, FastAPI, PostgreSQL, SQLAlchemy, Alembic, and JWT authentication. The current React shell is described below; the FastAPI HTTP service and authentication remain future work.
 
 ## Local configuration
 
@@ -68,7 +69,45 @@ SMTP is optional during early setup. Before enabling email delivery, call `setti
 - [Task 8](https://github.com/240103098-code/Student_marketplace/issues/8) configures real verification-email delivery.
 - [Task 40](https://github.com/240103098-code/Student_marketplace/issues/40) verifies and documents the complete local MVP demonstration.
 
-Application service startup commands are not available yet. Keep passwords, SMTP credentials, JWT secrets, local .env files, uploads, and credential files out of Git. The configuration contract is implemented above; the decision baseline is recorded in [the plan](plan.md).
+Backend HTTP service startup commands are not available yet. Keep passwords, SMTP credentials, JWT secrets, local .env files, uploads, and credential files out of Git. The configuration contract is implemented above; the decision baseline is recorded in [the plan](plan.md).
+
+## React preview shell
+
+Supported Node versions match `frontend/package.json`: 22.22.2+ on the 22.x line, 24.15.0+ on the 24.x line, or 26+. Verification used the available **Node 24.19.0** and **npm 12.2.0**. Use npm 12.2.0 or newer with a compatible Node version. No global tooling configuration was changed.
+
+From `frontend`, these clean installation, noninteractive test, and production-build commands passed:
+
+```powershell
+npm ci
+npm run test -- --run
+npm run build
+npm run dev
+```
+
+Open `http://127.0.0.1:5173/` and stop the development server with Ctrl+C. It binds only to loopback with a strict port; an occupied 5173 reports an error rather than changing the URL. Known routes `/`, `/login`, `/register`, `/verify`, and `/marketplace` support direct opening/reload through Vite's SPA fallback; other routes display Page not found.
+
+Navigation uses ordinary links with client-side history, a shared header/main landmark, skip link, visible focus styles, and a wrapping mobile layout. The preview collects no passwords or codes, fabricates no listings or seller data, and simulates no authentication. Verified-only authorization remains future work; a visible marketplace link grants no access to real content.
+
+Direct dependencies are React/React DOM 19.3.0. Development dependencies are Vite 8.3.4, Vitest 5.0.4, Testing Library React 16.3.3, and jsdom 30.1.2. No routing, backend client, UI framework, or state library is added. `package-lock.json` pins the resolved dependency graph; `node_modules` and `dist` remain ignored. Two focused tests follow user-visible links and verify destination/not-found headings; the production build writes `frontend/dist`.
+
+npm was not available on PATH in the verification environment. Its official package was obtained from [the npm registry](https://registry.npmjs.org/npm/12.2.0), extracted to sibling `../npm-runtime/package`, outside this repository. To repeat that workspace-local setup without global installation, run from the repository root:
+
+```powershell
+New-Item -ItemType Directory -Force ../npm-runtime | Out-Null
+Invoke-WebRequest https://registry.npmjs.org/npm/-/npm-12.2.0.tgz -OutFile ../npm-runtime/npm.tgz
+tar -xzf ../npm-runtime/npm.tgz -C ../npm-runtime
+```
+
+Then, from `frontend`, replace the commands above with their tested local equivalents:
+
+```powershell
+node ../../npm-runtime/package/bin/npm-cli.js ci --cache ../../npm-runtime/cache --no-fund --no-audit
+node ../../npm-runtime/package/bin/npm-cli.js run test -- --run
+node ../../npm-runtime/package/bin/npm-cli.js run build
+node ../../npm-runtime/package/bin/npm-cli.js run dev
+```
+
+Dependency retrieval and local server connections required approved execution outside this environment's networking sandbox. Backend files and schemas were unchanged; the eighteen backend service-free tests passed, while the actual PostgreSQL integration class is opt-in and remains separately documented below.
 
 ## PostgreSQL connection and migrations
 
