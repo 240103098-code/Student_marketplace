@@ -1,22 +1,24 @@
-"""Persist a new unverified student; activation and email are later workflows."""
+"""Persist an unverified student and send their purpose-scoped verification code."""
 
 from argon2 import PasswordHasher, Type
 from sqlalchemy.exc import IntegrityError
 
 from backend.models import User
+from backend.email_codes import issue_email_code
 
 
 class DuplicateEmailError(Exception):
     pass
 
 
-def register_student(database, email, password):
+def register_student(database, email, password, settings, sender):
     password_hash = PasswordHasher(type=Type.ID).hash(password)
     try:
         with database.session() as session:
             user = User(email=email, password_hash=password_hash)
             session.add(user)
             session.flush()
+            issue_email_code(session, user, "registration", settings, sender)
         return user
     except IntegrityError as error:
         details = getattr(error.orig, "diag", None)

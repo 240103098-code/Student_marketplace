@@ -2,7 +2,7 @@
 
 ## Current status
 
-The Python bootstrap, typed configuration loader, PostgreSQL engine/session helpers, connection-check command, account/code/refresh-session schema, unverified-student registration API, and React preview shell are ready, with automated tests. The backend HTTP service currently supports registration only. No listing schema, email transport, activation, login, token issuance, or marketplace authorization exists yet. Importing configuration/database helpers never starts services, connects, or creates tables. Frontend routes are placeholders and make no backend requests.
+The Python bootstrap, typed configuration loader, PostgreSQL engine/session helpers, connection-check command, account/code/refresh-session schema, registration API with configured SMTP verification-code delivery, and React preview shell are ready, with automated tests. The backend HTTP service currently supports registration only. No listing schema, activation, login, token issuance, or marketplace authorization exists yet. Live internet inbox delivery remains unverified. Importing configuration/database helpers never starts services, connects, or creates tables. Frontend routes are placeholders and make no backend requests.
 
 ## Current layout
 
@@ -35,7 +35,7 @@ python -m venv .venv
 .venv/Scripts/python.exe -m unittest discover -s tests -v
 ```
 
-On Linux or macOS, use `.venv/bin/python` instead of `.venv/Scripts/python.exe`. Activation is optional. The default run has twenty-two service-free tests and skips three PostgreSQL integration classes. Unit tests inject synthetic isolated settings and need no .env, real credentials, network, database, SMTP, or running service. Opt in to sixteen actual PostgreSQL tests using the preparation below.
+On Linux or macOS, use `.venv/bin/python` instead of `.venv/Scripts/python.exe`. Activation is optional. The default run has twenty-six service-free tests and skips four PostgreSQL integration classes. Unit tests inject synthetic isolated settings and need no .env, real credentials, network, database, SMTP, or running service. Opt in to twenty-one PostgreSQL/loopback-SMTP integration cases using the preparation below.
 
 In a restricted Windows environment whose temporary directory is not writable, first create a workspace temporary directory and direct this terminal's TEMP and TMP to it before the commands above:
 
@@ -45,7 +45,7 @@ $env:TEMP = (Resolve-Path .venv/tmp).Path
 $env:TMP = $env:TEMP
 ```
 
-The pip workflow adds pydantic-settings 2.15.0 with its six resolved configuration dependencies, plus SQLAlchemy 2.1.4, Alembic 1.20.0, and psycopg[binary] 3.3.6. Database transitive additions are psycopg-binary 3.3.6, Mako 1.4.3, MarkupSafe 3.0.4, and tzdata 2026.5. All versions are pinned in `requirements.lock`; keep the manifest and export aligned when approved dependencies change. Registration adds FastAPI 0.143.0, uvicorn 0.54.0, argon2-cffi 25.1.0, email-validator 2.3.0, and httpx 0.28.1 with their required resolved dependencies, all pinned in requirements.lock. No email transport or JWT feature library has been added.
+The pip workflow adds pydantic-settings 2.15.0 with its six resolved configuration dependencies, plus SQLAlchemy 2.1.4, Alembic 1.20.0, and psycopg[binary] 3.3.6. Database transitive additions are psycopg-binary 3.3.6, Mako 1.4.3, MarkupSafe 3.0.4, and tzdata 2026.5. All versions are pinned in `requirements.lock`; keep the manifest and export aligned when approved dependencies change. Registration adds FastAPI 0.143.0, uvicorn 0.54.0, argon2-cffi 25.1.0, email-validator 2.3.0, and httpx 0.28.1 with their required resolved dependencies, all pinned in requirements.lock. SMTP delivery uses only the standard library; this task adds no dependencies. No JWT feature library has been added.
 
 The planned complete application uses React, FastAPI, PostgreSQL, SQLAlchemy, Alembic, and JWT authentication. The current React shell is described below; activation, login, and authenticated marketplace access remain future work.
 
@@ -59,7 +59,7 @@ The complete setting contract is documented beside each name in `.env.example`: 
 
 Production requires HTTPS frontend origins and a Secure refresh cookie (automatically true if omitted in production). Development/test allow HTTP loopback origins and a non-Secure cookie; HttpOnly and SameSite=lax are mandatory in every mode. This task validates settings; cookie, CORS, and CSRF enforcement remain future application work.
 
-SMTP is optional during early setup. Before enabling email delivery, call `settings.validate_email_delivery()` to require host, port, username, password, and sender together. SMTP_SECURITY is starttls by default or tls; select the server's actual mode and port. This check never connects or sends mail. Real SMTP credentials and a live mail account remain external operator setup, and transport is deferred to task 8.
+SMTP is optional during early setup. Before enabling email delivery, call `settings.validate_email_delivery()` to require host, port, username, password, and sender together. SMTP_SECURITY is starttls by default or tls; select the server's actual mode and port. This check never connects or sends mail. Real SMTP credentials and a live mail account remain external operator setup. The implemented SMTP sender uses this check and verified TLS/STARTTLS before authentication, a ten-second network timeout, and cleanup on success/failure.
 
 ## Setup tasks
 
@@ -82,9 +82,19 @@ After configuring ignored runtime settings and starting your PostgreSQL database
 
 Open `http://127.0.0.1:8000/docs` or `/openapi.json`; stop with Ctrl+C. Startup was verified on loopback with Python 3.13.15, FastAPI 0.143.0, and uvicorn 0.54.0. The explicit runtime factory loads validated settings, creates lazy database infrastructure, and disposes owned resources on normal shutdown. Injected borrowed infrastructure remains its caller's responsibility.
 
-POST /auth/register validates strict email/password JSON fields and persists an unverified, unsuspended student with an Argon2id password hash. See [the API contract](api.md) for exact normalization, limits, responses, and safe errors. Registration does not send email, generate codes, activate the account, or issue tokens. Frontend forms and API integration remain future work.
+POST /auth/register validates strict email/password JSON fields and persists an unverified, unsuspended student with an Argon2id password hash. See [the API contract](api.md) for exact normalization, limits, responses, and safe errors. Registration now generates a cryptographically random six-digit code, stores only its keyed digest, and sends it by configured SMTP. Missing/incomplete settings or delivery errors return sanitized 503 and roll back the account/code transaction. Registration does not activate the account or issue tokens. Frontend forms and API integration remain future work.
 
-The seven PostgreSQL API tests cover hash verification/mismatch, normalization, duplicate/concurrent uniqueness, rollback, domain/lookalike rejection, password boundaries without trimming/coercion, malformed/missing/extra inputs, and safe errors/logs. They use the same confirmed disposable database safeguards, migrate their schema, clean test records, and downgrade to baseline after completion. Dependency consistency and frontend regressions passed.
+The seven registration regression tests use an explicitly injected test sender and cover hash verification/mismatch, normalization, duplicate/concurrent uniqueness, rollback, domain/lookalike rejection, password boundaries without trimming/coercion, malformed/missing/extra inputs, and safe errors/logs. They use the same confirmed disposable database safeguards, migrate their schema, clean test records, and downgrade to baseline after completion. Dependency consistency and frontend regressions passed.
+
+## Verification-email delivery and live check
+
+Configure all SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, and SMTP_FROM_EMAIL values in ignored runtime configuration. Use SMTP_SECURITY=starttls for explicit STARTTLS (commonly port 587), or tls for SMTP-over-TLS (commonly port 465), matching the actual server rather than assuming its ports. Production uses the default verified SSL context and never disables hostname/certificate checks or falls back to plaintext/console delivery. An explicit ASCII client hostname avoids machine-name disclosure and Unicode EHLO failures.
+
+Code issuance uses secrets.randbelow for six digits (including leading zeros), a ten-minute lifetime, and HMAC-SHA256 keyed from validated JWT_SECRET_KEY with domain-separated user/purpose binding. It persists only the digest, creation/expiry, zero attempts, and state. It locks the user's row, invalidates earlier usable same-purpose codes, and sends inside the caller transaction; failure restores the previous usable code by rollback. Verification, resend cooldown/endpoint, activation, and recovery endpoints are later work.
+
+The normal full backend test command from the disposable PostgreSQL lifecycle also runs the controlled SMTP fixture. It binds only to 127.0.0.1 on an ephemeral port and keeps received MIME messages in test memory. Its transport substitution is explicitly test-only; TLS/auth ordering and verified SSL contexts are checked separately without any production bypass. No external recipient messages were sent.
+
+**Live internet university-inbox delivery has not been verified.** Provider hostname, port, sender, credentials, and a real SMTP account remain external operator setup. For that later credential-dependent check, an operator should configure their own provider securely, start PostgreSQL/apply migrations and the backend, intentionally register their own sdu.edu.kz address through the API, and inspect their own inbox for the verification message. Do not publish the code or credentials. This operator check has not been run, and no SMTP credentials or live delivery are fabricated.
 
 ## React preview shell
 
@@ -177,4 +187,4 @@ try {
 }
 ```
 
-For a previously prepared dedicated cluster, omit only the CREATE DATABASE line. This environment required approved execution outside the networking sandbox for loopback clients and the single start/test/stop lifecycle. All **38 backend tests passed with no skips**, including sixteen actual PostgreSQL checks: baseline/connection/session regressions, six account-schema integrity/roundtrip tests, and seven registration HTTP/persistence tests. The historical baseline test targets 0001_baseline explicitly; the new schema test targets head, so both migration contracts remain covered. Frontend tests and production build also passed. The temporary server was stopped after verification. QA can repeat this exact lifecycle using the retained sibling runtime, without creating any system service.
+For a previously prepared dedicated cluster, omit only the CREATE DATABASE line. This environment required approved execution outside the networking sandbox for loopback clients and the single start/test/stop lifecycle. All **47 backend tests passed with no skips**, including twenty-one PostgreSQL/SMTP integration cases: baseline/connection/session regressions, six account-schema integrity/roundtrip tests, seven registration HTTP/persistence regressions, and five SMTP delivery/replacement/rollback cases. Four focused transport unit tests verify TLS/auth order, certificate verification, bounded timeout, cleanup, and sanitized failures. The historical baseline test targets 0001_baseline explicitly; the new schema test targets head, so both migration contracts remain covered. Frontend tests and production build also passed. The temporary server was stopped after verification. QA can repeat this exact lifecycle using the retained sibling runtime, without creating any system service.

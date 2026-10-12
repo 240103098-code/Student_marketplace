@@ -1,7 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
 import logging
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from alembic import command
 from alembic.config import Config
@@ -31,7 +31,8 @@ class RegistrationPostgreSQLTest(unittest.TestCase):
         cls.addClassCleanup(command.downgrade, cls.configuration, "0001_baseline")
 
     def setUp(self):
-        self.app = create_app(self.settings, self.database)
+        self.sender = Mock()
+        self.app = create_app(self.settings, self.database, sender=self.sender)
         self.client_context = TestClient(self.app)
         self.client = self.client_context.__enter__()
 
@@ -60,16 +61,18 @@ class RegistrationPostgreSQLTest(unittest.TestCase):
             self.assertFalse(user.verified)
             self.assertFalse(user.suspended)
             self.assertEqual(user.role, "student")
-            for model in (EmailCode, RefreshSession):
-                self.assertEqual(session.scalar(select(func.count()).select_from(model)), 0)
+            self.assertEqual(session.scalar(select(func.count()).select_from(EmailCode)), 1)
+            self.assertEqual(session.scalar(select(func.count()).select_from(RefreshSession)), 0)
             self.assertNotIn(user.password_hash, response.text)
         self.assertNotIn(PASSWORD, response.text)
+        self.sender.send_code.assert_called_once()
 
     def test_duplicate_unique_constraint_and_rollback(self):
         payload = {"email": "student@sdu.edu.kz", "password": PASSWORD}
         self.assertEqual(self.client.post("/auth/register", json=payload).status_code, 201)
         self.assertEqual(self.client.post("/auth/register", json=payload | {"email": " STUDENT@SDU.EDU.KZ "}).status_code, 409)
         self.assertEqual(self.count_users(), 1)
+        self.assertEqual(self.sender.send_code.call_count, 1)
         self.assertEqual(self.client.post("/auth/register", json=payload | {"email": "another@sdu.edu.kz"}).status_code, 201)
         self.assertEqual(self.count_users(), 2)
 

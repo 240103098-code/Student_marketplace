@@ -9,10 +9,11 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from backend.config import Settings
 from backend.database import Database
+from backend.mail import SmtpSender
 from backend.routers.auth import router
 
 
-def create_app(settings: Settings, database: Database | None = None):
+def create_app(settings: Settings, database: Database | None = None, *, sender=None):
     owns_database = database is None
     database = Database(settings) if database is None else database
 
@@ -27,6 +28,7 @@ def create_app(settings: Settings, database: Database | None = None):
     app = FastAPI(title="Student Marketplace", lifespan=lifespan)
     app.state.settings = settings
     app.state.database = database
+    app.state.email_sender = SmtpSender(settings) if sender is None else sender
 
     @app.exception_handler(RequestValidationError)
     async def validation_error(request: Request, error: RequestValidationError):
