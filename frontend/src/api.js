@@ -17,11 +17,11 @@ function apiOrigin() {
   }
 }
 
-export async function postJson(path, payload) {
+export async function requestJson(path, { method = 'GET', payload, headers = {} } = {}) {
   let response;
   try {
     response = await fetch(`${apiOrigin()}${path}`, {
-      method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+      method, credentials: 'include', headers: { ...(payload === undefined ? {} : { 'Content-Type': 'application/json' }), ...headers }, ...(payload === undefined ? {} : { body: JSON.stringify(payload) }),
     });
   } catch (error) {
     if (error instanceof ApiError) throw error;
@@ -30,7 +30,7 @@ export async function postJson(path, payload) {
   if (!response.ok) throw new ApiError('http', response.status);
   let data;
   try {
-    data = await response.json();
+    data = response.status === 204 ? null : await response.json();
   } catch {
     throw new ApiError('response');
   }
@@ -38,6 +38,8 @@ export async function postJson(path, payload) {
   const retry = /^\d+$/.test(retryHeader || '') ? Number(retryHeader) : 60;
   return { status: response.status, data, retryAfter: Number.isFinite(retry) ? Math.max(60, retry) : 60 };
 }
+
+export function postJson(path, payload) { return requestJson(path, { method: 'POST', payload }); }
 
 export function universityEmail(value) {
   const trimmed = value.trim();

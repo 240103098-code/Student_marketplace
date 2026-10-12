@@ -96,7 +96,7 @@ Send `Authorization: Bearer <access token>`; access authorization uses Bearer; r
 
 Missing/malformed Bearer credentials, invalid/expired tokens, and current ineligibility return 401 `{"detail":"Authentication required."}` with `WWW-Authenticate: Bearer`. Unexpected database errors on login/me return generic 500 `{"detail":"Authentication is temporarily unavailable."}`. Error responses and application logs do not echo credentials, tokens, raw validation input, or driver details.
 
-Current access tokens are session-family bound. Old access-only tokens lacking sid no longer authorize requests. Account suspension, unverification, deletion, family revocation, and fixed family expiry take effect through the database-backed guard. React login/protected navigation and full profile workflows remain future work.
+Current access tokens are session-family bound. Old access-only tokens lacking sid no longer authorize requests. Account suspension, unverification, deletion, family revocation, and fixed family expiry take effect through the database-backed guard. React login and protected student navigation are implemented; full profile workflows remain future work.
 
 ## Refresh cookie, CSRF bootstrap, and CORS
 
@@ -123,3 +123,12 @@ With valid Origin and CSRF, revoke only the presented cookie's user-scoped famil
 Absent, malformed, or unknown cookies identify no family and cause no database mutation; for this state-free idempotent case an allowed Origin and well-formed CSRF header are still required, but there is no known session to bind against. Clear the cookie and return 204 without affecting any other user's/family's state. Missing/invalid Origin or CSRF shape still returns 403.
 
 User-wide transactional revocation is exposed for later password/reset/deletion/admin workflows; those endpoints remain out of scope here. No schema/dependency change was needed for rotation/logout. Prior access-only tests/contracts were migrated to require sid, one login session, and the secure refresh cookie while retaining signature/claim/eligibility checks.
+
+
+## Browser session client
+
+The React provider restores each page load using credentialed GET /auth/csrf, POST /auth/refresh with X-CSRF-Token, then Bearer GET /auth/me. Protected placeholders stay hidden during confirmation. Login sends the normalized university email and untrimmed password, then confirms /auth/me and bootstraps CSRF before showing authenticated navigation. Access/CSRF values remain in provider memory; refresh cookies are managed by the browser. No credentials are stored in browser storage, URLs, logs, or debug markup.
+
+Shared authenticated **GET** requests include credentials and Bearer authorization. Simultaneous 401 responses share one refresh; each original GET retries at most once. Already-renewed credentials are reused instead of replaying rotation. Failed refresh, repeated rejection, and 403 stop recovery and remove protected access with session-expired/unavailable feedback. Unsafe mutations, refresh, login, and logout are never automatically replayed.
+
+Only exact /marketplace, /profile, and /my-listings are valid internal return destinations, held in memory. Unknown paths and /admin remain unavailable even for verified students. Sign-out waits for server 204 before clearing client state; network/server failure retains access and explicitly asks for retry without claiming revocation. These pages are placeholders until their own issues implement content.

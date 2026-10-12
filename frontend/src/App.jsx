@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { AuthProvider, useAuth } from './Auth.jsx';
+import { LoginForm } from './LoginForm.jsx';
 import { RegistrationForm, VerificationForm } from './AccountForms.jsx';
 
 const views = {
@@ -8,7 +10,7 @@ const views = {
   },
   '/login': {
     title: 'Sign in',
-    description: 'Sign-in will be available here soon. This preview does not collect account details.',
+    description: 'Sign in with your verified university account.',
   },
   '/register': {
     title: 'Create your account',
@@ -20,9 +22,14 @@ const views = {
   },
   '/marketplace': {
     title: 'Marketplace',
-    description: 'Listings will appear here when the marketplace is ready. Access will require a verified university email.',
+    description: 'Listings will appear here when the marketplace is ready.',
   },
 };
+
+const protectedPaths = ['/marketplace', '/profile', '/my-listings'];
+export function safeReturnPath(path) { return protectedPaths.includes(path) ? path : '/marketplace'; }
+views['/profile'] = { title: 'Profile', description: 'Your profile tools are being prepared.' };
+views['/my-listings'] = { title: 'My Listings', description: 'Your listing tools are being prepared.' };
 
 const navigation = [
   ['/', 'Home'],
@@ -32,7 +39,14 @@ const navigation = [
   ['/verify', 'Verify email'],
 ];
 
-export function App() {
+export function App() { return <AuthProvider><AppShell /></AuthProvider>; }
+
+function AppShell() {
+  const auth = useAuth();
+  const [returnPath, setReturnPath] = useState('/marketplace');
+  const [logoutPending, setLogoutPending] = useState(false);
+  const [logoutError, setLogoutError] = useState('');
+  const logoutBusy = useRef(false);
   const [path, setPath] = useState(window.location.pathname);
   const heading = useRef(null);
   const previousPath = useRef(path);
@@ -51,6 +65,22 @@ export function App() {
     }
   }, [path]);
 
+  useEffect(() => {
+    if (protectedPaths.includes(path) && auth.status === 'anonymous') {
+      setReturnPath(safeReturnPath(path));
+      window.history.replaceState(null, '', '/login');
+      setPath('/login');
+    }
+  }, [path, auth.status]);
+
+  async function signOut() {
+    if (logoutBusy.current) return;
+    logoutBusy.current = true; setLogoutPending(true); setLogoutError('');
+    try { await auth.logout(); goTo('/login'); }
+    catch { setLogoutError('Sign-out could not be confirmed. Your session may still be active. Please retry.'); }
+    finally { logoutBusy.current = false; setLogoutPending(false); }
+  }
+
   function navigate(event) {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
@@ -62,7 +92,8 @@ export function App() {
     setPath(nextPath);
   }
 
-  const view = views[path] || {
+  const guarded = protectedPaths.includes(path) && auth.status !== 'authenticated';
+  const view = guarded ? { title: 'Checking your session', description: 'Please wait while we confirm access.' } : views[path] || {
     title: 'Page not found',
     description: 'We could not find this page. Head back home to explore the preview.',
   };
@@ -74,9 +105,14 @@ export function App() {
         <div className="header-inner">
           <a className="brand" href="/" onClick={navigate}>Student Marketplace</a>
           <nav aria-label="Main navigation">
-            {navigation.map(([href, label]) => (
+            {navigation.filter(([href]) => auth.status !== 'authenticated' || !['/login', '/register', '/verify'].includes(href)).map(([href, label]) => (
               <a key={href} href={href} onClick={navigate} aria-current={path === href ? 'page' : undefined}>{label}</a>
             ))}
+            {auth.status === 'authenticated' && <>
+              <a href="/profile" onClick={navigate}>Profile</a>
+              <a href="/my-listings" onClick={navigate}>My Listings</a>
+              <button className="button secondary" onClick={signOut} disabled={logoutPending}>{logoutPending ? 'Signing out...' : 'Sign out'}</button>
+            </>}
           </nav>
         </div>
       </header>
@@ -84,6 +120,11 @@ export function App() {
         <div className="preview-label">{['/register', '/verify'].includes(path) ? 'University accounts' : 'Preview · Coming soon'}</div>
         <h1 ref={heading} tabIndex={-1}>{view.title}</h1>
         <p className="intro">{view.description}</p>
+        {auth.message && <p role="status" className="form-feedback">{auth.message}</p>}
+        {logoutError && <p role="alert" className="form-feedback error">{logoutError}</p>}
+        {logoutPending && <p role="status">Confirming sign-out...</p>}
+        {guarded && <p role="status">Checking your session...</p>}
+        {path === '/login' && <LoginForm navigate={navigate} onSignedIn={() => goTo(safeReturnPath(returnPath))} />}
         {path === '/register' && <RegistrationForm navigate={navigate} onRegistered={(email, deadline) => {
           setVerification(previous => ({ email, cooldowns: { ...previous.cooldowns, [email]: deadline } }));
           goTo('/verify');
@@ -98,7 +139,7 @@ export function App() {
         {!views[path] && <a className="button secondary" href="/" onClick={navigate}>Back to home</a>}
         <aside className="preview-note" aria-label="Preview information">
           <span className="note-dot" aria-hidden="true" />
-          <p>Registration and email verification are available. Sign-in screens and marketplace listings are still being prepared.</p>
+          <p>University accounts and browser sessions are available. Marketplace listings and profile tools are still being prepared.</p>
         </aside>
       </main>
       <footer className="site-footer">Student Marketplace <span aria-hidden="true">·</span> For your university community</footer>

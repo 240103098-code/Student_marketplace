@@ -25,7 +25,7 @@ function submitRegistration() {
 
 beforeEach(() => {
   fetchMock = vi.fn();
-  vi.stubGlobal('fetch', fetchMock);
+  vi.stubGlobal('fetch', (url, options) => url.endsWith('/auth/csrf') ? Promise.resolve(response(401)) : fetchMock(url, options));
 });
 afterEach(() => {
   vi.useRealTimers();

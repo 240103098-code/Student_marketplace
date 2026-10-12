@@ -1,18 +1,21 @@
 import React from 'react';
-import { expect, test } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { App } from './App.jsx';
 
-test('students can navigate the shell through visible links', () => {
+beforeEach(() => vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}', { status: 401 }))));
+afterEach(() => vi.unstubAllGlobals());
+
+test('students can navigate the shell through visible links', async () => {
   render(<App />);
   expect(screen.getByRole('heading', { name: 'Your campus marketplace' })).toBeTruthy();
   const navigation = within(screen.getByRole('navigation', { name: 'Main navigation' }));
   fireEvent.click(navigation.getByRole('link', { name: 'Marketplace' }));
-  expect(screen.getByRole('heading', { name: 'Marketplace' })).toBeTruthy();
-  expect(window.location.pathname).toBe('/marketplace');
+  await screen.findByRole('heading', { name: 'Sign in' });
+  expect(window.location.pathname).toBe('/login');
   fireEvent.click(navigation.getByRole('link', { name: 'Sign in' }));
   expect(screen.getByRole('heading', { name: 'Sign in' })).toBeTruthy();
-  expect(screen.queryByRole('textbox')).toBeNull();
+  expect(screen.getByLabelText('University email')).toBeTruthy();
 });
 
 test('a direct unknown route offers a useful path home', () => {
