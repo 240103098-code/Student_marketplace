@@ -1,6 +1,6 @@
 # Local development setup
 
-This document describes the tools, project layout, and local startup workflow for Student Marketplace. **Current status:** the Python project bootstrap and one pytest smoke test are ready. Backend and frontend application features and database integrations are not yet implemented.
+This document describes the tools, project layout, and local startup workflow for Student Marketplace. **Current status:** the Python project bootstrap and one pytest smoke test are ready. A minimal FastAPI backend and health endpoint are ready; frontend application features and database integrations are not yet implemented.
 
 ## Prerequisites
 
@@ -72,17 +72,29 @@ uv run python -m pytest
 
 To run the single-file smoke test referenced in `AGENTS.md`, use `uv run python -m pytest tests/test_home.py`. Use the minimal dependencies needed for approved backlog issues, keep manifests and lockfiles updated, and document dependency changes in implementation reports.
 
-## Backend service (after issue #3)
+## Backend service
 
-**Not implemented yet:** there is no FastAPI entry point to start. Once issue #3 adds the app, install Python dependencies using `uv sync`, then use the exact Uvicorn command documented by that implementation.
+From the repository root, install dependencies and start the backend:
 
-For reference, a typical FastAPI invocation is:
-
-```text
-uv run uvicorn <python.module.path>:app --reload
+```bash
+uv sync
+uv run python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
 ```
 
-This line is a **template, not a currently executable command**. Replace `<python.module.path>` with the actual module created under issue #3; do not guess the import path. Backend database connectivity is a separate task in [#8](https://github.com/240103098-code/student-marketplace/issues/8).
+Open `http://127.0.0.1:8000/health` or request it from another terminal:
+
+```bash
+curl http://127.0.0.1:8000/health
+```
+
+The endpoint returns HTTP 200, JSON content type, and exactly `{"status":"ok"}`.
+Stop the server with Ctrl+C. Importing the app and using `/health` require no
+PostgreSQL, SMTP, network connection, or production secrets. Authentication,
+users, listings, and administration have separate empty router modules; their
+marketplace endpoints are not implemented yet.
+
+Run the full suite with `uv run python -m pytest`, including the health endpoint
+test. Database integration is a separate task in [#8](https://github.com/240103098-code/student-marketplace/issues/8).
 
 ## Frontend service (after issue #5)
 
