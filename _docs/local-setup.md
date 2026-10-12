@@ -255,4 +255,11 @@ All 100 backend tests passed with the isolated PostgreSQL and controlled loopbac
 
 With verified session-bound Bearer access, GET /users/me reads only your basic profile and PATCH /users/me edits supplied name/contact fields. Empty patches and identity/security/avatar fields are rejected. Name is trimmed and required when supplied; optional phone/Telegram/HTTPS contact values may be cleared with null. Omitted fields are preserved, and initial unset profiles remain null. Profile editing may leave contacts empty; the contact prerequisite belongs to listing submission. See API notes for exact formats and sanitized statuses. Configured credentialed CORS permits PATCH.
 
-This issue supplies backend endpoints only; the /profile browser page remains a placeholder, and avatar uploads are not implemented. Verification passed with 109 backend tests using actual isolated PostgreSQL/controlled SMTP, including nine profile read/ownership/format/partial-update/security/rollback/stale-guard/CORS cases, plus all 31 frontend tests and production build. No frontend, dependency, or schema change was required.
+The backend endpoints support the /profile browser screen described below; avatar uploads are not implemented. Verification passed with 109 backend tests using actual isolated PostgreSQL/controlled SMTP, including nine profile read/ownership/format/partial-update/security/rollback/stale-guard/CORS cases, plus all 31 frontend tests and production build. No frontend, dependency, or schema change was required.
+
+
+## Edit your profile in the browser
+
+After verified sign-in, choose **Profile** or open /profile. Loading reads your actual account profile; failed loads offer retry. Verified email stays read-only. Edit name, international phone, Telegram username or HTTPS contact URL using the displayed hints. Optional contacts may all be cleared. Save submits only changed fields; unchanged initial null name is omitted. Successful saving refreshes the form from the server response. Failed saves retain edits and show truthful retry feedback; expired/revoked authorization removes the screen. Avatar uploads and seller-contact display are not available yet.
+
+All 38 frontend interaction tests and production build passed, including seven profile loading/retry/null/identity/partial-save/clearing/validation/pending/failure/session cases. All 109 backend tests passed with actual dedicated PostgreSQL/controlled SMTP fixtures. No backend, dependency, or schema changes were needed.

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AuthProvider, useAuth } from './Auth.jsx';
 import { RecoveryRequestForm, ResetPasswordForm } from './RecoveryForms.jsx';
+import { ProfileForm } from './ProfileForm.jsx';
 import { PasswordForm } from './PasswordForm.jsx';
 import { LoginForm } from './LoginForm.jsx';
 import { RegistrationForm, VerificationForm } from './AccountForms.jsx';
@@ -34,7 +35,7 @@ views['/reset-password'] = { title: 'Reset password', description: 'Enter your u
 const protectedPaths = ['/marketplace', '/profile', '/my-listings', '/account/password'];
 export function safeReturnPath(path) { return protectedPaths.includes(path) ? path : '/marketplace'; }
 views['/account/password'] = { title: 'Change password', description: 'Confirm your current password to set a new one. This signs out every session for your account.' };
-views['/profile'] = { title: 'Profile', description: 'Your profile tools are being prepared.' };
+views['/profile'] = { title: 'Profile', description: 'View and edit your name and optional external contact details. Your verified university email stays fixed.' };
 views['/my-listings'] = { title: 'My Listings', description: 'Your listing tools are being prepared.' };
 
 const navigation = [
@@ -132,6 +133,7 @@ function AppShell() {
         {logoutError && <p role="alert" className="form-feedback error">{logoutError}</p>}
         {logoutPending && <p role="status">Confirming sign-out...</p>}
         {guarded && <p role="status">Checking your session...</p>}
+        {path === '/profile' && !guarded && <ProfileForm />}
         {path === '/forgot-password' && <RecoveryRequestForm initialEmail={recovery.email} cooldowns={recovery.cooldowns} navigate={navigate} onRequested={(email, deadline) => setRecovery(previous => ({ email, cooldowns: { ...previous.cooldowns, [email]: deadline } }))} />}
         {path === '/reset-password' && <ResetPasswordForm initialEmail={recovery.email} navigate={navigate} onReset={() => goTo('/login')} />}
         {path === '/account/password' && !guarded && <PasswordForm onChanged={() => goTo('/login')} />}
@@ -150,7 +152,7 @@ function AppShell() {
         {!views[path] && <a className="button secondary" href="/" onClick={navigate}>Back to home</a>}
         <aside className="preview-note" aria-label="Preview information">
           <span className="note-dot" aria-hidden="true" />
-          <p>University accounts and browser sessions are available. Marketplace listings and profile tools are still being prepared.</p>
+          <p>University accounts and browser sessions are available. Marketplace listings and profile photos are still being prepared.</p>
         </aside>
       </main>
       <footer className="site-footer">Student Marketplace <span aria-hidden="true">·</span> For your university community</footer>

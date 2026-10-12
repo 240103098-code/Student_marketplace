@@ -131,7 +131,7 @@ The React provider restores each page load using credentialed GET /auth/csrf, PO
 
 Shared authenticated **GET** requests include credentials and Bearer authorization. Simultaneous 401 responses share one refresh; each original GET retries at most once. Already-renewed credentials are reused instead of replaying rotation. Failed refresh, repeated rejection, and 403 stop recovery and remove protected access with session-expired/unavailable feedback. Unsafe mutations, refresh, login, and logout are never automatically replayed.
 
-Only exact /marketplace, /profile, /my-listings, and /account/password are valid internal return destinations, held in memory. Unknown paths and /admin remain unavailable even for verified students. Sign-out waits for server 204 before clearing client state; network/server failure retains access and explicitly asks for retry without claiming revocation. Marketplace/profile/My Listings remain placeholders until their own issues implement content; the password screen is available below.
+Only exact /marketplace, /profile, /my-listings, and /account/password are valid internal return destinations, held in memory. Unknown paths and /admin remain unavailable even for verified students. Sign-out waits for server 204 before clearing client state; network/server failure retains access and explicitly asks for retry without claiming revocation. Marketplace/My Listings remain placeholders until their own issues implement content; the password screen is available below.
 
 
 ## POST /auth/change-password
@@ -176,4 +176,11 @@ PATCH accepts a nonempty object containing only name, phone, telegram_username, 
 
 Profile editing can leave every contact empty; at least one valid contact is required only by future listing submission. Email/id/role/verified/suspended/password/hash/avatar/session fields and all other unknown keys are forbidden. No partial write occurs on invalid input. The acting account is locked/reloaded and access/family eligibility is rechecked after waiting; a stale guard cannot update an account that became ineligible or revoked. Email, eligibility, role, password, avatar, sessions, and all other accounts remain unchanged.
 
-Successful GET/PATCH returns 200 with the same public own-profile shape. Missing/expired/revoked/ineligible authentication returns the existing sanitized 401 authentication-required contract. Invalid PATCH returns 422 `{"detail":"Invalid profile request."}`; database failure returns 500 `{"detail":"Profile is temporarily unavailable."}` and rolls back the whole update. Credentialed CORS explicitly permits PATCH only for configured frontend origins. These endpoints provide backend profile support; React editing and avatar uploads belong to subsequent issues.
+Successful GET/PATCH returns 200 with the same public own-profile shape. Missing/expired/revoked/ineligible authentication returns the existing sanitized 401 authentication-required contract. Invalid PATCH returns 422 `{"detail":"Invalid profile request."}`; database failure returns 500 `{"detail":"Profile is temporarily unavailable."}` and rolls back the whole update. Credentialed CORS explicitly permits PATCH only for configured frontend origins. These endpoints support the React editing screen described below; avatar uploads belong to the subsequent image issue.
+
+
+## React own-profile screen
+
+Protected /profile now loads GET /users/me with the shared authenticated client, shows loading feedback, and offers retry on an unconfirmed load. Verified university email is read-only; initial null name/contacts appear empty. Name and contact inputs mirror the API rules with labeled format hints. All contacts may be empty.
+
+Saving submits only changed permitted fields through explicit authenticated PATCH, without automatic mutation replay. Name changes are trimmed; untouched initially null name is omitted, and empty contact edits send null. Empty/duplicate pending saves are blocked. Confirmed returned profile values become the new authoritative form baseline and show save confirmation. Validation/network/server failure preserves edits without claiming success; authorization failures remove protected content through the shared client. No personal fields are written to URLs/storage/logs/debug output. Profile photos and seller-contact display remain separate features.
