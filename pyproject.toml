@@ -1,6 +1,6 @@
 [project]
 name = "student-marketplace"
 version = "0.1.0"
-description = "Empty bootstrap for Student Marketplace"
+description = "Student Marketplace backend scaffold"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = ["pydantic-settings==2.15.0"]

@@ -2,7 +2,7 @@
 
 A planned university-only marketplace where verified students list items and contact sellers externally.
 
-The empty Python project bootstrap is ready. It contains an importable backend package and one automated smoke test; marketplace features and runtime services remain planned. Python 3.11 or newer is supported, with no third-party dependencies or installation step. From the repository root, run `python -m unittest discover -s tests -v` (verified with Python 3.13.15).
+The Python scaffold and typed environment configuration are ready; marketplace features and runtime services remain planned. Python 3.11 or newer is supported (verified with Python 3.13.15). Create a virtual environment with `python -m venv .venv`, install the pinned configuration dependencies with `.venv/Scripts/python.exe -m pip install -r requirements.lock`, and run `.venv/Scripts/python.exe -m unittest discover -s tests -v` from the repository root on Windows. See the setup guide for other platforms and configuration details.
 
 ## Project documents
 
