@@ -2,6 +2,7 @@
 
 from email_validator import EmailNotValidError, validate_email
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
+from typing import Literal
 
 
 class UniversityEmailRequest(BaseModel):
@@ -30,6 +31,16 @@ class UniversityEmailRequest(BaseModel):
 
 class RegistrationRequest(UniversityEmailRequest):
     password: SecretStr = Field(strict=True, min_length=12, max_length=128)
+
+
+class LoginRequest(RegistrationRequest):
+    pass
+
+
+class AccessTokenResponse(BaseModel):
+    access_token: str = Field(repr=False)
+    token_type: Literal["bearer"] = "bearer"
+    expires_in: int
 
 
 class VerifyEmailRequest(UniversityEmailRequest):

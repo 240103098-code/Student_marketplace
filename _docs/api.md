@@ -1,7 +1,7 @@
 
 # Backend API
 
-Current capability: registration of an unverified student plus configured SMTP verification-code delivery. One-time verification and cooldown-limited resend are implemented below. Login, tokens, and marketplace authorization remain future work. The React preview does not call this API.
+Current capability: registration of an unverified student plus configured SMTP verification-code delivery. One-time verification and cooldown-limited resend are implemented below. Verified-user login, access JWTs, and the database-backed /auth/me guard are available below; refresh sessions and marketplace endpoints remain future work. The React preview does not call this API.
 
 ## POST /auth/register
 
@@ -60,3 +60,31 @@ Suppression sends no email and stores no code. User-row locking and a post-lock 
 ## Verification delivery status
 
 Local verification used actual SMTP protocol/MIME on an isolated loopback fixture, with an explicit test-only plaintext transport substitute. Production certificate verification remains enabled; TLS/auth ordering and failure cleanup were separately tested. No external people were emailed. Provider host/port/sender/credentials remain external operational configuration, and live internet university-inbox delivery has not been verified. See local setup for the credential-dependent operator check.
+
+## POST /auth/login
+
+Accept exactly `email` and `password`, using the same strict normalized university-email and untrimmed 12–128-character SecretStr password contract as registration. Unknown fields (including caller-supplied duration/claims), missing fields, wrong types, and malformed input return 422 `{"detail":"Invalid login request."}`. Argon2 verifies the stored password hash.
+
+Unknown email, incorrect password, unverified account, and suspended account all return 401 `{"detail":"Invalid credentials or account unavailable."}` with `WWW-Authenticate: Bearer`. A successful eligible login returns 200 with only access_token, token_type=bearer, and expires_in=900 by default (JWT_ACCESS_MINUTES times sixty). No refresh record, cookie, verification code, or email is created. The response token is sensitive: do not print or log it; future browser handling keeps it in memory.
+
+The access JWT uses only HS256 with the configured JWT_SECRET_KEY and these exact required claims:
+
+| Claim | Value |
+| --- | --- |
+| iss | student-marketplace |
+| aud | student-marketplace-students |
+| sub | Canonical positive user id as a string |
+| type | access |
+| iat | Issuance time, integer UTC seconds |
+| exp | iat plus configured access minutes times sixty |
+| jti | Random UUID hex identifier |
+
+Tokens contain no email, password/hash, code, profile/contact data, role, or eligibility flags. Validation uses an explicit HS256 allowlist, required issuer/audience/claims, strict canonical claim types and subject/id bounds, and the same configured duration. It rejects extra claims, malformed/incorrect signatures or algorithms, missing claims, wrong issuer/audience/purpose, expiry at its exact boundary, and future issued-at time. Signature/issuer/audience validation stays in PyJWT; explicit UTC-clock time checks allow deterministic tests without bypassing those checks.
+
+## GET /auth/me
+
+Send `Authorization: Bearer <access token>`; no cookie authentication is available yet. The shared require_verified_user dependency validates the token and reloads current account state from PostgreSQL on every request. Deleted/missing, unverified, or suspended accounts are rejected even while a signed token is unexpired. Success returns only id, normalized email, and verified=true; no profile editing or listing data is implemented here.
+
+Missing/malformed Bearer credentials, invalid/expired tokens, and current ineligibility return 401 `{"detail":"Authentication required."}` with `WWW-Authenticate: Bearer`. Unexpected database errors on login/me return generic 500 `{"detail":"Authentication is temporarily unavailable."}`. Error responses and application logs do not echo credentials, tokens, raw validation input, or driver details.
+
+Current authentication is access-only: refresh rotation/cookies/logout/session-based revocation are the next task. Account suspension, unverification, and deletion already take effect through the database-backed guard. React login/protected navigation and full profile workflows remain future work.

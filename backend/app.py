@@ -35,12 +35,12 @@ def create_app(settings: Settings, database: Database | None = None, *, sender=N
     @app.exception_handler(RequestValidationError)
     async def validation_error(request: Request, error: RequestValidationError):
         # FastAPI's default error includes raw inputs; never return those.
-        detail = "Invalid registration request." if request.url.path == "/auth/register" else "Invalid verification request."
+        detail = {"/auth/register": "Invalid registration request.", "/auth/login": "Invalid login request."}.get(request.url.path, "Invalid verification request.")
         return JSONResponse(status_code=422, content={"detail": detail})
 
     @app.exception_handler(SQLAlchemyError)
     async def database_error(request: Request, error: SQLAlchemyError):
-        detail = "Registration is temporarily unavailable." if request.url.path == "/auth/register" else "Verification is temporarily unavailable."
+        detail = {"/auth/register": "Registration is temporarily unavailable.", "/auth/login": "Authentication is temporarily unavailable.", "/auth/me": "Authentication is temporarily unavailable."}.get(request.url.path, "Verification is temporarily unavailable.")
         return JSONResponse(status_code=500, content={"detail": detail})
 
     app.include_router(router)
