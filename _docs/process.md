@@ -28,7 +28,23 @@ Rules
 - Do not skip step 2
 - The engineer does not close the issue
 - QA does not fix the code, only outputs PASS or FAIL
-- The orchestrator closes the issue only after QA outputs PASS
+- The orchestrator closes implementation issues as completed only after QA outputs PASS
+
+Backlog consolidation
+
+When the user requests consolidation, PM proposes canonical packages and a
+complete source-to-survivor mapping that preserves every source requirement.
+The engineer updates backlog documentation without changing application work.
+Independent QA audits scope coverage, canonical dependencies, completed history,
+and preservation of local changes before any administrative closure.
+
+After this audit passes, update surviving issue bodies first, then post explicit
+replacement links and close only superseded issues with reason `not_planned`.
+Those closures mean the separate records are superseded; they do not claim
+implementation or implementation QA PASS. Verify final issue counts and mapping.
+Surviving implementation packages still follow the lifecycle above and require
+independent QA PASS before completed closure. Keep one active package at a time;
+packages may require multiple focused commits rather than one session.
 
 Dependency authorization
 
