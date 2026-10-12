@@ -1,8 +1,9 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 
 from backend.registration import DuplicateEmailError, register_student
-from backend.schemas import RegistrationRequest, RegistrationResponse
+from backend.schemas import RegistrationRequest, RegistrationResponse, VerifyEmailRequest, ResendVerificationRequest
 from backend.mail import EmailDeliveryError
+from backend.verification import verify_registration_code, resend_registration_code
 
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
@@ -12,9 +13,29 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 def register(payload: RegistrationRequest, request: Request):
     try:
         user = register_student(request.app.state.database, payload.email,
-            payload.password.get_secret_value(), request.app.state.settings, request.app.state.email_sender)
+            payload.password.get_secret_value(), request.app.state.settings, request.app.state.email_sender, clock=request.app.state.clock)
     except DuplicateEmailError:
         raise HTTPException(status_code=409, detail="University email is already registered.") from None
     except EmailDeliveryError:
         raise HTTPException(status_code=503, detail="Verification email is temporarily unavailable.") from None
     return RegistrationResponse(id=user.id, email=user.email, verified=user.verified)
+
+
+@router.post("/verify-email")
+def verify_email(payload: VerifyEmailRequest, request: Request):
+    succeeded = verify_registration_code(request.app.state.database, payload.email,
+        payload.code.get_secret_value(), request.app.state.settings, clock=request.app.state.clock)
+    if not succeeded:
+        raise HTTPException(status_code=400, detail="Verification code is invalid or unavailable.")
+    return {"verified": True}
+
+
+@router.post("/resend-verification", status_code=202)
+def resend_verification(payload: ResendVerificationRequest, request: Request, response: Response):
+    try:
+        resend_registration_code(request.app.state.database, payload.email,
+            request.app.state.settings, request.app.state.email_sender, clock=request.app.state.clock)
+    except EmailDeliveryError:
+        raise HTTPException(status_code=503, detail="Verification email is temporarily unavailable.") from None
+    response.headers["Retry-After"] = "60"
+    return {"detail": "If this address is eligible, a verification email may arrive. Retry after 60 seconds."}

@@ -4,11 +4,10 @@ from email_validator import EmailNotValidError, validate_email
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
 
 
-class RegistrationRequest(BaseModel):
+class UniversityEmailRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", hide_input_in_errors=True)
 
     email: str = Field(strict=True, max_length=254)
-    password: SecretStr = Field(strict=True, min_length=12, max_length=128)
 
     @field_validator("email", mode="before")
     @classmethod
@@ -27,6 +26,25 @@ class RegistrationRequest(BaseModel):
         if validated.domain != "sdu.edu.kz":
             raise ValueError("Email must use the university domain")
         return validated.normalized
+
+
+class RegistrationRequest(UniversityEmailRequest):
+    password: SecretStr = Field(strict=True, min_length=12, max_length=128)
+
+
+class VerifyEmailRequest(UniversityEmailRequest):
+    code: SecretStr = Field(strict=True, min_length=6, max_length=6)
+
+    @field_validator("code")
+    @classmethod
+    def validate_ascii_code(cls, value):
+        if not all("0" <= digit <= "9" for digit in value.get_secret_value()):
+            raise ValueError("Code must contain six ASCII digits")
+        return value
+
+
+class ResendVerificationRequest(UniversityEmailRequest):
+    pass
 
 
 class RegistrationResponse(BaseModel):
