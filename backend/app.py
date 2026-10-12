@@ -15,6 +15,7 @@ from backend.email_codes import utc_now
 from backend.routers.auth import router
 from backend.routers.users import router as users_router
 from backend.sessions import CsrfError
+from backend.images import ImageInputError, ImageStorageError
 
 
 def create_app(settings: Settings, database: Database | None = None, *, sender=None, clock=None):
@@ -35,8 +36,16 @@ def create_app(settings: Settings, database: Database | None = None, *, sender=N
     app.state.email_sender = SmtpSender(settings) if sender is None else sender
     app.state.clock = utc_now if clock is None else clock
     app.add_middleware(CORSMiddleware, allow_origins=settings.frontend_origins,
-        allow_credentials=True, allow_methods=["GET", "POST", "PATCH"],
+        allow_credentials=True, allow_methods=["GET", "POST", "PATCH", "DELETE"],
         allow_headers=["Authorization", "Content-Type", "X-CSRF-Token"], expose_headers=["Retry-After"])
+
+    @app.exception_handler(ImageInputError)
+    async def image_input_error(request: Request, error: ImageInputError):
+        return JSONResponse(status_code=400, content={"detail": "Image must be valid JPEG, PNG or WebP within the pixel limit."})
+
+    @app.exception_handler(ImageStorageError)
+    async def image_storage_error(request: Request, error: ImageStorageError):
+        return JSONResponse(status_code=500, content={"detail": "Profile photo storage is temporarily unavailable."})
 
     @app.exception_handler(CsrfError)
     async def csrf_error(request: Request, error: CsrfError):

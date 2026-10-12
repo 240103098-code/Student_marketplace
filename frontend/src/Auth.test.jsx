@@ -29,6 +29,7 @@ function activeRoutes(extra = {}) {
     '/auth/csrf': () => Promise.resolve(response(200, { csrf_token: csrf })),
     '/auth/refresh': () => Promise.resolve(response(200, access('restored-secret'))),
     '/auth/me': () => Promise.resolve(response(200, user)),
+    '/users/me/avatar': () => Promise.resolve(response(404)),
     '/users/me': () => Promise.resolve(response(200, { ...user, name: null, phone: null, telegram_username: null, external_contact_url: null })), ...extra,
   };
 }
@@ -86,7 +87,7 @@ test('reload shows no protected content until csrf, refresh, and eligibility are
   expect(screen.queryByText('Your profile tools are being prepared.')).toBeNull();
   await act(async () => pending.resolve(response(200, { csrf_token: csrf })));
   await screen.findByRole('heading', { name: 'Profile' });
-  expect(fetchMock.mock.calls.map(([url]) => new URL(url).pathname)).toEqual(['/auth/csrf', '/auth/refresh', '/auth/me', '/users/me']);
+  expect(fetchMock.mock.calls.map(([url]) => new URL(url).pathname)).toEqual(['/auth/csrf', '/auth/refresh', '/auth/me', '/users/me/avatar', '/users/me']);
   expect(fetchMock.mock.calls[1][1].headers['X-CSRF-Token']).toBe(csrf);
 });
 

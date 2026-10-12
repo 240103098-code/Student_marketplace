@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AuthProvider, useAuth } from './Auth.jsx';
 import { RecoveryRequestForm, ResetPasswordForm } from './RecoveryForms.jsx';
+import { AvatarControl } from './AvatarControl.jsx';
 import { ProfileForm } from './ProfileForm.jsx';
 import { PasswordForm } from './PasswordForm.jsx';
 import { LoginForm } from './LoginForm.jsx';
@@ -133,7 +134,7 @@ function AppShell() {
         {logoutError && <p role="alert" className="form-feedback error">{logoutError}</p>}
         {logoutPending && <p role="status">Confirming sign-out...</p>}
         {guarded && <p role="status">Checking your session...</p>}
-        {path === '/profile' && !guarded && <ProfileForm />}
+        {path === '/profile' && !guarded && <><AvatarControl /><ProfileForm /></>}
         {path === '/forgot-password' && <RecoveryRequestForm initialEmail={recovery.email} cooldowns={recovery.cooldowns} navigate={navigate} onRequested={(email, deadline) => setRecovery(previous => ({ email, cooldowns: { ...previous.cooldowns, [email]: deadline } }))} />}
         {path === '/reset-password' && <ResetPasswordForm initialEmail={recovery.email} navigate={navigate} onReset={() => goTo('/login')} />}
         {path === '/account/password' && !guarded && <PasswordForm onChanged={() => goTo('/login')} />}
@@ -152,7 +153,7 @@ function AppShell() {
         {!views[path] && <a className="button secondary" href="/" onClick={navigate}>Back to home</a>}
         <aside className="preview-note" aria-label="Preview information">
           <span className="note-dot" aria-hidden="true" />
-          <p>University accounts and browser sessions are available. Marketplace listings and profile photos are still being prepared.</p>
+          <p>University accounts and browser sessions are available. Marketplace listings are still being prepared.</p>
         </aside>
       </main>
       <footer className="site-footer">Student Marketplace <span aria-hidden="true">·</span> For your university community</footer>

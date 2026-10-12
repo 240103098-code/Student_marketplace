@@ -81,12 +81,12 @@ export function createSessionClient(notify) {
         throw error;
       }
     },
-    async get(path) {
+    async get(path, binary = false) {
       // Only read-only GET contracts are automatically retried; mutations are explicit.
       if (!token) throw new ApiError('session');
       const previous = token;
       const started = generation;
-      try { return await requestJson(path, { headers: { Authorization: `Bearer ${previous}` } }); }
+      try { return await requestJson(path, { responseType: binary ? 'blob' : undefined, headers: { Authorization: `Bearer ${previous}` } }); }
       catch (error) {
         if (error.status !== 401) {
           if (error.status === 403) clear(expiredMessage);
@@ -96,8 +96,18 @@ export function createSessionClient(notify) {
       try {
         if (!token || started !== generation) throw new ApiError('session');
         const renewed = token && token !== previous ? token : await refresh();
-        return await requestJson(path, { headers: { Authorization: `Bearer ${renewed}` } });
+        return await requestJson(path, { responseType: binary ? 'blob' : undefined, headers: { Authorization: `Bearer ${renewed}` } });
       } catch (error) { clear(expiredMessage); throw error; }
+    },
+    async avatar(file) {
+      if (!token) throw new ApiError('session');
+      const body = file ? new FormData() : undefined;
+      if (file) body.append('image', file);
+      try { return await requestJson('/users/me/avatar', { method: file ? 'POST' : 'DELETE', body, headers: { Authorization: `Bearer ${token}` } }); }
+      catch (error) {
+        if ([401, 403].includes(error.status)) clear(expiredMessage);
+        throw error;
+      }
     },
     async patch(path, payload) {
       if (!token) throw new ApiError('session');
@@ -150,6 +160,6 @@ export function AuthProvider({ children }) {
     client.current.restore();
     return () => client.current.dispose();
   }, []);
-  return <AuthContext.Provider value={{ ...state, login: client.current.login, logout: client.current.logout, get: client.current.get, patch: client.current.patch, changePassword: client.current.changePassword, resetPassword: client.current.resetPassword }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ ...state, login: client.current.login, logout: client.current.logout, get: client.current.get, patch: client.current.patch, avatar: client.current.avatar, changePassword: client.current.changePassword, resetPassword: client.current.resetPassword }}>{children}</AuthContext.Provider>;
 }
 export function useAuth() { return useContext(AuthContext); }

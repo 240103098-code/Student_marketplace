@@ -17,11 +17,11 @@ function apiOrigin() {
   }
 }
 
-export async function requestJson(path, { method = 'GET', payload, headers = {} } = {}) {
+export async function requestJson(path, { method = 'GET', payload, body, responseType, headers = {} } = {}) {
   let response;
   try {
     response = await fetch(`${apiOrigin()}${path}`, {
-      method, credentials: 'include', headers: { ...(payload === undefined ? {} : { 'Content-Type': 'application/json' }), ...headers }, ...(payload === undefined ? {} : { body: JSON.stringify(payload) }),
+      method, credentials: 'include', headers: { ...(payload === undefined ? {} : { 'Content-Type': 'application/json' }), ...headers }, ...(payload === undefined ? (body === undefined ? {} : { body }) : { body: JSON.stringify(payload) }),
     });
   } catch (error) {
     if (error instanceof ApiError) throw error;
@@ -30,7 +30,7 @@ export async function requestJson(path, { method = 'GET', payload, headers = {} 
   if (!response.ok) throw new ApiError('http', response.status);
   let data;
   try {
-    data = response.status === 204 ? null : await response.json();
+    data = response.status === 204 ? null : responseType === 'blob' ? await response.blob() : await response.json();
   } catch {
     throw new ApiError('response');
   }

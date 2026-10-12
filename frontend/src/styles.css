@@ -60,3 +60,7 @@ button:disabled, input:disabled { opacity: 0.65; cursor: not-allowed; }
   .preview-note { margin-top: 40px; padding: 18px; }
   .site-footer { padding: 22px 20px; }
 }
+.avatar-control { max-width: 520px; margin-top: 32px; }
+.avatar-control label { display: block; font-weight: 600; margin: 18px 0 9px; }
+.avatar-control input { width: 100%; min-width: 0; }
+.avatar-preview { display: block; width: 160px; height: 160px; max-width: 100%; object-fit: cover; border-radius: 12px; }
