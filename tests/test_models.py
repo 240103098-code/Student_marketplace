@@ -15,6 +15,6 @@ class ModelRepresentationTest(unittest.TestCase):
     def test_model_import_does_not_load_settings_or_connect(self):
         result = subprocess.run([
             sys.executable, "-c",
-            "from unittest.mock import patch;\nwith patch('backend.config.load_settings', side_effect=AssertionError), patch('sqlalchemy.create_engine', side_effect=AssertionError):\n import backend.models; assert len(backend.models.Base.metadata.tables) == 3",
+            "from unittest.mock import patch;\nwith patch('backend.config.load_settings', side_effect=AssertionError), patch('sqlalchemy.create_engine', side_effect=AssertionError):\n import backend.models; assert set(backend.models.Base.metadata.tables) == {'users','email_codes','refresh_sessions','categories','listings','listing_photos','listing_reports'}",
         ], cwd=REPOSITORY_ROOT, capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)

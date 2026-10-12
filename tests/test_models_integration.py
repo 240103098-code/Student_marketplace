@@ -19,7 +19,7 @@ class AccountSchemaPostgreSQLTest(unittest.TestCase):
         cls.addClassCleanup(cls.database.dispose)
         cls.configuration = Config(str(REPOSITORY_ROOT / "alembic.ini"))
         cls.configuration.attributes["settings"] = cls.settings
-        command.upgrade(cls.configuration, "head")
+        command.upgrade(cls.configuration, "0002_accounts")
         cls.addClassCleanup(command.downgrade, cls.configuration, "0001_baseline")
 
     def tearDown(self):
@@ -138,6 +138,6 @@ class AccountSchemaPostgreSQLTest(unittest.TestCase):
         command.downgrade(self.configuration, "0001_baseline")
         with self.database.engine.connect() as connection:
             self.assertEqual(set(inspect(connection).get_table_names()), {"alembic_version"})
-        command.upgrade(self.configuration, "head")
+        command.upgrade(self.configuration, "0002_accounts")
         with self.database.engine.connect() as connection:
             self.assertEqual(set(inspect(connection).get_table_names()), expected)
