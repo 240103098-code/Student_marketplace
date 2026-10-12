@@ -2,7 +2,7 @@
 
 ## Current status
 
-The Python bootstrap, typed configuration loader, PostgreSQL engine/session helpers, connection-check command, empty Alembic baseline, and React preview shell are ready, with automated tests. No FastAPI HTTP service, account/listing schema, email transport, or marketplace feature exists yet. Importing configuration/database helpers never starts services, connects, or creates tables. Frontend routes are placeholders and make no backend requests.
+The Python bootstrap, typed configuration loader, PostgreSQL engine/session helpers, connection-check command, account/code/refresh-session schema, and React preview shell are ready, with automated tests. No FastAPI HTTP service, listing schema, email transport, or authentication/marketplace workflow exists yet. Importing configuration/database helpers never starts services, connects, or creates tables. Frontend routes are placeholders and make no backend requests.
 
 ## Current layout
 
@@ -10,8 +10,9 @@ The Python bootstrap, typed configuration loader, PostgreSQL engine/session help
 - `backend/__init__.py`: empty importable project package.
 - `tests/test_bootstrap.py`: one package import and path smoke test.
 - `backend/config.py` and `tests/test_config.py`: explicit settings loading and isolated configuration tests.
-- `backend/database.py`, `alembic.ini`, and `migrations/`: PostgreSQL infrastructure and the empty baseline revision.
-- `tests/test_database.py` and `tests/test_database_integration.py`: unit checks and opt-in actual PostgreSQL integration tests.
+- `backend/database.py`, `alembic.ini`, and `migrations/`: PostgreSQL infrastructure, the baseline, and account schema revision.
+- `tests/test_database.py` and `tests/test_database_integration.py`: unit checks and opt-in actual PostgreSQL baseline tests.
+- `backend/models.py` and `tests/test_models*`: account/code/refresh models, redacted representations, and actual PostgreSQL integrity tests.
 - `frontend/`: React/Vite preview shell, two component tests, and a resolved npm lockfile.
 - `.env.example`: supported configuration names, formats, defaults, and placeholders.
 - `README.md`: project overview and links.
@@ -34,7 +35,7 @@ python -m venv .venv
 .venv/Scripts/python.exe -m unittest discover -s tests -v
 ```
 
-On Linux or macOS, use `.venv/bin/python` instead of `.venv/Scripts/python.exe`. Activation is optional. The default run has eighteen service-free tests and skips the PostgreSQL integration class. Unit tests inject synthetic isolated settings and need no .env, real credentials, network, database, SMTP, or running service. Opt in to three actual PostgreSQL tests using the preparation below.
+On Linux or macOS, use `.venv/bin/python` instead of `.venv/Scripts/python.exe`. Activation is optional. The default run has twenty service-free tests and skips two PostgreSQL integration classes. Unit tests inject synthetic isolated settings and need no .env, real credentials, network, database, SMTP, or running service. Opt in to nine actual PostgreSQL tests using the preparation below.
 
 In a restricted Windows environment whose temporary directory is not writable, first create a workspace temporary directory and direct this terminal's TEMP and TMP to it before the commands above:
 
@@ -107,13 +108,13 @@ node ../../npm-runtime/package/bin/npm-cli.js run build
 node ../../npm-runtime/package/bin/npm-cli.js run dev
 ```
 
-Dependency retrieval and local server connections required approved execution outside this environment's networking sandbox. Backend files and schemas were unchanged; the eighteen backend service-free tests passed, while the actual PostgreSQL integration class is opt-in and remains separately documented below.
+Dependency retrieval and local server connections required approved execution outside this environment's networking sandbox. Backend files and schemas were unchanged; the existing backend tests passed, while actual PostgreSQL integration tests are opt-in and remains separately documented below.
 
 ## PostgreSQL connection and migrations
 
 Configure DATABASE_URL for a PostgreSQL database that you control, using `postgresql+psycopg://USER:PASSWORD@HOST:PORT/DATABASE` (plain `postgresql://` also selects psycopg). Explicit database construction creates a lazy engine and session factory; importing the module never loads settings or connects. Connections have a three-second driver timeout and a five-second statement timeout. Session contexts commit on success, roll back on failure, and always close; the owner explicitly disposes the engine.
 
-From the repository root, with runtime settings configured, these tested commands perform the connection check and empty baseline migration:
+From the repository root, with runtime settings configured, these tested commands perform connection checks and migrations. Normal setup uses upgrade head; the downgrade/roundtrip commands are for disposable databases because downgrading the account revision drops its tables and data:
 
 ```powershell
 .venv/Scripts/python.exe -m backend.database check
@@ -123,9 +124,19 @@ From the repository root, with runtime settings configured, these tested command
 .venv/Scripts/python.exe -m alembic upgrade head
 ```
 
-The check returns a nonzero exit code and a sanitized message on connection failure. Alembic reads the same explicit settings contract; `alembic.ini` contains no URL or credentials. Baseline `0001_baseline` only tracks the revision in `alembic_version`; it creates no application tables.
+The check returns a nonzero exit code and a sanitized message on connection failure. Alembic reads the same explicit settings contract; `alembic.ini` contains no URL or credentials. Baseline `0001_baseline` only tracks the revision in `alembic_version`; current head `0002_accounts` additionally creates exactly users, email_codes, and refresh_sessions. Revert just this schema with `.venv/Scripts/python.exe -m alembic downgrade 0001_baseline`, then reapply with `upgrade head`; both directions were verified against actual PostgreSQL.
 
 ## Dedicated PostgreSQL integration tests
+
+### Account schema representation
+
+`users` stores a normalized, unique university email, password hash, verification/suspension flags, student/admin role, creation timestamp, and nullable name/avatar/contact fields. Model assignment trims/lowercases email; PostgreSQL also rejects non-normalized values, unsupported roles, empty identity/hash values, and domains other than exactly sdu.edu.kz. The unique email constraint supplies the lookup index. New persisted users are unverified, unsuspended students; profile completion belongs to a later workflow.
+
+`email_codes` stores only a digest, registration or password_reset purpose, user FK, timezone-aware creation/expiry, zero-to-five wrong attempts, and nullable consumption/invalidation timestamps. Its composite user/purpose index supports purpose-specific lookup. `refresh_sessions` stores only a unique token digest, user FK, UUID family, timezone-aware creation/expiry/revocation, and nullable unique predecessor/successor IDs. Its user/family index supports revocation queries; digest uniqueness supplies lookup indexing. UUID defaults use PostgreSQL's built-in gen_random_uuid().
+
+Deleting a user cascades to their codes and sessions. Session lineage FKs use SET NULL on deletion, so no dangling predecessor/successor references remain. Family matching and rotation/reuse/revocation behavior are later service responsibilities; this task provides their representation only. Expired, revoked, consumed, and invalidated records remain representable. Repr methods omit password hashes and digests. No plaintext password/code/token fields, HTTP endpoints, login, verification, or refresh flow have been implemented.
+
+Models register the shared SQLAlchemy metadata without loading configuration or connecting. The original migration is unchanged, and revision 0002 follows it. Integration tests require an initially empty confirmed disposable database, create only their account schema, clean test records, and downgrade to baseline afterward; they never reset an arbitrary application database. No new dependency was required for this schema task.
 
 Tests never reuse DATABASE_URL as their target. Prepare a separate empty database named `student_marketplace_test_<suffix>` on loopback and explicitly set TEST_DATABASE_URL plus TEST_DATABASE_CONFIRM equal to that exact database name. Tests reject non-loopback hosts, unconfirmed names, and databases containing application tables. They do not drop/reset arbitrary databases; temporary transaction probes are cleaned up and baseline downgrade is applied afterward.
 
@@ -152,4 +163,4 @@ try {
 }
 ```
 
-For a previously prepared dedicated cluster, omit only the CREATE DATABASE line. This environment required approved execution outside the networking sandbox for loopback clients and the single start/test/stop lifecycle. All **21 tests passed with no skips**, including actual PostgreSQL CLI success/unreachable failure, baseline upgrade/downgrade/second-upgrade, and real session commit/rollback cleanup. The temporary server was stopped after verification. QA can repeat this exact lifecycle using the retained sibling runtime, without creating any system service.
+For a previously prepared dedicated cluster, omit only the CREATE DATABASE line. This environment required approved execution outside the networking sandbox for loopback clients and the single start/test/stop lifecycle. All **29 backend tests passed with no skips**, including nine actual PostgreSQL checks: baseline/connection/session regression tests and six account-schema integrity/roundtrip tests. The historical baseline test targets 0001_baseline explicitly; the new schema test targets head, so both migration contracts remain covered. Frontend tests and production build also passed. The temporary server was stopped after verification. QA can repeat this exact lifecycle using the retained sibling runtime, without creating any system service.

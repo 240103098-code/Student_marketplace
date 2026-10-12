@@ -5,7 +5,7 @@ Commands
 - `.venv/Scripts/python.exe -m pip install -r requirements.lock` - install the pinned Python dependencies.
 - `.venv/Scripts/python.exe -m unittest discover -s tests -v` - run service-free tests; real PostgreSQL tests are opt-in using the dedicated database contract in `_docs/local-setup.md`.
 - `.venv/Scripts/python.exe -m backend.database check` - explicitly check configured PostgreSQL connectivity.
-- `.venv/Scripts/python.exe -m alembic upgrade head` / `downgrade base` - apply/revert the empty database baseline; no application tables exist yet.
+- `.venv/Scripts/python.exe -m alembic upgrade head` / `downgrade base` - apply/revert migrations. Current head creates account/code/refresh tables; use downgrades only on disposable data.
 - From `frontend`, `npm ci`, `npm run test -- --run`, and `npm run build` install/test/build the React preview shell; `npm run dev` serves it at http://127.0.0.1:5173/ (Ctrl+C to stop).
 - Frontend verification uses Node 24.19.0 and npm 12.2.0; see `_docs/local-setup.md` for supported versions and workspace-local npm.
 - No backend HTTP service startup command is available yet.

@@ -6,6 +6,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 from sqlalchemy.exc import OperationalError
+from sqlalchemy.orm import DeclarativeBase
 
 from backend.config import REPOSITORY_ROOT, load_settings
 from backend.database import Base, Database, main
@@ -35,7 +36,7 @@ class DatabaseInfrastructureTest(unittest.TestCase):
             self.assertTrue(create.call_args.kwargs["hide_parameters"])
             create.return_value.connect.assert_not_called()
             sessions.assert_called_once_with(bind=database.engine, expire_on_commit=False)
-        self.assertEqual(list(Base.metadata.tables), [])
+        self.assertTrue(issubclass(Base, DeclarativeBase))
 
     def test_successful_session_commits_and_closes(self):
         database = Database.__new__(Database)

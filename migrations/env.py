@@ -5,6 +5,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from backend.config import load_settings
 from backend.database import Base, Database
+from backend import models  # Register metadata only; no settings or connections.
 
 
 settings = context.config.attributes.get("settings")

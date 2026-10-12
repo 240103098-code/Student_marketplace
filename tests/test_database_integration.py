@@ -8,41 +8,18 @@ import unittest
 
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import inspect, text
+from sqlalchemy import text
 from sqlalchemy.engine import make_url
 
-from backend.config import REPOSITORY_ROOT, load_settings
-from backend.database import Database
+from backend.config import REPOSITORY_ROOT
+from postgresql_support import open_disposable_database
 
 
 class PostgreSQLIntegrationTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        raw_url = os.environ.get("TEST_DATABASE_URL")
-        if not raw_url:
-            raise unittest.SkipTest("Set dedicated TEST_DATABASE_URL and matching TEST_DATABASE_CONFIRM to run real PostgreSQL tests")
-        url = make_url(raw_url)
-        if (
-            url.drivername not in {"postgresql", "postgresql+psycopg"}
-            or url.host not in {"localhost", "127.0.0.1", "::1"}
-            or not url.database
-            or not url.database.startswith("student_marketplace_test_")
-            or os.environ.get("TEST_DATABASE_CONFIRM") != url.database
-        ):
-            raise ValueError("Integration tests require an explicitly confirmed disposable loopback PostgreSQL test database")
-        cls.environment = {
-            "APP_ENV": "test", "DATABASE_URL": raw_url,
-            "JWT_SECRET_KEY": "TEST_ONLY_MARKER_" + "x" * 40,
-        }
-        cls.settings = load_settings(environ=cls.environment, env_file=None)
-        cls.database = Database(cls.settings)
+        cls.settings, cls.database, cls.environment = open_disposable_database()
         cls.addClassCleanup(cls.database.dispose)
-        with cls.database.engine.connect() as connection:
-            if connection.execute(text("SELECT current_database()")).scalar_one() != url.database:
-                raise ValueError("Connected database does not match the disposable test database")
-            tables = set(inspect(connection).get_table_names())
-            if tables - {"alembic_version"}:
-                raise ValueError("Disposable test database must contain no application tables")
 
     def migration_config(self):
         configuration = Config(str(REPOSITORY_ROOT / "alembic.ini"))
@@ -53,13 +30,13 @@ class PostgreSQLIntegrationTest(unittest.TestCase):
         self.assertTrue(self.database.check_connection())
         configuration = self.migration_config()
         try:
-            command.upgrade(configuration, "head")
+            command.upgrade(configuration, "0001_baseline")
             with self.database.engine.connect() as connection:
                 self.assertEqual(connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one(), "0001_baseline")
             command.downgrade(configuration, "base")
             with self.database.engine.connect() as connection:
                 self.assertEqual(connection.execute(text("SELECT count(*) FROM alembic_version")).scalar_one(), 0)
-            command.upgrade(configuration, "head")
+            command.upgrade(configuration, "0001_baseline")
             with self.database.engine.connect() as connection:
                 self.assertEqual(connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one(), "0001_baseline")
         finally:
