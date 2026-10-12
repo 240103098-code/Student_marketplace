@@ -9,8 +9,9 @@ Rules
 - Dependencies are added in `pyproject.toml`. Do not add one without
   asking
 
-  Documents
+## Documents
 
-- `_docs/process.md` - how work is organized
-- Before writing tests, read `_docs/testing-guidelines.md`
-- For anything touching the UI, read `_docs/design-system.md`
+- Read `_docs/process.md` before starting work.
+- Before writing tests, read `_docs/testing-guidelines.md`.
+- For anything touching the UI, read `_docs/design-system.md`.
+- Before working on APIs, read `_docs/api.md`.
