@@ -99,6 +99,13 @@ export function createSessionClient(notify) {
         return await requestJson(path, { responseType: binary ? 'blob' : undefined, headers: { Authorization: `Bearer ${renewed}` } });
       } catch (error) { clear(expiredMessage); throw error; }
     },
+    async post(path,payload,file) {
+      if (!token) throw new ApiError('session');
+      const body=file?new FormData():undefined;
+      if(file)body.append('image',file);
+      try { return await requestJson(path,{method:'POST',payload:file?undefined:payload,body,headers:{Authorization:`Bearer ${token}`}}); }
+      catch(error) { if([401,403].includes(error.status))clear(expiredMessage);throw error; }
+    },
     async avatar(file) {
       if (!token) throw new ApiError('session');
       const body = file ? new FormData() : undefined;
@@ -160,6 +167,6 @@ export function AuthProvider({ children }) {
     client.current.restore();
     return () => client.current.dispose();
   }, []);
-  return <AuthContext.Provider value={{ ...state, login: client.current.login, logout: client.current.logout, get: client.current.get, patch: client.current.patch, avatar: client.current.avatar, changePassword: client.current.changePassword, resetPassword: client.current.resetPassword }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ ...state, login: client.current.login, logout: client.current.logout, get: client.current.get, post: client.current.post, patch: client.current.patch, avatar: client.current.avatar, changePassword: client.current.changePassword, resetPassword: client.current.resetPassword }}>{children}</AuthContext.Provider>;
 }
 export function useAuth() { return useContext(AuthContext); }

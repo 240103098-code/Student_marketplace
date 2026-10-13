@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AuthProvider, useAuth } from './Auth.jsx';
 import { RecoveryRequestForm, ResetPasswordForm } from './RecoveryForms.jsx';
+import { NewListingForm } from './NewListingForm.jsx';
 import { AvatarControl } from './AvatarControl.jsx';
 import { ProfileForm } from './ProfileForm.jsx';
 import { PasswordForm } from './PasswordForm.jsx';
@@ -33,7 +34,9 @@ const views = {
 views['/forgot-password'] = { title: 'Recover your password', description: 'Request a reset code with your university email. Only eligible verified accounts can receive one.' };
 views['/reset-password'] = { title: 'Reset password', description: 'Enter your university email, recovery code, and a new password. Codes last ten minutes.' };
 
-const protectedPaths = ['/marketplace', '/profile', '/my-listings', '/account/password'];
+views['/listings/new'] = { title: 'Create a listing', description: 'Describe your item and optionally add photos. New listings wait for manual admin review before publication.' };
+
+const protectedPaths = ['/marketplace', '/profile', '/my-listings', '/account/password', '/listings/new'];
 export function safeReturnPath(path) { return protectedPaths.includes(path) ? path : '/marketplace'; }
 views['/account/password'] = { title: 'Change password', description: 'Confirm your current password to set a new one. This signs out every session for your account.' };
 views['/profile'] = { title: 'Profile', description: 'View and edit your name and optional external contact details. Your verified university email stays fixed.' };
@@ -118,6 +121,7 @@ function AppShell() {
               <a key={href} href={href} onClick={navigate} aria-current={path === href ? 'page' : undefined}>{label}</a>
             ))}
             {auth.status === 'authenticated' && <>
+              <a href="/listings/new" onClick={navigate}>Create listing</a>
               <a href="/profile" onClick={navigate}>Profile</a>
               <a href="/my-listings" onClick={navigate}>My Listings</a>
               <a href="/account/password" onClick={navigate}>Change password</a>
@@ -134,6 +138,7 @@ function AppShell() {
         {logoutError && <p role="alert" className="form-feedback error">{logoutError}</p>}
         {logoutPending && <p role="status">Confirming sign-out...</p>}
         {guarded && <p role="status">Checking your session...</p>}
+        {path === '/listings/new' && !guarded && <NewListingForm navigate={navigate} />}
         {path === '/profile' && !guarded && <><AvatarControl /><ProfileForm /></>}
         {path === '/forgot-password' && <RecoveryRequestForm initialEmail={recovery.email} cooldowns={recovery.cooldowns} navigate={navigate} onRequested={(email, deadline) => setRecovery(previous => ({ email, cooldowns: { ...previous.cooldowns, [email]: deadline } }))} />}
         {path === '/reset-password' && <ResetPasswordForm initialEmail={recovery.email} navigate={navigate} onReset={() => goTo('/login')} />}

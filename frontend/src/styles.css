@@ -64,3 +64,11 @@ button:disabled, input:disabled { opacity: 0.65; cursor: not-allowed; }
 .avatar-control label { display: block; font-weight: 600; margin: 18px 0 9px; }
 .avatar-control input { width: 100%; min-width: 0; }
 .avatar-preview { display: block; width: 160px; height: 160px; max-width: 100%; object-fit: cover; border-radius: 12px; }
+.account-form textarea, .account-form select { width: 100%; min-width: 0; padding: 13px 14px; border: 1px solid #bcc9c1; border-radius: 8px; color: #222b30; background: #fff; font: inherit; }
+.account-form textarea { min-height: 130px; resize: vertical; }
+textarea:focus-visible, select:focus-visible { outline: 3px solid #477c64; outline-offset: 3px; }
+textarea:disabled, select:disabled { opacity: 0.65; }
+.listing-previews { width: 100%; padding-left: 24px; }
+.listing-previews img { width: 160px; height: 120px; max-width: 100%; object-fit: cover; border-radius: 8px; }
+.listing-previews li { margin-top: 18px; }
+.listing-previews p { font-size: 13px; }
