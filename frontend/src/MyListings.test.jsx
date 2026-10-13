@@ -7,7 +7,7 @@ let fetchMock,create,revoke;
 function item(id,status='active',photos=[]){return {id,title:`Own item ${id}`,description:'A useful description.',price:'12.34',currency:'KZT',category_id:1,condition:'used',status,created_at:'2026-10-13T00:00:00Z',published_at:status==='active'||status==='sold'?'2026-10-13T00:00:00Z':null,rejection_reason:status==='rejected'?'Prohibited item.':null,photos};}
 function response(status,data={}){return new Response(JSON.stringify(data),{status});}
 function page(items,total=items.length,status=null,offset=0){return {items,total,count:items.length,limit:20,offset,status};}
-function setup(load,photo=()=>Promise.resolve(new Response(new Uint8Array([1,2]),{status:200,headers:{'Content-Type':'image/png'}})),sold){
+function setup(load,photo=()=>Promise.resolve(new Response(new Uint8Array([1,2]),{status:200,headers:{'Content-Type':'image/png'}})),sold,remove){
  fetchMock.mockImplementation((url,options)=>{
   const parsed=new URL(url),path=parsed.pathname;
   if(path==='/auth/csrf')return Promise.resolve(response(200,{csrf_token:'a'.repeat(64)}));
@@ -17,6 +17,7 @@ function setup(load,photo=()=>Promise.resolve(new Response(new Uint8Array([1,2])
   if(path==='/listings/7/edit')return Promise.resolve(response(200,{id:7,title:'Own item 7',price:'12.34',description:'A useful description.',status:'active',published_at:'2026-10-13T00:00:00Z'}));
   if(path.includes('/photos/'))return photo(options);
   if(path.endsWith('/sold'))return sold(options);
+  if(options.method==='DELETE'&&path==='/listings/7')return remove(options);
   throw new Error('Unexpected test route');
  });
 }
@@ -48,7 +49,7 @@ test('cards expose only allowed real actions and rejection/Removed guidance with
  expect(screen.getAllByRole('link',{name:'Edit price or description'})).toHaveLength(3);
  const rejected=screen.getByRole('heading',{name:'Own item 4'}).closest('li');expect(within(rejected).queryByRole('link')).toBeNull();expect(rejected.textContent).toContain('Prohibited item.');
  const removed=screen.getByRole('heading',{name:'Own item 5'}).closest('li');expect(within(removed).queryByRole('link')).toBeNull();expect(removed.textContent).toContain('Photos are unavailable');
- expect(screen.getAllByRole('button',{name:'Mark Sold'})).toHaveLength(1);expect(screen.queryByRole('button',{name:/delete|approve/i})).toBeNull();expect(fetchMock.mock.calls.some(([url])=>url.includes('/photos/'))).toBe(false);
+ expect(screen.getAllByRole('button',{name:'Mark Sold'})).toHaveLength(1);expect(screen.getAllByRole('button',{name:'Delete listing'})).toHaveLength(5);expect(screen.queryByRole('button',{name:/approve/i})).toBeNull();expect(fetchMock.mock.calls.some(([url])=>url.includes('/photos/'))).toBe(false);
 });
 
 test('main thumbnail fetch is authenticated binary and object URLs release on view change/unmount',async()=>{
@@ -89,4 +90,22 @@ test('failed sold action retains Active and never automatically replays or claim
  setup(()=>Promise.resolve(response(200,page([item(7)]))),undefined,()=>Promise.reject(new Error('SENSITIVE_NETWORK')));await open();await screen.findByRole('button',{name:'Mark Sold'});
  fireEvent.click(screen.getByRole('button',{name:'Mark Sold'}));fireEvent.click(screen.getByRole('button',{name:'Confirm Sold'}));await screen.findByRole('alert');
  expect(screen.getByRole('alert').textContent).toContain('could not be confirmed');expect(screen.getByText('12.34 KZT · Active')).toBeTruthy();expect(fetchMock.mock.calls.filter(([url])=>url.endsWith('/sold'))).toHaveLength(1);
+});
+
+test('delete cancel sends nothing and confirmed pending cleanup reloads authoritative data',async()=>{
+ let finish,deleted=false;
+ setup(()=>Promise.resolve(response(200,page(deleted?[]:[item(7,'rejected')]))),undefined,undefined,()=>new Promise(resolve=>{finish=resolve;}));await open();await screen.findByRole('button',{name:'Delete listing'});
+ fireEvent.click(screen.getByRole('button',{name:'Delete listing'}));fireEvent.click(screen.getByRole('button',{name:'Cancel deletion'}));expect(fetchMock.mock.calls.filter(([,o])=>o.method==='DELETE')).toHaveLength(0);
+ fireEvent.click(screen.getByRole('button',{name:'Delete listing'}));fireEvent.click(screen.getByRole('button',{name:'Confirm deletion'}));await waitFor(()=>expect(typeof finish).toBe('function'));
+ expect(screen.getByRole('button',{name:'Deleting…'}).disabled).toBe(true);fireEvent.click(screen.getByRole('button',{name:'Deleting…'}));
+ const calls=fetchMock.mock.calls.filter(([,o])=>o.method==='DELETE');expect(calls).toHaveLength(1);expect(calls[0][1].body).toBeUndefined();expect(calls[0][1].headers.Authorization).toBe('Bearer secret-access');
+ await act(async()=>{deleted=true;finish(response(200,{id:7,deleted:true,cleanup_pending:true}));});await screen.findByText('No listings in this view.');expect(screen.getByText('Listing deleted. Some photo-file cleanup is still pending.')).toBeTruthy();
+});
+test('ambiguous deletion requires review and never automatically replays or claims success',async()=>{
+ let absent=false;setup(()=>Promise.resolve(response(200,page(absent?[]:[item(7)]))),undefined,undefined,()=>Promise.reject(new Error('PRIVATE_NETWORK')));await open();await screen.findByRole('button',{name:'Delete listing'});
+ fireEvent.click(screen.getByRole('button',{name:'Delete listing'}));fireEvent.click(screen.getByRole('button',{name:'Confirm deletion'}));await screen.findByRole('alert');expect(screen.getByRole('alert').textContent).toContain('may already be absent');expect(screen.queryByText(/Listing deleted\./)).toBeNull();
+ absent=true;fireEvent.click(screen.getByRole('button',{name:'Reload listings to review'}));await screen.findByText('No listings in this view.');expect(fetchMock.mock.calls.filter(([,o])=>o.method==='DELETE')).toHaveLength(1);
+});
+test('deleting the last item on the last page reloads the nearest valid page',async()=>{
+ let deleted=false;setup(params=>{const offset=Number(params.get('offset'));return Promise.resolve(response(200,page(offset?(deleted?[]:[item(7)]):Array.from({length:20},(_,i)=>item(i+30)),deleted?20:21,null,offset)));},undefined,undefined,()=>{deleted=true;return Promise.resolve(response(200,{id:7,deleted:true,cleanup_pending:false}));});await open();await screen.findByRole('heading',{name:'Own item 30'});fireEvent.click(screen.getByRole('button',{name:'Next page'}));await screen.findByRole('heading',{name:'Own item 7'});fireEvent.click(screen.getByRole('button',{name:'Delete listing'}));fireEvent.click(screen.getByRole('button',{name:'Confirm deletion'}));await screen.findByRole('heading',{name:'Own item 30'});expect(screen.getByRole('button',{name:'Previous page'}).disabled).toBe(true);expect(screen.getByRole('button',{name:'Next page'}).disabled).toBe(true);
 });

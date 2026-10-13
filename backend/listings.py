@@ -108,3 +108,19 @@ def mark_own_listing_sold(database,user_id,token,listing_id,settings,*,clock):
         listing.status='sold'
         session.flush()
         return {'id':listing.id,'status':'sold','published_at':listing.published_at}
+
+
+def delete_own_listing(database,user_id,token,listing_id,settings,*,clock):
+    from backend.images import ImageStorage,ImageStorageError
+    storage=ImageStorage(settings.upload_dir,namespace='listings')
+    with database.session() as session:
+        listing=locked_own_listing(session,user_id,token,listing_id,settings,clock)
+        paths=list(session.scalars(select(ListingPhoto.storage_path).where(ListingPhoto.listing_id==listing_id)))
+        for path in paths:storage.path(path,listing_id)
+        session.delete(listing)
+        session.flush()
+    pending=False
+    for path in paths:
+        try:storage.delete(path,listing_id)
+        except ImageStorageError:pending=True
+    return {'id':listing_id,'deleted':True,'cleanup_pending':pending}

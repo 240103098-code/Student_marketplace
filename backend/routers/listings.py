@@ -9,7 +9,7 @@ from pydantic import ValidationError
 
 from backend.authentication import AuthenticationError, authentication_required, require_verified_user
 from backend.listing_schemas import ListingCreateRequest, OwnListingResponse, ListingEditRequest, ListingEditResponse, MineListingsPage
-from backend.listings import SellerContactRequired, create_own_listing, fixed_categories, ListingUnavailable, ListingEditForbidden, read_own_listing_edit, update_own_listing, own_listings_page, mark_own_listing_sold, ListingSoldForbidden
+from backend.listings import SellerContactRequired, create_own_listing, fixed_categories, ListingUnavailable, ListingEditForbidden, read_own_listing_edit, update_own_listing, own_listings_page, mark_own_listing_sold, ListingSoldForbidden, delete_own_listing
 
 router=APIRouter(tags=['listing submission'])
 
@@ -114,15 +114,19 @@ def edit_listing(listing_id:Annotated[int,Path(ge=1,le=9223372036854775807)],req
     return ListingEditResponse.model_validate(listing)
 
 
-@router.post('/listings/{listing_id}/sold')
-async def mark_sold(listing_id:Annotated[int,Path(ge=1,le=9223372036854775807)],request:Request,user=Depends(require_verified_user)):
+async def require_empty_action(request,error_detail):
     raw=bytearray()
     async for chunk in request.stream():
-        if len(raw)+len(chunk)>1024:raise HTTPException(status_code=422,detail='Sold requests accept no fields.')
+        if len(raw)+len(chunk)>1024:raise HTTPException(status_code=422,detail=error_detail)
         raw.extend(chunk)
     try:
         if request.query_params or (raw and json.loads(raw)!={}):raise ValueError()
-    except (ValueError,TypeError):raise HTTPException(status_code=422,detail='Sold requests accept no fields.') from None
+    except (ValueError,TypeError):raise HTTPException(status_code=422,detail=error_detail) from None
+
+
+@router.post('/listings/{listing_id}/sold')
+async def mark_sold(listing_id:Annotated[int,Path(ge=1,le=9223372036854775807)],request:Request,user=Depends(require_verified_user)):
+    await require_empty_action(request,'Sold requests accept no fields.')
     from starlette.concurrency import run_in_threadpool
     try:
         return await run_in_threadpool(mark_own_listing_sold,request.app.state.database,user.id,
@@ -131,3 +135,15 @@ async def mark_sold(listing_id:Annotated[int,Path(ge=1,le=9223372036854775807)],
     except AuthenticationError:raise authentication_required() from None
     except ListingUnavailable:raise HTTPException(status_code=404,detail='Listing is unavailable.') from None
     except ListingSoldForbidden:raise HTTPException(status_code=409,detail='Only Active listings can be marked Sold.') from None
+
+
+@router.delete('/listings/{listing_id}')
+async def delete_listing(listing_id:Annotated[int,Path(ge=1,le=9223372036854775807)],request:Request,user=Depends(require_verified_user)):
+    await require_empty_action(request,'Deletion requests accept no fields.')
+    from starlette.concurrency import run_in_threadpool
+    try:
+        return await run_in_threadpool(delete_own_listing,request.app.state.database,user.id,
+            request.headers['authorization'].split(' ',1)[1],listing_id,
+            request.app.state.settings,clock=request.app.state.clock)
+    except AuthenticationError:raise authentication_required() from None
+    except ListingUnavailable:raise HTTPException(status_code=404,detail='Listing is unavailable.') from None

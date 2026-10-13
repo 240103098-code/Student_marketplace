@@ -39,6 +39,11 @@ function SoldAction({item,onSaved}){
  async function submit(){if(busy.current)return;busy.current=true;setPending(true);setError('');try{const result=await auth.post(`/listings/${item.id}/sold`);if(result.status!==200||result.data?.id!==item.id||result.data.status!=='sold')throw new ApiError('response');onSaved();}catch{setError('Sold status could not be confirmed. Review or reload your listings before retrying.');}finally{busy.current=false;setPending(false);}}
  return <div>{confirm?<><p>Mark this listing Sold? Buyers will lose access; there is no undo.</p><button className="button primary" disabled={pending} onClick={submit}>{pending?'Marking Sold…':'Confirm Sold'}</button><button className="button secondary" disabled={pending} onClick={()=>{setConfirm(false);setError('');}}>Cancel</button></>:<button className="button secondary" onClick={()=>setConfirm(true)}>Mark Sold</button>}{pending&&<p role="status">Confirming Sold status…</p>}{error&&<p role="alert" className="form-feedback error">{error}</p>}</div>;
 }
+function DeleteAction({item,onDeleted,onReview}){
+ const auth=useAuth();const [confirm,setConfirm]=useState(false),[pending,setPending]=useState(false),[error,setError]=useState('');const busy=useRef(false);
+ async function submit(){if(busy.current)return;busy.current=true;setPending(true);setError('');try{const result=await auth.remove(`/listings/${item.id}`);if(result.status!==200||result.data?.id!==item.id||result.data.deleted!==true||typeof result.data.cleanup_pending!=='boolean')throw new ApiError('response');onDeleted(result.data);}catch{setError('Deletion could not be confirmed. Reload My Listings to review before retrying; the listing may already be absent.');}finally{busy.current=false;setPending(false);}}
+ return <div>{confirm?<><p>Permanently delete this listing and its photos? This cannot be undone.</p><button className="button primary" autoFocus disabled={pending} onClick={submit}>{pending?'Deleting…':'Confirm deletion'}</button><button className="button secondary" disabled={pending} onClick={()=>{setConfirm(false);setError('');}}>Cancel deletion</button></>:<button className="button secondary" onClick={()=>setConfirm(true)}>Delete listing</button>}{pending&&<p role="status">Confirming deletion…</p>}{error&&<><p role="alert" className="form-feedback error">{error}</p><button className="button secondary" disabled={pending} onClick={onReview}>Reload listings to review</button></>}</div>;
+}
 export function MyListings({navigate}){
   const auth=useAuth();
   const [status,setStatus]=useState('all');
@@ -47,17 +52,19 @@ export function MyListings({navigate}){
   const [page,setPage]=useState(null);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState('');
+  const [notice,setNotice]=useState('');
   useEffect(()=>{
     let active=true;setLoading(true);setPage(null);setError('');
     const query=new URLSearchParams({limit:'20',offset:String(offset)});if(status!=='all')query.set('status',status);
     auth.get(`/listings/mine?${query}`).then(result=>{
-      const data=validPage(result.data,status,offset);if(active)setPage(data);
+      const data=validPage(result.data,status,offset);if(active){if(offset>0&&!data.count&&data.total<=offset){setOffset(Math.floor(Math.max(0,data.total-1)/20)*20);return;}setPage(data);}
     }).catch(()=>{if(active)setError('Your listings could not be loaded. Please retry.');}).finally(()=>{if(active)setLoading(false);});
     return()=>{active=false;};
   },[auth.get,status,offset,retry]);
   return <section aria-label="Own listings">
     <div className="dashboard-controls"><label htmlFor="mine-status">Listing status</label><select id="mine-status" value={status} onChange={event=>{setStatus(event.target.value);setOffset(0);}}><option value="all">All statuses</option>{statuses.map(value=><option key={value} value={value}>{label(value)}</option>)}</select><a className="button primary" href="/listings/new" onClick={navigate}>Create a new listing</a></div>
     <p className="field-help">Pending listings wait for manual admin review. Sold, Rejected and Removed listings are not shown in public browsing.</p>
+    {notice&&<p role="status" className="form-feedback">{notice}</p>}
     {loading&&<p role="status">Loading your listings…</p>}
     {error&&<><p role="alert" className="form-feedback error">{error}</p><button className="button secondary" onClick={()=>setRetry(value=>value+1)}>Retry listings</button></>}
     {page&&<>
@@ -69,6 +76,7 @@ export function MyListings({navigate}){
         {item.status==='pending'&&<p>Awaiting manual admin review; not public.</p>}
         {item.status==='rejected'&&<p>Rejected: {item.rejection_reason||'No reason is available.'} Editing is unavailable; deletion and recreation are required.</p>}
         {item.status==='removed'&&<p>Removed by moderation; editing and photos are unavailable.</p>}
+        <DeleteAction item={item} onReview={()=>setRetry(value=>value+1)} onDeleted={result=>{setNotice(result.cleanup_pending?'Listing deleted. Some photo-file cleanup is still pending.':'Listing deleted. Stored photo cleanup completed.');setRetry(value=>value+1);}}/>
         {item.status==='active'&&<SoldAction item={item} onSaved={()=>setRetry(value=>value+1)}/>}
         {['pending','active','sold'].includes(item.status)&&<a href={`/listings/${item.id}/edit`} onClick={navigate}>Edit price or description</a>}
       </li>)}</ul>

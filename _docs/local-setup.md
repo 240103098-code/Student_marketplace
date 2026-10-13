@@ -333,3 +333,13 @@ All 154 backend tests passed with actual isolated PostgreSQL/disposable filesyst
 On My Listings, an Active card offers Mark Sold, followed by Confirm Sold or Cancel. Confirmation calls the owner-only endpoint without state/owner fields. Pending controls prevent duplicate clicks; confirmed success reloads actual dashboard data. Failed/uncertain responses make no Sold claim and ask you to review/reload before retrying. Sold is retained privately, absent from Active, and no longer gives buyers photo access; your own photos remain readable. This action has no undo/reactivation and changes no item metadata, timestamps, reports or files.
 
 All 160 backend tests passed with real isolated PostgreSQL/filesystem/SMTP, including six Sold transition/idempotence/concurrency/state/ownership/eligibility/stale-guard/rollback/preservation/privacy cases. All 71 frontend tests and build passed, including confirmation/cancel/pending/contract/success-reload/failure cases. No dependencies/schema changes; PostgreSQL stopped after verification.
+
+## Scoped listing-photo cleanup recovery
+
+A successful listing deletion may report `cleanup_pending: true` after its database commit. With the same configured database and `UPLOAD_DIR` as the application, an operator can retry only that absent listing's generated photo files:
+
+```powershell
+.venv/Scripts/python.exe -m backend.listing_cleanup 7 --confirm-listing-id 7
+```
+
+Replace both identifiers with the exact deleted listing id. The command refuses mismatched identifiers or a still-existing listing. It checks confinement under the upload root, rejects symlink/junction escapes, and removes only generated JPG/PNG/WebP filenames directly in that listing namespace. Unknown names, directories, other listing files and avatars are preserved; it performs no recursive directory deletion. Missing files count as completed cleanup. Failure prints a sanitized message and exits nonzero; inspect permissions/configuration and retry this same scoped command. This is an explicit operator action, not a background cleanup guarantee.
