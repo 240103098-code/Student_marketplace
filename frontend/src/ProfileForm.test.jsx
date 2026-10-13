@@ -30,6 +30,7 @@ test('profile load has a clear loading state, safe retry, null fields and read-o
   setup({ load: () => ++attempts === 1 ? new Promise(resolve => { finish = resolve; }) : Promise.resolve(response(200, emptyProfile)) });
   window.history.replaceState(null, '', '/profile'); render(<App />);
   await screen.findByText('Loading your profile…');
+  await waitFor(() => expect(typeof finish).toBe('function'));
   expect(screen.queryByLabelText('Name')).toBeNull();
   await act(async () => finish(response(500, { detail: 'SENSITIVE_DRIVER' })));
   expect(screen.getByRole('alert').textContent).toBe('Your profile could not be loaded. Please retry.');
