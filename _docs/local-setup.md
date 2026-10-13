@@ -77,7 +77,7 @@ The registration-only backend startup command is documented below. Keep password
 After configuring ignored runtime settings and starting your PostgreSQL database, apply `.venv/Scripts/python.exe -m alembic upgrade head`. Then run this tested command from the repository root:
 
 ```powershell
-.venv/Scripts/python.exe -m uvicorn backend.main:create_runtime_app --factory --host 127.0.0.1 --port 8000
+.venv/Scripts/python.exe -m uvicorn backend.main:create_runtime_app --factory --host 127.0.0.1 --port 8000 --no-access-log
 ```
 
 Open `http://127.0.0.1:8000/docs` or `/openapi.json`; stop with Ctrl+C. Startup was verified on loopback with Python 3.13.15, FastAPI 0.143.0, and uvicorn 0.54.0. The explicit runtime factory loads validated settings, creates lazy database infrastructure, and disposes owned resources on normal shutdown. Injected borrowed infrastructure remains its caller's responsibility.
@@ -344,4 +344,9 @@ A successful listing deletion may report `cleanup_pending: true` after its datab
 
 Replace both identifiers with the exact deleted listing id. The command refuses mismatched identifiers or a still-existing listing. It checks confinement under the upload root, rejects symlink/junction escapes, and removes only generated JPG/PNG/WebP filenames directly in that listing namespace. Unknown names, directories, other listing files and avatars are preserved; it performs no recursive directory deletion. Missing files count as completed cleanup. Failure prints a sanitized message and exits nonzero; inspect permissions/configuration and retry this same scoped command. This is an explicit operator action, not a background cleanup guarantee.
 
-Protected marketplace browsing is available through `GET /listings` with the current Bearer access token. Its bounded limit/offset pages show only approved Active listings of eligible sellers, ordered by publication date and id descending. See the API notes for exact query/card contracts and sanitized statuses. Search, filters, marketplace card UI and listing details/contact are subsequent tasks; manual approval is unchanged.
+Protected marketplace browsing is available through `GET /listings` with the current Bearer access token. Its bounded limit/offset pages show only approved Active listings of eligible sellers, ordered by publication date and id descending. See the API notes for exact query/card contracts and sanitized statuses. Optional q keyword search is documented below; filters, marketplace card UI and listing details/contact are subsequent tasks; manual approval is unchanged.
+
+
+The protected feed accepts optional q search text (at most 200 decoded characters before trimming, no control characters). Blank text browses normally; nonblank text matches a literal case-insensitive substring in title or description, retaining approved visibility, safe card fields and newest-publication ordering. URL-encode query text, including percent/underscore/escape characters, which match literally. No-result searches return empty pages. Unicode case comparison follows PostgreSQL configuration; there is no relevance ranking, stemming or accent-folding guarantee. React search controls and category/price/condition filters are future tasks.
+
+Disable raw request-target access logging with Uvicorn `--no-access-log`, as in the startup command above, and configure any reverse-proxy access logs to omit or redact query strings. Search text must not be recorded by infrastructure access logs; the service does not log or echo q, and SQL driver parameters remain hidden.

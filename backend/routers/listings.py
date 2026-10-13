@@ -91,12 +91,15 @@ def browse_query(request:Request):
     try:
         values={}
         import re
+        import unicodedata
         for key,value in request.query_params.multi_items():
-            if key not in {'limit','offset'} or key in values or not re.fullmatch(r'(?:0|[1-9][0-9]*)',value):raise ValueError()
+            if key not in {'limit','offset','q'} or key in values:raise ValueError()
+            if key!='q' and not re.fullmatch(r'(?:0|[1-9][0-9]*)',value):raise ValueError()
+            if key=='q' and (len(value)>200 or any(unicodedata.category(character)=='Cc' for character in value)):raise ValueError()
             values[key]=value
         limit=int(values.get('limit','20'));offset=int(values.get('offset','0'))
         if not 1<=limit<=50 or not 0<=offset<=9223372036854775807:raise ValueError()
-        return {'limit':limit,'offset':offset}
+        return {'limit':limit,'offset':offset,'q':values.get('q','').strip() or None}
     except (ValueError,OverflowError):raise HTTPException(status_code=422,detail='Invalid marketplace query.') from None
 
 

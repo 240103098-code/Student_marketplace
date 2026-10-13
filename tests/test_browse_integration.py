@@ -49,7 +49,7 @@ class BrowsePostgreSQLTest(unittest.TestCase):
   for forbidden in ['SECRET','storage_path','owner_id','rejection_reason','email','password','description','verified','suspended']:self.assertNotIn(forbidden,raw)
   self.assertEqual(self.client.get(f'/listings/{self.item.id}/photos/{self.photo.id}',headers=self.buyer_headers).status_code,200)
  def test_strict_query_bounds_duplicates_and_unknowns(self):
-  for query in ['?limit=0','?limit=51','?limit=-1','?limit=1.5','?limit=01','?offset=-1','?offset=9223372036854775808','?offset=1e3','?offset=','?limit=2&limit=3','?offset=0&offset=0','?status=active','?owner_id=1','?sort=id','?q=book','?category_id=1','?offset=%2B1','?limit='+('9'*5000)]:
+  for query in ['?limit=0','?limit=51','?limit=-1','?limit=1.5','?limit=01','?offset=-1','?offset=9223372036854775808','?offset=1e3','?offset=','?limit=2&limit=3','?offset=0&offset=0','?status=active','?owner_id=1','?sort=id','?keyword=book','?category_id=1','?offset=%2B1','?limit='+('9'*5000)]:
    with self.subTest(query=query[:80]):
     result=self.browse(query);self.assertEqual(result.status_code,422);self.assertEqual(result.json(),{'detail':'Invalid marketplace query.'})
   self.assertEqual(self.browse('?limit=50&offset=0').status_code,200)
