@@ -42,3 +42,33 @@ def create_own_listing(database,user_id,token,payload,settings,*,clock):
 def fixed_categories(database):
     with database.session() as session:
         return [{'id':item.id,'key':item.key,'label':item.name} for item in session.scalars(select(Category).order_by(Category.id))]
+
+
+class ListingUnavailable(Exception):
+    pass
+
+
+class ListingEditForbidden(Exception):
+    pass
+
+
+def locked_own_listing(session,user_id,token,listing_id,settings,clock):
+    from backend.avatars import locked_avatar_user
+    locked_avatar_user(session,user_id,token,settings,clock)
+    listing=session.scalar(select(Listing).where(Listing.id==listing_id).with_for_update())
+    if listing is None or listing.owner_id != user_id:raise ListingUnavailable()
+    return listing
+
+
+def read_own_listing_edit(database,user_id,token,listing_id,settings,*,clock):
+    with database.session() as session:
+        return locked_own_listing(session,user_id,token,listing_id,settings,clock)
+
+
+def update_own_listing(database,user_id,token,listing_id,payload,settings,*,clock):
+    with database.session() as session:
+        listing=locked_own_listing(session,user_id,token,listing_id,settings,clock)
+        if listing.status not in {'pending','active','sold'}:raise ListingEditForbidden()
+        for field,value in payload.model_dump(exclude_unset=True).items():setattr(listing,field,value)
+        session.flush()
+        return listing

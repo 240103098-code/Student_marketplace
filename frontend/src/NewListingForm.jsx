@@ -104,6 +104,7 @@ export function NewListingForm({ navigate }) {
     {error&&<p role="alert" className="form-feedback error">{error}</p>}
     {contactError&&<a href="/profile" onClick={navigate}>Add your profile contact</a>}
     <button className="button primary" disabled={!!pending||uncertain||complete}>{pending?'Saving…':listing?'Retry remaining photos':'Create Pending listing'}</button>
+    {listing&&<a href={`/listings/${listing.id}/edit`} onClick={navigate}>Edit price or description</a>}
     {(listing||uncertain)&&<a href="/profile" onClick={navigate}>Go to your profile</a>}
   </form>;
 }

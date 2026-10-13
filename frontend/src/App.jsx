@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AuthProvider, useAuth } from './Auth.jsx';
 import { RecoveryRequestForm, ResetPasswordForm } from './RecoveryForms.jsx';
+import { EditListingForm } from './EditListingForm.jsx';
 import { NewListingForm } from './NewListingForm.jsx';
 import { AvatarControl } from './AvatarControl.jsx';
 import { ProfileForm } from './ProfileForm.jsx';
@@ -37,7 +38,12 @@ views['/reset-password'] = { title: 'Reset password', description: 'Enter your u
 views['/listings/new'] = { title: 'Create a listing', description: 'Describe your item and optionally add photos. New listings wait for manual admin review before publication.' };
 
 const protectedPaths = ['/marketplace', '/profile', '/my-listings', '/account/password', '/listings/new'];
-export function safeReturnPath(path) { return protectedPaths.includes(path) ? path : '/marketplace'; }
+function editListingId(path) {
+  const match=/^\/listings\/([1-9][0-9]{0,18})\/edit$/.exec(path);
+  return match && BigInt(match[1])<=9223372036854775807n ? match[1] : null;
+}
+function protectedPath(path) { return protectedPaths.includes(path)||!!editListingId(path); }
+export function safeReturnPath(path) { return protectedPath(path) ? path : '/marketplace'; }
 views['/account/password'] = { title: 'Change password', description: 'Confirm your current password to set a new one. This signs out every session for your account.' };
 views['/profile'] = { title: 'Profile', description: 'View and edit your name and optional external contact details. Your verified university email stays fixed.' };
 views['/my-listings'] = { title: 'My Listings', description: 'Your listing tools are being prepared.' };
@@ -78,7 +84,7 @@ function AppShell() {
   }, [path]);
 
   useEffect(() => {
-    if (protectedPaths.includes(path) && auth.status === 'anonymous') {
+    if (protectedPath(path) && auth.status === 'anonymous') {
       setReturnPath(safeReturnPath(path));
       window.history.replaceState(null, '', '/login');
       setPath('/login');
@@ -104,8 +110,9 @@ function AppShell() {
     setPath(nextPath);
   }
 
-  const guarded = protectedPaths.includes(path) && auth.status !== 'authenticated';
-  const view = guarded ? { title: 'Checking your session', description: 'Please wait while we confirm access.' } : views[path] || {
+  const editId=editListingId(path);
+  const guarded = protectedPath(path) && auth.status !== 'authenticated';
+  const view = guarded ? { title: 'Checking your session', description: 'Please wait while we confirm access.' } : editId ? { title: 'Edit listing', description: 'Change only price and description. Existing approval and publication stay unchanged.' } : views[path] || {
     title: 'Page not found',
     description: 'We could not find this page. Head back home to explore the preview.',
   };
@@ -138,6 +145,7 @@ function AppShell() {
         {logoutError && <p role="alert" className="form-feedback error">{logoutError}</p>}
         {logoutPending && <p role="status">Confirming sign-out...</p>}
         {guarded && <p role="status">Checking your session...</p>}
+        {editId && !guarded && <EditListingForm listingId={editId} key={editId} />}
         {path === '/listings/new' && !guarded && <NewListingForm navigate={navigate} />}
         {path === '/profile' && !guarded && <><AvatarControl /><ProfileForm /></>}
         {path === '/forgot-password' && <RecoveryRequestForm initialEmail={recovery.email} cooldowns={recovery.cooldowns} navigate={navigate} onRequested={(email, deadline) => setRecovery(previous => ({ email, cooldowns: { ...previous.cooldowns, [email]: deadline } }))} />}
@@ -155,7 +163,7 @@ function AppShell() {
             <a className="button secondary" href="/register" onClick={navigate}>Create an account</a>
           </div>
         )}
-        {!views[path] && <a className="button secondary" href="/" onClick={navigate}>Back to home</a>}
+        {!views[path] && !editId && <a className="button secondary" href="/" onClick={navigate}>Back to home</a>}
         <aside className="preview-note" aria-label="Preview information">
           <span className="note-dot" aria-hidden="true" />
           <p>University accounts and browser sessions are available. Marketplace listings are still being prepared.</p>

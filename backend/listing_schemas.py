@@ -5,7 +5,7 @@ from decimal import Decimal, InvalidOperation
 import re
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_validator
 
 
 class ListingCreateRequest(BaseModel):
@@ -65,6 +65,38 @@ class OwnListingResponse(BaseModel):
     status:Literal['pending']
     created_at:datetime
     published_at:None
+
+    @field_serializer('price')
+    def canonical_price(self,value):return format(value,'.2f')
+
+
+class ListingEditRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid',hide_input_in_errors=True)
+    price:Decimal|None=None
+    description:str|None=Field(default=None,strict=True,min_length=10,max_length=2000)
+
+    @field_validator('price',mode='before')
+    @classmethod
+    def price_exact(cls,value):return ListingCreateRequest.exact_price(value)
+
+    @field_validator('description',mode='before')
+    @classmethod
+    def description_trimmed(cls,value):return ListingCreateRequest.trimmed_text(value)
+
+    @model_validator(mode='after')
+    def nonempty(self):
+        if not self.model_fields_set:raise ValueError('Provide price or description')
+        return self
+
+
+class ListingEditResponse(BaseModel):
+    model_config=ConfigDict(from_attributes=True)
+    id:int
+    title:str
+    price:Decimal
+    description:str
+    status:Literal['pending','active','sold','rejected','removed']
+    published_at:datetime|None
 
     @field_serializer('price')
     def canonical_price(self,value):return format(value,'.2f')
