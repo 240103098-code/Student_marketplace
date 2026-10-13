@@ -1,4 +1,5 @@
 import React,{useEffect,useState} from 'react';
+import {ListingReport} from './ListingReport.jsx';
 import {useAuth} from './Auth.jsx';
 import {ApiError} from './api.js';
 import {profileChangeError} from './profileValidation.js';
@@ -25,5 +26,5 @@ export function ListingDetail({listingId,navigate}){
   <h2>{detail.title}</h2><p>{detail.price} KZT · {labels[detail.category_id-1]} · {detail.condition==='new'?'New':'Used'}</p><p>Published <time dateTime={detail.published_at}>{new Date(detail.published_at).toLocaleDateString()}</time></p><p className="listing-description">{detail.description}</p>
   <section aria-label="Listing photo gallery">{detail.photos.length?<><Photo key={detail.photos[selected].url} photo={detail.photos[selected]} alt={`Listing photo ${selected+1}`}/><p role="status">Photo {selected+1} of {detail.photos.length}{selected===0?' · Main photo':''}</p><div className="actions">{detail.photos.map((p,index)=><button className="button secondary" key={p.id} aria-pressed={selected===index} onClick={()=>setSelected(index)}>Photo {index+1}</button>)}</div></>:<p>No photos for this listing.</p>}</section>
   <section aria-label="Seller contact"><h3>Seller contact</h3>{seller.name&&<p>{seller.name}</p>}{contact&&<a className="button primary" href={contact} target="_blank" rel="noopener noreferrer">Contact Seller</a>}{seller.phone&&<p><a href={`tel:${seller.phone}`}>Call seller: {seller.phone}</a></p>}{seller.telegram_username&&seller.external_contact_url&&<p><a href={seller.external_contact_url} target="_blank" rel="noopener noreferrer">Other external contact</a></p>}{!contact&&!seller.phone&&<p>Seller contact is currently unavailable.</p>}<p>Negotiate, pay and arrange pickup directly with the seller. The marketplace does not process payments or provide chat.</p></section>
- </>}</section>;
+ <ListingReport listingId={listingId} /></>}</section>;
 }

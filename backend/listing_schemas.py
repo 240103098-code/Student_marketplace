@@ -168,3 +168,8 @@ class ListingDetailResponse(BaseModel):
 
     @field_serializer('price')
     def canonical_price(self,value):return format(value,'.2f')
+
+
+class ListingReportRequest(BaseModel):
+    model_config=ConfigDict(extra='forbid',hide_input_in_errors=True)
+    reason:Literal['spam','prohibited_items','misleading_information']

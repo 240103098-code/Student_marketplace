@@ -4,7 +4,7 @@ from pydantic import ValidationError
 from sqlalchemy import select, func, or_
 
 from backend.authentication import AuthenticationError
-from backend.models import Category, Listing, ListingPhoto, RefreshSession, User
+from backend.models import Category, Listing, ListingPhoto, ListingReport, RefreshSession, User
 from backend.profile_schemas import ProfilePatch
 from backend.tokens import AccessTokenError, validate_access_token
 
@@ -176,3 +176,23 @@ def read_buyer_listing(database,user_id,token,listing_id,settings,*,clock):
         detail={key:getattr(listing,key) for key in ['id','title','description','price','currency','category_id','condition','published_at']}
         detail.update(photos=photos,seller=contact)
         return detail
+
+
+class OwnListingReportForbidden(Exception):
+    pass
+
+
+def report_listing(database,user_id,token,listing_id,payload,settings,*,clock):
+    from backend.avatars import locked_avatar_user
+    with database.session() as session:
+        locked_avatar_user(session,user_id,token,settings,clock)
+        listing=session.scalar(select(Listing).where(Listing.id==listing_id).with_for_update())
+        if listing is None or listing.status!='active' or listing.published_at is None:raise ListingUnavailable()
+        seller=session.get(User,listing.owner_id)
+        if seller is None or not seller.verified or seller.suspended:raise ListingUnavailable()
+        if listing.owner_id==user_id:raise OwnListingReportForbidden()
+        existing=session.scalar(select(ListingReport.id).where(ListingReport.listing_id==listing_id,ListingReport.reporter_id==user_id).limit(1))
+        if existing is None:
+            session.add(ListingReport(listing_id=listing_id,reporter_id=user_id,reason=payload.reason,created_at=clock(),reviewed_at=None))
+            session.flush()
+    return {'accepted':True}

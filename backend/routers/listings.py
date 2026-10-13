@@ -8,8 +8,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Path
 from pydantic import ValidationError
 
 from backend.authentication import AuthenticationError, authentication_required, require_verified_user
-from backend.listing_schemas import ListingCreateRequest, OwnListingResponse, ListingEditRequest, ListingEditResponse, MineListingsPage, BrowseListingsPage, ListingDetailResponse
-from backend.listings import SellerContactRequired, create_own_listing, fixed_categories, ListingUnavailable, ListingEditForbidden, read_own_listing_edit, update_own_listing, own_listings_page, mark_own_listing_sold, ListingSoldForbidden, delete_own_listing, browse_listings_page, read_buyer_listing
+from backend.listing_schemas import ListingCreateRequest, OwnListingResponse, ListingEditRequest, ListingEditResponse, MineListingsPage, BrowseListingsPage, ListingDetailResponse, ListingReportRequest
+from backend.listings import SellerContactRequired, create_own_listing, fixed_categories, ListingUnavailable, ListingEditForbidden, read_own_listing_edit, update_own_listing, own_listings_page, mark_own_listing_sold, ListingSoldForbidden, delete_own_listing, browse_listings_page, read_buyer_listing, report_listing, OwnListingReportForbidden
 
 router=APIRouter(tags=['listing submission'])
 
@@ -190,3 +190,18 @@ def buyer_detail(listing_id:Annotated[int,Path(ge=1,le=9223372036854775807)],req
             request.app.state.settings,clock=request.app.state.clock)
     except AuthenticationError:raise authentication_required() from None
     except ListingUnavailable:raise HTTPException(status_code=404,detail='Listing is unavailable.') from None
+
+
+async def exact_report_payload(request:Request):
+    if request.query_params:raise HTTPException(status_code=422,detail='Invalid listing-report request.')
+    return await read_exact_listing_payload(request,ListingReportRequest,'Invalid listing-report request.')
+
+
+@router.post('/listings/{listing_id}/reports',status_code=202,openapi_extra={'requestBody':{'required':True,'content':{'application/json':{'schema':ListingReportRequest.model_json_schema()}}}})
+def submit_report(listing_id:Annotated[int,Path(ge=1,le=9223372036854775807)],request:Request,user=Depends(require_verified_user),payload=Depends(exact_report_payload)):
+    try:
+        return report_listing(request.app.state.database,user.id,request.headers['authorization'].split(' ',1)[1],
+            listing_id,payload,request.app.state.settings,clock=request.app.state.clock)
+    except AuthenticationError:raise authentication_required() from None
+    except ListingUnavailable:raise HTTPException(status_code=404,detail='Listing is unavailable.') from None
+    except OwnListingReportForbidden:raise HTTPException(status_code=400,detail='You cannot report your own listing.') from None
