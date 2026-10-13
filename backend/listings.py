@@ -152,3 +152,27 @@ def browse_listings_page(database,user_id,token,settings,*,limit,offset,clock,q=
             card['main_photo']=main.get(row.id)
             items.append(card)
         return {'items':items,'total':total,'count':len(items),'limit':limit,'offset':offset}
+
+
+def read_buyer_listing(database,user_id,token,listing_id,settings,*,clock):
+    from backend.avatars import locked_avatar_user
+    with database.session() as session:
+        locked_avatar_user(session,user_id,token,settings,clock)
+        result=session.execute(select(Listing,User).join(User,Listing.owner_id==User.id).where(
+            Listing.id==listing_id,Listing.status=='active',Listing.published_at.is_not(None),
+            User.verified.is_(True),User.suspended.is_(False))).first()
+        if result is None:raise ListingUnavailable()
+        listing,seller=result
+        contact={}
+        for key in ['name','phone','telegram_username','external_contact_url']:
+            value=getattr(seller,key)
+            if value is not None:
+                try:value=ProfilePatch.model_validate({key:value}).model_dump()[key]
+                except ValidationError:value=None
+            contact[key]=value
+        photos=[]
+        for photo in session.scalars(select(ListingPhoto).where(ListingPhoto.listing_id==listing_id).order_by(ListingPhoto.position)):
+            photos.append({'id':photo.id,'position':photo.position,'is_main':not photos,'url':f'/listings/{listing_id}/photos/{photo.id}'})
+        detail={key:getattr(listing,key) for key in ['id','title','description','price','currency','category_id','condition','published_at']}
+        detail.update(photos=photos,seller=contact)
+        return detail

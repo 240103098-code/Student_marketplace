@@ -8,8 +8,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Path
 from pydantic import ValidationError
 
 from backend.authentication import AuthenticationError, authentication_required, require_verified_user
-from backend.listing_schemas import ListingCreateRequest, OwnListingResponse, ListingEditRequest, ListingEditResponse, MineListingsPage, BrowseListingsPage
-from backend.listings import SellerContactRequired, create_own_listing, fixed_categories, ListingUnavailable, ListingEditForbidden, read_own_listing_edit, update_own_listing, own_listings_page, mark_own_listing_sold, ListingSoldForbidden, delete_own_listing, browse_listings_page
+from backend.listing_schemas import ListingCreateRequest, OwnListingResponse, ListingEditRequest, ListingEditResponse, MineListingsPage, BrowseListingsPage, ListingDetailResponse
+from backend.listings import SellerContactRequired, create_own_listing, fixed_categories, ListingUnavailable, ListingEditForbidden, read_own_listing_edit, update_own_listing, own_listings_page, mark_own_listing_sold, ListingSoldForbidden, delete_own_listing, browse_listings_page, read_buyer_listing
 
 router=APIRouter(tags=['listing submission'])
 
@@ -176,6 +176,16 @@ async def delete_listing(listing_id:Annotated[int,Path(ge=1,le=92233720368547758
     from starlette.concurrency import run_in_threadpool
     try:
         return await run_in_threadpool(delete_own_listing,request.app.state.database,user.id,
+            request.headers['authorization'].split(' ',1)[1],listing_id,
+            request.app.state.settings,clock=request.app.state.clock)
+    except AuthenticationError:raise authentication_required() from None
+    except ListingUnavailable:raise HTTPException(status_code=404,detail='Listing is unavailable.') from None
+
+
+@router.get('/listings/{listing_id}',response_model=ListingDetailResponse)
+def buyer_detail(listing_id:Annotated[int,Path(ge=1,le=9223372036854775807)],request:Request,user=Depends(require_verified_user)):
+    try:
+        return read_buyer_listing(request.app.state.database,user.id,
             request.headers['authorization'].split(' ',1)[1],listing_id,
             request.app.state.settings,clock=request.app.state.clock)
     except AuthenticationError:raise authentication_required() from None

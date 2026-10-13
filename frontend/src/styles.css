@@ -85,3 +85,6 @@ textarea:disabled, select:disabled { opacity: 0.65; }
 .marketplace-filters > p,.marketplace-filters .form-actions { grid-column: 1 / -1; margin: 0; }
 .marketplace-filters .form-actions { display: flex; gap: 12px; flex-wrap: wrap; }
 .marketplace-thumbnail { width: 100%; height: 180px; object-fit: cover; border-radius: 8px; }
+.listing-description { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; }
+section[aria-label="Listing detail"] { margin-top: 28px; overflow-wrap: anywhere; }
+section[aria-label="Listing photo gallery"],section[aria-label="Seller contact"] { margin-top: 28px; }

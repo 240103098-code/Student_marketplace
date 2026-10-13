@@ -145,3 +145,26 @@ class BrowseListingsPage(BaseModel):
     count:int
     limit:int
     offset:int
+
+
+class ListingSellerResponse(BaseModel):
+    name:str|None
+    phone:str|None
+    telegram_username:str|None
+    external_contact_url:str|None
+
+
+class ListingDetailResponse(BaseModel):
+    id:int
+    title:str
+    description:str
+    price:Decimal
+    currency:Literal['KZT']
+    category_id:int
+    condition:Literal['new','used']
+    published_at:datetime
+    photos:list[ListingPhotoSummary]
+    seller:ListingSellerResponse
+
+    @field_serializer('price')
+    def canonical_price(self,value):return format(value,'.2f')

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AuthProvider, useAuth } from './Auth.jsx';
 import { RecoveryRequestForm, ResetPasswordForm } from './RecoveryForms.jsx';
+import { ListingDetail } from './ListingDetail.jsx';
 import { Marketplace } from './Marketplace.jsx';
 import { MyListings } from './MyListings.jsx';
 import { EditListingForm } from './EditListingForm.jsx';
@@ -44,7 +45,8 @@ function editListingId(path) {
   const match=/^\/listings\/([1-9][0-9]{0,18})\/edit$/.exec(path);
   return match && BigInt(match[1])<=9223372036854775807n ? match[1] : null;
 }
-function protectedPath(path) { return protectedPaths.includes(path)||!!editListingId(path); }
+function detailListingId(path){const match=/^\/listings\/([1-9][0-9]{0,18})$/.exec(path);return match&&BigInt(match[1])<=9223372036854775807n?match[1]:null;}
+function protectedPath(path) { return protectedPaths.includes(path)||!!editListingId(path)||!!detailListingId(path); }
 export function safeReturnPath(path) { return protectedPath(path) ? path : '/marketplace'; }
 views['/account/password'] = { title: 'Change password', description: 'Confirm your current password to set a new one. This signs out every session for your account.' };
 views['/profile'] = { title: 'Profile', description: 'View and edit your name and optional external contact details. Your verified university email stays fixed.' };
@@ -114,9 +116,9 @@ function AppShell() {
     setPath(nextPath);
   }
 
-  const editId=editListingId(path);
+  const editId=editListingId(path),detailId=detailListingId(path);
   const guarded = protectedPath(path) && auth.status !== 'authenticated';
-  const view = guarded ? { title: 'Checking your session', description: 'Please wait while we confirm access.' } : editId ? { title: 'Edit listing', description: 'Change only price and description. Existing approval and publication stay unchanged.' } : views[path] || {
+  const view = guarded ? { title: 'Checking your session', description: 'Please wait while we confirm access.' } : editId ? { title: 'Edit listing', description: 'Change only price and description. Existing approval and publication stay unchanged.' } : detailId ? {title:'Listing details',description:'Contact the seller directly to arrange your purchase.'} : views[path] || {
     title: 'Page not found',
     description: 'We could not find this page. Head back home to explore the preview.',
   };
@@ -149,8 +151,9 @@ function AppShell() {
         {logoutError && <p role="alert" className="form-feedback error">{logoutError}</p>}
         {logoutPending && <p role="status">Confirming sign-out...</p>}
         {guarded && <p role="status">Checking your session...</p>}
-        {path === '/marketplace' && !guarded && <Marketplace />}
+        {path === '/marketplace' && !guarded && <Marketplace navigate={navigate} />}
         {path === '/my-listings' && !guarded && <MyListings navigate={navigate} />}
+        {detailId && !guarded && <ListingDetail listingId={detailId} key={detailId} navigate={navigate} />}
         {editId && !guarded && <EditListingForm listingId={editId} key={editId} />}
         {path === '/listings/new' && !guarded && <NewListingForm navigate={navigate} />}
         {path === '/profile' && !guarded && <><AvatarControl /><ProfileForm /></>}
@@ -169,10 +172,10 @@ function AppShell() {
             <a className="button secondary" href="/register" onClick={navigate}>Create an account</a>
           </div>
         )}
-        {!views[path] && !editId && <a className="button secondary" href="/" onClick={navigate}>Back to home</a>}
+        {!views[path] && !editId && !detailId && <a className="button secondary" href="/" onClick={navigate}>Back to home</a>}
         <aside className="preview-note" aria-label="Preview information">
           <span className="note-dot" aria-hidden="true" />
-          <p>Only verified university students can access approved marketplace listings. Contact and listing detail screens will be added next.</p>
+          <p>Only verified university students can access approved marketplace listings. Negotiate, pay and arrange pickup directly with the seller.</p>
         </aside>
       </main>
       <footer className="site-footer">Student Marketplace <span aria-hidden="true">·</span> For your university community</footer>

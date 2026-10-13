@@ -9,7 +9,7 @@ function categoriesValid(data){
  if(!Array.isArray(data)||data.length!==5||data.some((c,index)=>c.id!==index+1||c.key!==categoryKeys[index]||typeof c.label!=='string'||!c.label.trim()))throw new ApiError('response');
  return data;
 }
-function pageValid(data,offset){
+export function pageValid(data,offset){
  if(!data||!Array.isArray(data.items)||data.limit!==20||data.offset!==offset||!Number.isSafeInteger(data.total)||data.total<0||data.count!==data.items.length||data.count>20||data.count>Math.max(0,data.total-offset))throw new ApiError('response');
  const ids=new Set();
  for(const card of data.items){
@@ -19,15 +19,15 @@ function pageValid(data,offset){
  }
  return data;
 }
-function Photo({photo}){
+export function Photo({photo,alt="Main listing photo"}){
  const auth=useAuth(),[src,setSrc]=useState(null),[error,setError]=useState(false);
  useEffect(()=>{let active=true,url=null;setSrc(null);setError(false);auth.get(photo.url,true).then(result=>{
   if(result.status!==200||!['image/jpeg','image/png','image/webp'].includes(result.data?.type))throw new ApiError('response');
   if(active){url=URL.createObjectURL(result.data);setSrc(url);}
  }).catch(()=>{if(active)setError(true);});return()=>{active=false;if(url)URL.revokeObjectURL(url);};},[auth.get,photo.url]);
- return error?<p>Photo is unavailable.</p>:src?<img className="marketplace-thumbnail" src={src} alt="Main listing photo"/>:<p>Loading private photo…</p>;
+ return error?<p>Photo is unavailable.</p>:src?<img className="marketplace-thumbnail" src={src} alt={alt}/>:<p>Loading private photo…</p>;
 }
-export function Marketplace(){
+export function Marketplace({navigate}){
  const auth=useAuth(),[categories,setCategories]=useState(null),[categoryError,setCategoryError]=useState(false),[categoryRetry,setCategoryRetry]=useState(0),[draft,setDraft]=useState(empty),[applied,setApplied]=useState(empty),[offset,setOffset]=useState(0),[page,setPage]=useState(null),[loading,setLoading]=useState(true),[error,setError]=useState(false),[validation,setValidation]=useState(''),[retry,setRetry]=useState(0);
  useEffect(()=>{let active=true;setCategories(null);setCategoryError(false);auth.get('/categories').then(result=>{if(result.status!==200)throw new ApiError('response');const data=categoriesValid(result.data);if(active)setCategories(data);}).catch(()=>{if(active)setCategoryError(true);});return()=>{active=false;};},[auth.get,categoryRetry]);
  useEffect(()=>{let active=true;setLoading(true);setPage(null);setError(false);const query=new URLSearchParams({limit:'20',offset:String(offset)});for(const [key,value] of Object.entries(applied)){if(value!=='')query.set(key,value);}
@@ -59,7 +59,7 @@ export function Marketplace(){
   {!categories&&!categoryError&&<p role="status">Loading categories…</p>}{categoryError&&<><p role="alert">Categories could not be loaded.</p><button className="button secondary" onClick={()=>setCategoryRetry(n=>n+1)}>Retry categories</button></>}
   {loading&&<p role="status">Loading marketplace listings…</p>}{error&&<><p role="alert">Marketplace listings could not be loaded. Please retry.</p><button className="button secondary" onClick={()=>setRetry(n=>n+1)}>Retry marketplace</button></>}
   {page&&<><p role="status">{page.total} matching listings. {page.count?`Showing ${offset+1}–${offset+page.count}.`:'No items on this page.'}</p>{!page.count&&<p>{page.total?'No listings on this page.':'No matching listings. Try different filters.'}</p>}
-   <ul className="listing-cards">{page.items.map(card=><li className="listing-card" key={card.id}><h2>{card.title}</h2>{card.main_photo?<Photo key={card.main_photo.url} photo={card.main_photo}/>:<p>No photo.</p>}<p>{card.price} KZT</p><p>{categories?.find(c=>c.id===card.category_id)?.label||(categoryError?'Category unavailable':'Category loading')} · {card.condition==='new'?'New':'Used'}</p><p>Published <time dateTime={card.published_at}>{new Date(card.published_at).toLocaleDateString()}</time></p></li>)}</ul>
+   <ul className="listing-cards">{page.items.map(card=><li className="listing-card" key={card.id}><h2><a href={`/listings/${card.id}`} onClick={navigate}>{card.title}</a></h2>{card.main_photo?<Photo key={card.main_photo.url} photo={card.main_photo}/>:<p>No photo.</p>}<p>{card.price} KZT</p><p>{categories?.find(c=>c.id===card.category_id)?.label||(categoryError?'Category unavailable':'Category loading')} · {card.condition==='new'?'New':'Used'}</p><p>Published <time dateTime={card.published_at}>{new Date(card.published_at).toLocaleDateString()}</time></p></li>)}</ul>
    <div className="actions"><button className="button secondary" disabled={offset===0||loading} onClick={()=>{setPage(null);setOffset(n=>Math.max(0,n-20));}}>Previous page</button><button className="button secondary" disabled={offset+20>=page.total||loading} onClick={()=>{setPage(null);setOffset(n=>n+20);}}>Next page</button></div>
   </>}
  </section>;
