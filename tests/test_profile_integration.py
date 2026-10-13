@@ -72,7 +72,7 @@ class ProfilePostgreSQLTest(unittest.TestCase):
         response = self.get()
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {'id': self.user.id, 'email': self.user.email, 'verified': True, 'name': None, 'phone': None, 'telegram_username': None, 'external_contact_url': None})
-        self.assertEqual(self.client.get('/auth/me', headers=self.headers).json(), {'id': self.user.id, 'email': self.user.email, 'verified': True})
+        self.assertEqual(self.client.get('/auth/me', headers=self.headers).json(), {'id': self.user.id, 'email': self.user.email, 'verified': True,'is_admin':False})
         self.assertNotIn(PASSWORD, response.text)
 
     def test_own_partial_edits_null_clearing_and_other_account_isolation(self):

@@ -11,7 +11,7 @@ function setup({ profile = emptyProfile, load, save } = {}) {
     const path = new URL(url).pathname;
     if (path === '/auth/csrf') return Promise.resolve(response(200, { csrf_token: 'a'.repeat(64) }));
     if (path === '/auth/refresh') return Promise.resolve(response(200, { access_token: 'secret-access', token_type: 'bearer', expires_in: 900 }));
-    if (path === '/auth/me') return Promise.resolve(response(200, { id: 1, email: profile.email, verified: true }));
+    if (path === '/auth/me') return Promise.resolve(response(200, { id: 1, email: profile.email, verified: true, is_admin: false }));
     if (path === '/users/me/avatar') return Promise.resolve(response(404));
     if (path === '/users/me' && options.method === 'GET') return load ? load(options) : Promise.resolve(response(200, profile));
     if (path === '/users/me' && options.method === 'PATCH') return save ? save(options) : Promise.resolve(response(200, { ...profile, ...JSON.parse(options.body) }));

@@ -13,7 +13,7 @@ function setup(change) {
     const path = new URL(url).pathname;
     if (path === '/auth/csrf') return Promise.resolve(response(200, { csrf_token: csrf }));
     if (path === '/auth/refresh') return Promise.resolve(response(200, { access_token: 'secret-access', token_type: 'bearer', expires_in: 900 }));
-    if (path === '/auth/me') return Promise.resolve(response(200, { id: 1, email: 'student@sdu.edu.kz', verified: true }));
+    if (path === '/auth/me') return Promise.resolve(response(200, { id: 1, email: 'student@sdu.edu.kz', verified: true, is_admin: false }));
     if (path === '/auth/change-password') return change(options);
     throw new Error('Unexpected test route');
   });

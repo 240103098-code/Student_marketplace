@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AuthProvider, useAuth } from './Auth.jsx';
 import { RecoveryRequestForm, ResetPasswordForm } from './RecoveryForms.jsx';
+import { AdminLanding } from './AdminLanding.jsx';
 import { ListingDetail } from './ListingDetail.jsx';
 import { Marketplace } from './Marketplace.jsx';
 import { MyListings } from './MyListings.jsx';
@@ -40,7 +41,8 @@ views['/reset-password'] = { title: 'Reset password', description: 'Enter your u
 
 views['/listings/new'] = { title: 'Create a listing', description: 'Describe your item and optionally add photos. New listings wait for manual admin review before publication.' };
 
-const protectedPaths = ['/marketplace', '/profile', '/my-listings', '/account/password', '/listings/new'];
+views['/admin']={title:'Administration',description:'Access is checked against your current university account permissions.'};
+const protectedPaths = ['/admin', '/marketplace', '/profile', '/my-listings', '/account/password', '/listings/new'];
 function editListingId(path) {
   const match=/^\/listings\/([1-9][0-9]{0,18})\/edit$/.exec(path);
   return match && BigInt(match[1])<=9223372036854775807n ? match[1] : null;
@@ -134,6 +136,7 @@ function AppShell() {
               <a key={href} href={href==='/'&&auth.status==='authenticated'?'/marketplace':href} onClick={navigate} aria-current={path === href ? 'page' : undefined}>{label}</a>
             ))}
             {auth.status === 'authenticated' && <>
+              {auth.user.is_admin&&<a href="/admin" onClick={navigate}>Admin</a>}
               <a href="/listings/new" onClick={navigate}>Create listing</a>
               <a href="/profile" onClick={navigate}>Profile</a>
               <a href="/my-listings" onClick={navigate}>My Listings</a>
@@ -151,6 +154,7 @@ function AppShell() {
         {logoutError && <p role="alert" className="form-feedback error">{logoutError}</p>}
         {logoutPending && <p role="status">Confirming sign-out...</p>}
         {guarded && <p role="status">Checking your session...</p>}
+        {path === '/admin' && !guarded && <AdminLanding navigate={navigate} />}
         {path === '/marketplace' && !guarded && <Marketplace navigate={navigate} />}
         {path === '/my-listings' && !guarded && <MyListings navigate={navigate} />}
         {detailId && !guarded && <ListingDetail listingId={detailId} key={detailId} navigate={navigate} />}

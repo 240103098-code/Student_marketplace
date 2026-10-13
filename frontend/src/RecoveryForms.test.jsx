@@ -82,7 +82,7 @@ test('reset pending blocks duplicates; success sends only contract fields and cl
   vi.stubGlobal('fetch', (url, options) => {
     if (url.endsWith('/auth/csrf')) return Promise.resolve(response(200, { csrf_token: 'a'.repeat(64) }));
     if (url.endsWith('/auth/refresh')) return Promise.resolve(response(200, { access_token: 'secret-session', token_type: 'bearer', expires_in: 900 }));
-    if (url.endsWith('/auth/me')) return Promise.resolve(response(200, { id: 1, email: 'student@sdu.edu.kz', verified: true }));
+    if (url.endsWith('/auth/me')) return Promise.resolve(response(200, { id: 1, email: 'student@sdu.edu.kz', verified: true, is_admin: false }));
     return fetchMock(url, options);
   });
   open('/reset-password'); await screen.findByRole('button', { name: 'Sign out' });

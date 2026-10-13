@@ -9,7 +9,7 @@ Registration holds the returned normalized email and a sixty-second resend deadl
 
 Resend treats 202 as the same generic eligible-address response and uses Retry-After (sixty seconds by contract) for a readable disabled-button countdown. Failed network/503 requests do not start a new cooldown and remain retryable. Pending controls prevent duplicate/overlapping submissions. Login/session React integration is still the next task, and live university-inbox delivery remains unverified without external SMTP setup.
 
-Current capability: registration of an unverified student plus configured SMTP verification-code delivery. One-time verification and cooldown-limited resend are implemented below. Verified-user login, access JWTs, and the database-backed /auth/me guard are available below; secure refresh rotation/logout are available below; marketplace endpoints remain future work. React registration/verification screens call their three public endpoints; login/session React integration remains future work.
+Current capability: registration of an unverified student plus configured SMTP verification-code delivery. One-time verification and cooldown-limited resend are implemented below. Verified-user login, access JWTs, and the database-backed /auth/me guard are available below; secure refresh rotation/logout are available below; marketplace browsing/search/filter/detail/report endpoints are documented below. React registration/verification screens call their three public endpoints; login/session and marketplace React integration are documented below.
 
 ## POST /auth/register
 
@@ -92,7 +92,7 @@ Tokens contain no email, password/hash, code, profile/contact data, role, or eli
 
 ## GET /auth/me
 
-Send `Authorization: Bearer <access token>`; access authorization uses Bearer; refresh/logout use their protected cookie contract below. The shared require_verified_user dependency validates the token and reloads current account and active session-family state from PostgreSQL on every request. Deleted/missing, unverified, or suspended accounts are rejected even while a signed token is unexpired. Success returns only id, normalized email, and verified=true; no profile editing or listing data is implemented here.
+Send `Authorization: Bearer <access token>`; access authorization uses Bearer; refresh/logout use their protected cookie contract below. The shared require_verified_user dependency validates the token and reloads current account and active session-family state from PostgreSQL on every request. Deleted/missing, unverified, or suspended accounts are rejected even while a signed token is unexpired. Success returns only id, normalized email, verified=true and the additive current-role is_admin boolean; no profile editing or listing data is implemented here.
 
 Missing/malformed Bearer credentials, invalid/expired tokens, and current ineligibility return 401 `{"detail":"Authentication required."}` with `WWW-Authenticate: Bearer`. Unexpected database errors on login/me return generic 500 `{"detail":"Authentication is temporarily unavailable."}`. Error responses and application logs do not echo credentials, tokens, raw validation input, or driver details.
 
@@ -131,7 +131,7 @@ The React provider restores each page load using credentialed GET /auth/csrf, PO
 
 Shared authenticated **GET** requests include credentials and Bearer authorization. Simultaneous 401 responses share one refresh; each original GET retries at most once. Already-renewed credentials are reused instead of replaying rotation. Failed refresh, repeated rejection, and 403 stop recovery and remove protected access with session-expired/unavailable feedback. Unsafe mutations, refresh, login, and logout are never automatically replayed.
 
-Only exact /marketplace, /profile, /my-listings, and /account/password are valid internal return destinations, held in memory. Unknown paths and /admin remain unavailable even for verified students. Sign-out waits for server 204 before clearing client state; network/server failure retains access and explicitly asks for retry without claiming revocation. Marketplace/My Listings remain placeholders until their own issues implement content; the password screen is available below.
+Only implemented exact internal destinations are allowed, including /marketplace, /profile, /my-listings, /account/password, /listings/new, bounded listing detail/edit paths and /admin. Return paths remain in memory, and /admin requires a fresh server role check. Unknown and external/path-trick destinations remain unavailable. Sign-out waits for server 204 before clearing client state; network/server failure retains access and explicitly asks for retry without claiming revocation. Marketplace/My Listings and the password screen are implemented below.
 
 
 ## POST /auth/change-password
@@ -170,7 +170,7 @@ The public /forgot-password and /reset-password forms are reachable from sign-in
 
 ## Own-profile endpoints: GET /users/me and PATCH /users/me
 
-Both endpoints use the existing current verified, unsuspended, session-bound Bearer guard; cookie possession alone is insufficient. No caller-supplied identifier selects an account. GET returns exactly id, email, verified, name, phone, telegram_username, and external_contact_url. Existing unset personal/contact fields are null, without fabricated defaults. /auth/me retains its original id/email/verified-only contract. Avatar paths and all security fields are excluded; private own-photo access is available through the separate endpoint below.
+Both endpoints use the existing current verified, unsuspended, session-bound Bearer guard; cookie possession alone is insufficient. No caller-supplied identifier selects an account. GET returns exactly id, email, verified, name, phone, telegram_username, and external_contact_url. Existing unset personal/contact fields are null, without fabricated defaults. /auth/me adds only the is_admin capability to id/email/verified; see admin access below. Avatar paths and all security fields are excluded; private own-photo access is available through the separate endpoint below.
 
 PATCH accepts a nonempty object containing only name, phone, telegram_username, and external_contact_url. Omitted fields remain unchanged; explicit contact null clears that field. Supplied name cannot be null: it is trimmed, nonblank, and 1–100 characters. Phone is `+` followed by 7–15 ASCII digits; Telegram username is 5–32 ASCII letters/digits/underscores. Blank non-null contact strings and wrong types are invalid. External contact URL is at most 2048 characters, HTTPS with a syntactically valid DNS/IP hostname and valid optional port, no credentials, whitespace or control characters. Unsafe schemes are rejected.
 
@@ -331,3 +331,14 @@ Current verified, unsuspended session identity supplies the reporter. The exact 
 First and repeat success both return 202 `{ "accepted": true }`, with no ids, reporter/queue/review/contact data. Server id/time and reviewed_at=null are stored only on the first same-reporter/listing report. Repeated or concurrent submissions are serialized accepted no-ops preserving that original reason/time, even when a different reason is supplied. Different reporters retain independent reports. Commit failure rolls back and returns sanitized listing-unavailable 500. Reporting never automatically removes a listing or contacts admins externally; admin review/removal remains later work.
 
 Visible detail pages have a labeled reason selector and explicit report submission, pending duplicate prevention, confirmed acceptance and safe failure feedback. Ambiguous failure never claims success/failure or automatically replays; explicit retry is safe through duplicate semantics. No free-text comment/evidence/reporter tracking is introduced.
+
+
+## Administrator provisioning, capability and landing
+
+Explicit local provisioning is `.venv/Scripts/python.exe -m backend.admin --email existing@sdu.edu.kz`. It normalizes/validates an existing exact university email, locks that account and atomically promotes only verified, unsuspended users. Already-admin promotion is idempotent; password/profile/email/session data are unchanged. Missing/invalid/ineligible accounts and configuration/database errors produce sanitized nonzero failures; imports have no configuration/connection side effects and execution disposes its database. No public role-writing endpoint, default admin or automatic promotion exists.
+
+/auth/me now returns id/email/verified plus the additive boolean is_admin, read from the current database role. Registration/verification response shapes remain unchanged; tokens contain no admin authorization flags. Login/restoration validate this boolean before accepting the session. The browser uses only server-confirmed capability for navigation, never storage/caller/JWT flags.
+
+Shared admin authorization builds on current verified/session-family access and rechecks the locked account role on every request. Anonymous/ineligible/revoked users receive safe 401; eligible students receive 403 `Administrator access required.`. Current role demotion immediately denies an existing access token. GET /admin/me returns only `{id,is_admin:true}` for an authorized admin, with no contacts/queues/secrets.
+
+Protected /admin checks this endpoint before showing its confirmed landing. Loading/errors/ordinary-user denial never flash admin content. Server 403 removes stale admin navigation while retaining ordinary student access; check failures offer retry. Fresh successful proof can update capability after explicit promotion. Landing offers only a genuine back-to-marketplace link: user/listing/report management and moderation queues/actions remain subsequent tasks.

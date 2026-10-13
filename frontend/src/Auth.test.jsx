@@ -4,7 +4,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { App, safeReturnPath } from './App.jsx';
 import { createSessionClient } from './Auth.jsx';
 
-const user = { id: 7, email: 'student@sdu.edu.kz', verified: true };
+const user = { id: 7, email: 'student@sdu.edu.kz', verified: true, is_admin: false };
 const csrf = 'a'.repeat(64);
 const access = token => ({ access_token: token, token_type: 'bearer', expires_in: 900 });
 function response(status, data = {}) { return new Response(status === 204 ? null : JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } }); }
@@ -102,13 +102,10 @@ test('ineligible restoration removes protected content with honest session feedb
   expect(screen.queryByRole('button', { name: 'Sign out' })).toBeNull();
 });
 
-test('only exact student return paths are accepted; admin and path tricks remain unavailable', async () => {
-  for (const path of ['https://evil.test', '//evil.test', '/%2f%2fevil', '/admin', '/profile?next=evil', '/profile/../admin', '/my-listings/']) expect(safeReturnPath(path)).toBe('/marketplace');
-  expect(safeReturnPath('/profile')).toBe('/profile');
-  setup(activeRoutes()); open('/admin');
-  expect(screen.getByRole('heading', { name: 'Page not found' })).toBeTruthy();
-  await screen.findByRole('button', { name: 'Sign out' });
-  expect(screen.getByRole('heading', { name: 'Page not found' })).toBeTruthy();
+test('only exact internal paths are accepted and admin access remains server guarded',async()=>{
+ for(const path of ['https://evil.test','//evil.test','/%2f%2fevil','/profile?next=evil','/profile/../admin','/my-listings/'])expect(safeReturnPath(path)).toBe('/marketplace');
+ expect(safeReturnPath('/profile')).toBe('/profile');expect(safeReturnPath('/admin')).toBe('/admin');
+ setup(activeRoutes({'/admin/me':()=>Promise.resolve(response(403))}));open('/admin');await screen.findByText('Administrator access is required.');expect(screen.getByRole('button',{name:'Sign out'})).toBeTruthy();expect(screen.queryByRole('heading',{name:'Admin access confirmed'})).toBeNull();
 });
 
 test('confirmed sign-out clears navigation only after server success and blocks duplicate clicks', async () => {

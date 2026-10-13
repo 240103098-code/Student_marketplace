@@ -13,7 +13,7 @@ function setup({load,createListing,upload}={}){
   const path=new URL(url).pathname;
   if(path==='/auth/csrf')return Promise.resolve(response(200,{csrf_token:'a'.repeat(64)}));
   if(path==='/auth/refresh')return Promise.resolve(response(200,{access_token:'secret-token',token_type:'bearer',expires_in:900}));
-  if(path==='/auth/me')return Promise.resolve(response(200,{id:1,email:'student@sdu.edu.kz',verified:true}));
+  if(path==='/auth/me')return Promise.resolve(response(200,{id:1,email:'student@sdu.edu.kz',verified:true,is_admin:false}));
   if(path==='/categories')return load?load():Promise.resolve(response(200,categories));
   if(path==='/listings')return createListing?createListing(options):Promise.resolve(response(201,metadata()));
   if(path==='/listings/7/photos')return upload(options);

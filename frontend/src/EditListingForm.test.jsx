@@ -11,7 +11,7 @@ function setup({load,save,listing=item}={}){
   const path=new URL(url).pathname;
   if(path==='/auth/csrf')return Promise.resolve(response(200,{csrf_token:'a'.repeat(64)}));
   if(path==='/auth/refresh')return Promise.resolve(response(200,{access_token:'secret-token',token_type:'bearer',expires_in:900}));
-  if(path==='/auth/me')return Promise.resolve(response(200,{id:1,email:'student@sdu.edu.kz',verified:true}));
+  if(path==='/auth/me')return Promise.resolve(response(200,{id:1,email:'student@sdu.edu.kz',verified:true,is_admin:false}));
   if(path==='/listings/7/edit')return load?load():Promise.resolve(response(200,listing));
   if(path==='/listings/7')return save?save(options):Promise.resolve(response(200,{...listing,...JSON.parse(options.body)}));
   throw new Error('Unexpected test route');

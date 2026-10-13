@@ -2,7 +2,7 @@
 
 ## Current status
 
-The Python bootstrap, typed configuration loader, PostgreSQL engine/session helpers, connection-check command, account/code/refresh-session schema, registration API with configured SMTP verification-code delivery, and React preview shell are ready, with automated tests. The backend HTTP service supports registration, verification/resend, login, and minimal protected account access. One-time email activation and cooldown-limited resend are also ready; verified-user login/access JWTs and /auth/me are ready; secure refresh rotation/logout are ready; React registration/verification forms are ready; React login, session restoration, and protected navigation are ready; listing submission and fixed-category endpoints are ready; listing-photo append/private reads are ready; the creation UI is ready; browsing/detail endpoints remain future work. Live internet inbox delivery remains unverified. Importing configuration/database helpers never starts services, connects, or creates tables. Frontend registration/verification/login/profile/photo routes use their implemented API contracts; marketplace content remains a placeholder.
+The Python bootstrap, typed configuration loader, PostgreSQL engine/session helpers, connection-check command, account/code/refresh-session schema, registration API with configured SMTP verification-code delivery, and React preview shell are ready, with automated tests. The backend HTTP service supports registration, verification/resend, login, and minimal protected account access. One-time email activation and cooldown-limited resend are also ready; verified-user login/access JWTs and /auth/me are ready; secure refresh rotation/logout are ready; React registration/verification forms are ready; React login, session restoration, and protected navigation are ready; listing submission and fixed-category endpoints are ready; listing-photo append/private reads are ready; the creation UI is ready; browsing/search/filter/detail/report endpoints and explicit admin access are available below. Live internet inbox delivery remains unverified. Importing configuration/database helpers never starts services, connects, or creates tables. Frontend registration/verification/login/profile/photo routes use their implemented API contracts; marketplace content and the protected admin landing use their real API contracts.
 
 ## Current layout
 
@@ -104,7 +104,7 @@ Verification locks both user and code before comparing expiry/digest and commits
 
 ## Login and protected account proof
 
-After verification, POST /auth/login with exactly email/password returns a Bearer access token and expires_in=900 by default. The email is normalized; password case/whitespace is preserved. Unknown, incorrect, unverified, and suspended credentials share a safe 401. Use Authorization: Bearer with GET /auth/me to obtain only id/email/verified; each request reloads the account, so suspension, unverification, or deletion denies an existing signed token immediately.
+After verification, POST /auth/login with exactly email/password returns a Bearer access token and expires_in=900 by default. The email is normalized; password case/whitespace is preserved. Unknown, incorrect, unverified, and suspended credentials share a safe 401. Use Authorization: Bearer with GET /auth/me to obtain only id/email/verified plus boolean is_admin; each request reloads the account, so suspension, unverification, or deletion denies an existing signed token immediately.
 
 HS256 is the sole allowed access algorithm. Issuer is student-marketplace, audience is student-marketplace-students; required exact claims are iss/aud/sub/type=access/iat/exp/jti/sid (session-family binding). UTC timestamps and the configured fifteen-minute default are enforced, including exact expiry and future-issued rejection. Tokens contain no sensitive profile/password/code data or trusted eligibility flags. Do not log/store the raw token in files; future browser integration keeps access tokens in memory.
 
@@ -228,7 +228,7 @@ For a previously prepared dedicated cluster, omit only the CREATE DATABASE line.
 
 ## React browser sessions
 
-Open /login to sign in with a previously verified disposable university account. Login confirms /auth/me before displaying Marketplace, Profile, and My Listings placeholders. Reload checks the HttpOnly cookie through /auth/csrf, rotates once, and confirms eligibility while showing a loading state. Anonymous visitors return to /login; after sign-in only the exact internal student destination is restored. Admin routes are unavailable.
+Open /login to sign in with a previously verified disposable university account. Login confirms /auth/me before displaying protected Marketplace, Profile, and My Listings content. Reload checks the HttpOnly cookie through /auth/csrf, rotates once, and confirms eligibility while showing a loading state. Anonymous visitors return to /login; after sign-in only the exact internal student destination is restored. Admin navigation and the landing require confirmed current server admin access, documented below.
 
 Keep frontend VITE_API_ORIGIN and backend FRONTEND_ORIGINS on the same hostname as described above. Requests include browser credentials; CSRF and Bearer values stay in memory. Sign out waits for the API to confirm revocation; a failed network/server response shows retry guidance and does not claim success. Registration/verification remain accessible. Shared GET recovery retries once; mutations are not automatically replayed.
 
@@ -364,3 +364,16 @@ Seller contact fields are revalidated on every detail read. Contact Seller prefe
 
 
 On a visible listing detail page choose Spam, Prohibited items or Misleading information and explicitly Submit report. First/repeat submission returns generic accepted feedback; repeated reports preserve the original reason/time and concurrent repeats cannot create extra rows through the API. Own-listing reports are rejected, and private/ineligible targets are unavailable. Pending controls prevent duplicate clicks; uncertain responses show honest retry guidance without automatic replay. Reports are reason-only and do not automatically remove listings or send messages. Admin review/removal is a later task. The API notes document exact payload/status/identity and locking boundaries.
+
+
+## Explicit administrator provisioning
+
+First register the intended university account, complete real email verification and ensure it is unsuspended. With the configured application database, run from the repository root:
+
+```powershell
+.venv/Scripts/python.exe -m backend.admin --email existing@sdu.edu.kz
+```
+
+Supply the exact existing account email; normalization follows normal university-email rules. The command locks and promotes only eligible existing accounts, is idempotent, preserves passwords/profile/sessions and exits nonzero with safe output for refusal/configuration/database failure. It performs no default/automatic provisioning and imports never connect. It does not supply or expose any password.
+
+Sign in or restore the account to receive current /auth/me is_admin capability. Confirmed admins see Admin navigation; /admin makes a fresh protected /admin/me check before rendering access confirmation. Direct ordinary-user access is denied honestly, while demotion takes effect immediately on the server and removes stale navigation after denial. Check errors offer retry without exposing admin content. Existing student auth behavior remains, with strict boolean capability validation in the updated browser. No user/listing/report queue or moderation action is implemented yet. Operator role changes and further admin features remain explicitly controlled.

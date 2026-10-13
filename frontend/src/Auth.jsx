@@ -10,8 +10,10 @@ export function createSessionClient(notify) {
   let csrf = null;
   let refreshFlight = null;
   let generation = 0;
+  let confirmedUser=null;
   function clear(message = '') {
     generation += 1;
+    confirmedUser=null;
     token = null;
     csrf = null;
     notify({ status: 'anonymous', user: null, message });
@@ -27,8 +29,8 @@ export function createSessionClient(notify) {
   }
   async function confirm(candidate) {
     const { data } = await requestJson('/auth/me', { headers: { Authorization: `Bearer ${candidate}` } });
-    if (!Number.isInteger(data?.id) || data.id < 1 || typeof data.email !== 'string' || data.verified !== true) throw new ApiError('response');
-    return { id: data.id, email: data.email, verified: true };
+    if (!Number.isInteger(data?.id) || data.id < 1 || typeof data.email !== 'string' || data.verified !== true || typeof data.is_admin!=='boolean') throw new ApiError('response');
+    return { id: data.id, email: data.email, verified: true,is_admin:data.is_admin };
   }
   function refresh() {
     if (!refreshFlight) {
@@ -59,7 +61,7 @@ export function createSessionClient(notify) {
         hadSession = true;
         const candidate = await refresh();
         const user = await confirm(candidate);
-        if (started === generation) notify({ status: 'authenticated', user, message: '' });
+        if (started === generation) {confirmedUser=user;notify({ status: 'authenticated', user, message: '' });}
       } catch (error) {
         if (started === generation) clear(error.status === 401 && !hadSession ? '' : expiredMessage);
       }
@@ -75,13 +77,13 @@ export function createSessionClient(notify) {
         if (started !== generation) throw new ApiError('session');
         token = candidate;
         csrf = nextCsrf;
-        notify({ status: 'authenticated', user, message: '' });
+        confirmedUser=user;notify({ status: 'authenticated', user, message: '' });
       } catch (error) {
         if (started === generation) clear();
         throw error;
       }
     },
-    async get(path, binary = false) {
+    async get(path, binary = false, keepForbidden=false) {
       // Only read-only GET contracts are automatically retried; mutations are explicit.
       if (!token) throw new ApiError('session');
       const previous = token;
@@ -89,7 +91,7 @@ export function createSessionClient(notify) {
       try { return await requestJson(path, { responseType: binary ? 'blob' : undefined, headers: { Authorization: `Bearer ${previous}` } }); }
       catch (error) {
         if (error.status !== 401) {
-          if (error.status === 403) clear(expiredMessage);
+          if (error.status === 403&&!keepForbidden) clear(expiredMessage);
           throw error;
         }
       }
@@ -97,7 +99,12 @@ export function createSessionClient(notify) {
         if (!token || started !== generation) throw new ApiError('session');
         const renewed = token && token !== previous ? token : await refresh();
         return await requestJson(path, { responseType: binary ? 'blob' : undefined, headers: { Authorization: `Bearer ${renewed}` } });
-      } catch (error) { clear(expiredMessage); throw error; }
+      } catch (error) { if(error.status!==403||!keepForbidden)clear(expiredMessage); throw error; }
+    },
+    async adminCheck(){
+      const started=generation;
+      try{const result=await this.get('/admin/me',false,true);if(started!==generation||result.status!==200||result.data?.id!==confirmedUser?.id||result.data?.is_admin!==true)throw new ApiError('response');if(!confirmedUser.is_admin){confirmedUser={...confirmedUser,is_admin:true};notify({status:'authenticated',user:confirmedUser,message:''});}return result;}
+      catch(error){if(started===generation&&error.status===403&&confirmedUser){confirmedUser={...confirmedUser,is_admin:false};notify({status:'authenticated',user:confirmedUser,message:''});}throw error;}
     },
     async remove(path) {
       if(!token)throw new ApiError('session');
@@ -172,6 +179,6 @@ export function AuthProvider({ children }) {
     client.current.restore();
     return () => client.current.dispose();
   }, []);
-  return <AuthContext.Provider value={{ ...state, login: client.current.login, logout: client.current.logout, get: client.current.get, post: client.current.post, remove: client.current.remove, patch: client.current.patch, avatar: client.current.avatar, changePassword: client.current.changePassword, resetPassword: client.current.resetPassword }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ ...state, login: client.current.login, logout: client.current.logout, get: client.current.get, adminCheck: client.current.adminCheck, post: client.current.post, remove: client.current.remove, patch: client.current.patch, avatar: client.current.avatar, changePassword: client.current.changePassword, resetPassword: client.current.resetPassword }}>{children}</AuthContext.Provider>;
 }
 export function useAuth() { return useContext(AuthContext); }

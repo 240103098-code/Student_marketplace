@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
 from backend.registration import DuplicateEmailError, register_student
-from backend.schemas import RegistrationRequest, RegistrationResponse, VerifyEmailRequest, ResendVerificationRequest, LoginRequest, AccessTokenResponse, ChangePasswordRequest, ForgotPasswordRequest, ResetPasswordRequest
+from backend.schemas import RegistrationRequest, RegistrationResponse, AuthMeResponse, VerifyEmailRequest, ResendVerificationRequest, LoginRequest, AccessTokenResponse, ChangePasswordRequest, ForgotPasswordRequest, ResetPasswordRequest
 from backend.mail import EmailDeliveryError
 from backend.verification import verify_registration_code, resend_registration_code
 from backend.authentication import AuthenticationError, authenticate_student, require_verified_user
@@ -58,9 +58,9 @@ def login(payload: LoginRequest, request: Request, response: Response):
     return AccessTokenResponse(access_token=token, expires_in=request.app.state.settings.jwt_access_minutes * 60)
 
 
-@router.get("/me", response_model=RegistrationResponse)
+@router.get("/me", response_model=AuthMeResponse)
 def current_account(user=Depends(require_verified_user)):
-    return RegistrationResponse(id=user.id, email=user.email, verified=user.verified)
+    return AuthMeResponse(id=user.id, email=user.email, verified=user.verified,is_admin=user.role=="admin")
 
 
 def mutation_csrf(request):

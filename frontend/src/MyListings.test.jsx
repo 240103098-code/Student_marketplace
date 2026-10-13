@@ -12,7 +12,7 @@ function setup(load,photo=()=>Promise.resolve(new Response(new Uint8Array([1,2])
   const parsed=new URL(url),path=parsed.pathname;
   if(path==='/auth/csrf')return Promise.resolve(response(200,{csrf_token:'a'.repeat(64)}));
   if(path==='/auth/refresh')return Promise.resolve(response(200,{access_token:'secret-access',token_type:'bearer',expires_in:900}));
-  if(path==='/auth/me')return Promise.resolve(response(200,{id:1,email:'student@sdu.edu.kz',verified:true}));
+  if(path==='/auth/me')return Promise.resolve(response(200,{id:1,email:'student@sdu.edu.kz',verified:true,is_admin:false}));
   if(path==='/listings/mine')return load(parsed.searchParams,options);
   if(path==='/listings/7/edit')return Promise.resolve(response(200,{id:7,title:'Own item 7',price:'12.34',description:'A useful description.',status:'active',published_at:'2026-10-13T00:00:00Z'}));
   if(path.includes('/photos/'))return photo(options);

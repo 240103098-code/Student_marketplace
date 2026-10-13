@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.exc import SQLAlchemyError
 
+from backend.routers.admin import router as admin_router
 from backend.config import Settings
 from backend.database import Database
 from backend.mail import SmtpSender
@@ -65,6 +66,7 @@ def create_app(settings: Settings, database: Database | None = None, *, sender=N
         detail = "Registration is temporarily unavailable." if request.url.path == "/auth/register" else "Verification is temporarily unavailable." if request.url.path in {"/auth/verify-email", "/auth/resend-verification"} else "Profile is temporarily unavailable." if request.url.path == "/users/me" else "Listings are temporarily unavailable." if request.url.path.startswith("/listings") or request.url.path == "/categories" else "Authentication is temporarily unavailable."
         return JSONResponse(status_code=500, content={"detail": detail})
 
+    app.include_router(admin_router)
     app.include_router(router)
     app.include_router(users_router)
     app.include_router(listings_router)

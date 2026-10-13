@@ -77,3 +77,7 @@ class ForgotPasswordRequest(UniversityEmailRequest):
 
 class ResetPasswordRequest(VerifyEmailRequest):
     new_password: SecretStr = Field(strict=True, min_length=12, max_length=128)
+
+
+class AuthMeResponse(RegistrationResponse):
+    is_admin:bool

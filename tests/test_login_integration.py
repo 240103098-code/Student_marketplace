@@ -68,7 +68,7 @@ class LoginPostgreSQLTest(unittest.TestCase):
         self.assertEqual(claims["exp"] - claims["iat"], 900)
         protected = self.client.get("/auth/me", headers={"Authorization": "Bearer " + body["access_token"]})
         self.assertEqual(protected.status_code, 200)
-        self.assertEqual(protected.json(), {"id": user.id, "email": "student@sdu.edu.kz", "verified": True})
+        self.assertEqual(protected.json(), {"id": user.id, "email": "student@sdu.edu.kz", "verified": True,"is_admin":False})
         with self.database.session() as session:
             self.assertEqual(session.scalar(select(func.count()).select_from(EmailCode)), 0)
             self.assertEqual(session.scalar(select(func.count()).select_from(RefreshSession)), 1)
