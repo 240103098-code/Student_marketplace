@@ -14,6 +14,7 @@ from backend.mail import SmtpSender
 from backend.email_codes import utc_now
 from backend.routers.auth import router
 from backend.routers.users import router as users_router
+from backend.routers.listings import router as listings_router
 from backend.sessions import CsrfError
 from backend.images import ImageInputError, ImageStorageError
 
@@ -59,9 +60,10 @@ def create_app(settings: Settings, database: Database | None = None, *, sender=N
 
     @app.exception_handler(SQLAlchemyError)
     async def database_error(request: Request, error: SQLAlchemyError):
-        detail = "Registration is temporarily unavailable." if request.url.path == "/auth/register" else "Verification is temporarily unavailable." if request.url.path in {"/auth/verify-email", "/auth/resend-verification"} else "Profile is temporarily unavailable." if request.url.path == "/users/me" else "Authentication is temporarily unavailable."
+        detail = "Registration is temporarily unavailable." if request.url.path == "/auth/register" else "Verification is temporarily unavailable." if request.url.path in {"/auth/verify-email", "/auth/resend-verification"} else "Profile is temporarily unavailable." if request.url.path == "/users/me" else "Listings are temporarily unavailable." if request.url.path in {"/listings","/categories"} else "Authentication is temporarily unavailable."
         return JSONResponse(status_code=500, content={"detail": detail})
 
     app.include_router(router)
     app.include_router(users_router)
+    app.include_router(listings_router)
     return app

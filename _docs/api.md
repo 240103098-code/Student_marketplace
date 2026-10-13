@@ -199,7 +199,7 @@ Generated owner-specific relative paths are stored only in User.avatar_path bene
 /profile now includes optional upload/replace/remove controls and format/size guidance. Current images are fetched with Bearer+credentials as binary blobs; local object URLs are revoked on replacement/unmount. Tokens never enter img src. Pending duplicates are blocked; failures retain the previous preview and show safe retry guidance. No seller-photo/listing-photo feature is implemented here.
 
 
-## Listing/report representation (no listing API yet)
+## Listing/report representation
 
 Revision 0003_listings follows 0002_accounts and adds exactly categories, listings, listing_photos, and listing_reports. Fixed category ids/keys/names are 1/electronics/Electronics, 2/clothing/Clothing, 3/books/Books, 4/furniture/Furniture, and 5/other/Other. Keys/names are unique and the fixed mapping is constrained; referenced category deletion is restricted.
 
@@ -209,4 +209,19 @@ State tokens are pending, active, sold, rejected and removed. New rows default p
 
 Photos contain only listing FK, generated relative storage_path and position 1–5 (plus row id). Paths use listings/<listing_id>/<32 lowercase hex>.(jpg|png|webp), are globally unique, and cannot contain traversal/absolute/external paths. Unique listing/position gives at most five slots; the lowest stored position is the derived main image without a separate flag. This metadata does not create, expose, validate or clean disk files.
 
-Reports reference reporter/listing, with reasons spam, prohibited_items or misleading_information and timezone-aware created_at/nullable reviewed_at. Review cannot predate creation. There is no evidence text, reporter tracking or user-targeted report workflow. Owner deletion cascades listing/photo/report rows; reporter deletion cascades their reports. Indexes cover owner/status, active publication discovery, ordered photo slots, reporter/listing and unreviewed report lookup. Authorization, disk cleanup, listing/report endpoints and admin controls remain future work.
+Reports reference reporter/listing, with reasons spam, prohibited_items or misleading_information and timezone-aware created_at/nullable reviewed_at. Review cannot predate creation. There is no evidence text, reporter tracking or user-targeted report workflow. Owner deletion cascades listing/photo/report rows; reporter deletion cascades their reports. Indexes cover owner/status, active publication discovery, ordered photo slots, reporter/listing and unreviewed report lookup. Submission authorization is implemented below; disk cleanup, browsing/report endpoints and admin controls remain future work.
+
+
+## POST /listings
+
+Protected submission accepts exactly title, description, price, category_id, and condition in application/json. Title and description are strict strings trimmed before validation, with 3–120 and 10–2000 characters respectively; NUL text is rejected before database insertion. Category id is a strict integer 1–5 matching the fixed seeded categories; condition is exactly new or used. Missing/null/coerced/extra fields are rejected, including owner/id/status/currency/publication/rejection/photo input. JSON parsing rejects duplicate keys, malformed/nonfinite constants, and oversized request bodies (64 KiB).
+
+Price accepts a finite standard JSON number (including standard JSON exponent notation) or an unsigned canonical decimal string matching `(0|[1-9][0-9]*)(.[0-9]+)?`, where the period is literal. Strings cannot use signs, exponent notation, whitespace, leading-zero integers, incomplete decimals, commas or hexadecimal. Boolean/null/container values are invalid. JSON decimal numbers are parsed directly as Decimal rather than binary float. Amounts must be 0 through 1,000,000,000 and have at most two meaningful fractional digits; trailing zeroes are insignificant, so 12.3400 is valid while 1.005 is rejected. Validation occurs before Numeric coercion, with no silent rounding; output always uses a canonical two-decimal string and zero is 0.00.
+
+Creation locks/reloads the guard-established account, revalidates current token/family and verified/unsuspended eligibility after waiting, and requires at least one currently valid phone/Telegram/HTTPS contact from the existing profile formats. Invalid legacy contacts do not satisfy the prerequisite; any one valid contact is enough. A name is not an additional creation prerequisite. Missing contact returns safe profile guidance without a row. Identity/status/publication fields are server-controlled, and new listings are pending with no publication date under mandatory manual approval.
+
+201 returns exactly id (server-generated bigint), title, description, price, currency=KZT, category_id, condition, status=pending, timezone-aware created_at and published_at=null. No owner/contact data, credentials, paths or photos are returned. Invalid request returns 422 `{"detail":"Invalid listing request."}`; missing valid contact returns 400 `{"detail":"Add a valid contact method to your profile before creating a listing."}`; missing/currently ineligible access returns existing sanitized 401; database/service failure returns 500 `{"detail":"Listings are temporarily unavailable."}` and rolls back. There is no create-listing UI, photo upload, browsing/detail endpoint or approval control yet.
+
+## GET /categories
+
+Protected by the same current verified session-bound guard. Return an array in stable id order, each with exactly id, key and label: Electronics, Clothing, Books, Furniture, Other (1–5). Invalid/ineligible access returns sanitized 401; database failure returns the same safe listing-unavailable 500 contract. No category mutation endpoint exists.
