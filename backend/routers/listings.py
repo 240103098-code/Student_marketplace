@@ -1,4 +1,4 @@
-"""Listing submission and fixed categories; no browsing/photo routes."""
+"""Protected listing creation, owner management and marketplace browsing."""
 
 import json
 from decimal import Decimal
@@ -8,8 +8,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Path
 from pydantic import ValidationError
 
 from backend.authentication import AuthenticationError, authentication_required, require_verified_user
-from backend.listing_schemas import ListingCreateRequest, OwnListingResponse, ListingEditRequest, ListingEditResponse, MineListingsPage
-from backend.listings import SellerContactRequired, create_own_listing, fixed_categories, ListingUnavailable, ListingEditForbidden, read_own_listing_edit, update_own_listing, own_listings_page, mark_own_listing_sold, ListingSoldForbidden, delete_own_listing
+from backend.listing_schemas import ListingCreateRequest, OwnListingResponse, ListingEditRequest, ListingEditResponse, MineListingsPage, BrowseListingsPage
+from backend.listings import SellerContactRequired, create_own_listing, fixed_categories, ListingUnavailable, ListingEditForbidden, read_own_listing_edit, update_own_listing, own_listings_page, mark_own_listing_sold, ListingSoldForbidden, delete_own_listing, browse_listings_page
 
 router=APIRouter(tags=['listing submission'])
 
@@ -82,6 +82,28 @@ def mine_query(request:Request):
 def my_listings(request:Request,user=Depends(require_verified_user),query=Depends(mine_query)):
     try:
         return own_listings_page(request.app.state.database,user.id,
+            request.headers['authorization'].split(' ',1)[1],request.app.state.settings,
+            **query,clock=request.app.state.clock)
+    except AuthenticationError:raise authentication_required() from None
+
+
+def browse_query(request:Request):
+    try:
+        values={}
+        import re
+        for key,value in request.query_params.multi_items():
+            if key not in {'limit','offset'} or key in values or not re.fullmatch(r'(?:0|[1-9][0-9]*)',value):raise ValueError()
+            values[key]=value
+        limit=int(values.get('limit','20'));offset=int(values.get('offset','0'))
+        if not 1<=limit<=50 or not 0<=offset<=9223372036854775807:raise ValueError()
+        return {'limit':limit,'offset':offset}
+    except (ValueError,OverflowError):raise HTTPException(status_code=422,detail='Invalid marketplace query.') from None
+
+
+@router.get('/listings',response_model=BrowseListingsPage)
+def browse_listings(request:Request,user=Depends(require_verified_user),query=Depends(browse_query)):
+    try:
+        return browse_listings_page(request.app.state.database,user.id,
             request.headers['authorization'].split(' ',1)[1],request.app.state.settings,
             **query,clock=request.app.state.clock)
     except AuthenticationError:raise authentication_required() from None

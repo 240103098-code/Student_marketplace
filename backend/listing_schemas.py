@@ -123,3 +123,25 @@ class MineListingsPage(BaseModel):
     limit:int
     offset:int
     status:Literal['pending','active','sold','rejected','removed']|None
+
+
+class BrowseListingResponse(BaseModel):
+    id:int
+    title:str
+    price:Decimal
+    currency:Literal['KZT']
+    category_id:int
+    condition:Literal['new','used']
+    published_at:datetime
+    main_photo:ListingPhotoSummary|None
+
+    @field_serializer('price')
+    def canonical_price(self,value):return format(value,'.2f')
+
+
+class BrowseListingsPage(BaseModel):
+    items:list[BrowseListingResponse]
+    total:int
+    count:int
+    limit:int
+    offset:int

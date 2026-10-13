@@ -124,3 +124,25 @@ def delete_own_listing(database,user_id,token,listing_id,settings,*,clock):
         try:storage.delete(path,listing_id)
         except ImageStorageError:pending=True
     return {'id':listing_id,'deleted':True,'cleanup_pending':pending}
+
+
+def browse_listings_page(database,user_id,token,settings,*,limit,offset,clock):
+    from backend.avatars import locked_avatar_user
+    with database.session() as session:
+        locked_avatar_user(session,user_id,token,settings,clock)
+        visible=[Listing.status=='active',Listing.published_at.is_not(None),User.verified.is_(True),User.suspended.is_(False)]
+        query=select(Listing).join(User,Listing.owner_id==User.id).where(*visible)
+        total=session.scalar(select(func.count()).select_from(Listing).join(User,Listing.owner_id==User.id).where(*visible))
+        rows=list(session.scalars(query.order_by(Listing.published_at.desc(),Listing.id.desc()).limit(limit).offset(offset)))
+        ids=[item.id for item in rows]
+        main={}
+        if ids:
+            for photo in session.scalars(select(ListingPhoto).where(ListingPhoto.listing_id.in_(ids)).order_by(ListingPhoto.listing_id,ListingPhoto.position)):
+                if photo.listing_id not in main:
+                    main[photo.listing_id]={'id':photo.id,'position':photo.position,'is_main':True,'url':f'/listings/{photo.listing_id}/photos/{photo.id}'}
+        items=[]
+        for row in rows:
+            card={key:getattr(row,key) for key in ['id','title','price','currency','category_id','condition','published_at']}
+            card['main_photo']=main.get(row.id)
+            items.append(card)
+        return {'items':items,'total':total,'count':len(items),'limit':limit,'offset':offset}
