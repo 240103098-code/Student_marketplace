@@ -93,13 +93,21 @@ def browse_query(request:Request):
         import re
         import unicodedata
         for key,value in request.query_params.multi_items():
-            if key not in {'limit','offset','q'} or key in values:raise ValueError()
-            if key!='q' and not re.fullmatch(r'(?:0|[1-9][0-9]*)',value):raise ValueError()
+            if key not in {'limit','offset','q','category_id','min_price','max_price','condition'} or key in values:raise ValueError()
+            if key in {'limit','offset','category_id'} and not re.fullmatch(r'(?:0|[1-9][0-9]*)',value):raise ValueError()
             if key=='q' and (len(value)>200 or any(unicodedata.category(character)=='Cc' for character in value)):raise ValueError()
             values[key]=value
         limit=int(values.get('limit','20'));offset=int(values.get('offset','0'))
         if not 1<=limit<=50 or not 0<=offset<=9223372036854775807:raise ValueError()
-        return {'limit':limit,'offset':offset,'q':values.get('q','').strip() or None}
+        category_id=int(values['category_id']) if 'category_id' in values else None
+        condition=values.get('condition')
+        if category_id is not None and not 1<=category_id<=5:raise ValueError()
+        if condition is not None and condition not in {'new','used'}:raise ValueError()
+        min_price=ListingCreateRequest.exact_price(values['min_price']) if 'min_price' in values else None
+        max_price=ListingCreateRequest.exact_price(values['max_price']) if 'max_price' in values else None
+        if min_price is not None and max_price is not None and min_price>max_price:raise ValueError()
+        return {'limit':limit,'offset':offset,'q':values.get('q','').strip() or None,
+            'category_id':category_id,'condition':condition,'min_price':min_price,'max_price':max_price}
     except (ValueError,OverflowError):raise HTTPException(status_code=422,detail='Invalid marketplace query.') from None
 
 

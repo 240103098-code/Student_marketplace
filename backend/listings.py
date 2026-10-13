@@ -126,13 +126,17 @@ def delete_own_listing(database,user_id,token,listing_id,settings,*,clock):
     return {'id':listing_id,'deleted':True,'cleanup_pending':pending}
 
 
-def browse_listings_page(database,user_id,token,settings,*,limit,offset,clock,q=None):
+def browse_listings_page(database,user_id,token,settings,*,limit,offset,clock,q=None,category_id=None,condition=None,min_price=None,max_price=None):
     from backend.avatars import locked_avatar_user
     with database.session() as session:
         locked_avatar_user(session,user_id,token,settings,clock)
         visible=[Listing.status=='active',Listing.published_at.is_not(None),User.verified.is_(True),User.suspended.is_(False)]
         if q:
             visible.append(or_(Listing.title.icontains(q,autoescape=True,escape='!'),Listing.description.icontains(q,autoescape=True,escape='!')))
+        if category_id is not None:visible.append(Listing.category_id==category_id)
+        if condition is not None:visible.append(Listing.condition==condition)
+        if min_price is not None:visible.append(Listing.price>=min_price)
+        if max_price is not None:visible.append(Listing.price<=max_price)
         query=select(Listing).join(User,Listing.owner_id==User.id).where(*visible)
         total=session.scalar(select(func.count()).select_from(Listing).join(User,Listing.owner_id==User.id).where(*visible))
         rows=list(session.scalars(query.order_by(Listing.published_at.desc(),Listing.id.desc()).limit(limit).offset(offset)))

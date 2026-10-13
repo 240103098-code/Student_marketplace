@@ -38,7 +38,7 @@ class SearchPostgreSQLTest(unittest.TestCase):
   self.assertEqual(self.search(' '+ 'x'*200).status_code,422)
   for q in ['x'*201,'hello\nworld','hello\x00world','hello\x7fworld','hello\x85world']:
    result=self.search(q);self.assertEqual(result.status_code,422);self.assertEqual(result.json(),{'detail':'Invalid marketplace query.'});self.assertNotIn(q,result.text)
-  for query in ['q=book&q=other','q=book&owner_id=1','q=book&sort=title','q=book&category_id=1']:
+  for query in ['q=book&q=other','q=book&owner_id=1','q=book&sort=title','q=book&category=1']:
    result=self.client.get('/listings?'+query,headers=self.buyer_headers);self.assertEqual(result.status_code,422)
  def test_filtered_totals_publication_ties_pages_and_private_visibility(self):
   for state in ['pending','sold','rejected','removed']:self.add('Matching needle '+state,state=state)
