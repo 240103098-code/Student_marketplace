@@ -15,6 +15,7 @@ from backend.email_codes import utc_now
 from backend.routers.auth import router
 from backend.routers.users import router as users_router
 from backend.routers.listings import router as listings_router
+from backend.routers.listing_photos import router as listing_photos_router
 from backend.sessions import CsrfError
 from backend.images import ImageInputError, ImageStorageError
 
@@ -46,7 +47,7 @@ def create_app(settings: Settings, database: Database | None = None, *, sender=N
 
     @app.exception_handler(ImageStorageError)
     async def image_storage_error(request: Request, error: ImageStorageError):
-        return JSONResponse(status_code=500, content={"detail": "Profile photo storage is temporarily unavailable."})
+        return JSONResponse(status_code=500, content={"detail": "Listing photo storage is temporarily unavailable." if request.url.path.startswith("/listings") else "Profile photo storage is temporarily unavailable."})
 
     @app.exception_handler(CsrfError)
     async def csrf_error(request: Request, error: CsrfError):
@@ -56,14 +57,16 @@ def create_app(settings: Settings, database: Database | None = None, *, sender=N
     async def validation_error(request: Request, error: RequestValidationError):
         # FastAPI's default error includes raw inputs; never return those.
         detail = {"/auth/register": "Invalid registration request.", "/auth/login": "Invalid login request.", "/auth/change-password": "Invalid password-change request.", "/auth/forgot-password": "Invalid recovery request.", "/auth/reset-password": "Invalid password-reset request.", "/users/me": "Invalid profile request."}.get(request.url.path, "Invalid verification request.")
+        if request.url.path.startswith("/listings/"):detail = "Invalid listing-photo request."
         return JSONResponse(status_code=422, content={"detail": detail})
 
     @app.exception_handler(SQLAlchemyError)
     async def database_error(request: Request, error: SQLAlchemyError):
-        detail = "Registration is temporarily unavailable." if request.url.path == "/auth/register" else "Verification is temporarily unavailable." if request.url.path in {"/auth/verify-email", "/auth/resend-verification"} else "Profile is temporarily unavailable." if request.url.path == "/users/me" else "Listings are temporarily unavailable." if request.url.path in {"/listings","/categories"} else "Authentication is temporarily unavailable."
+        detail = "Registration is temporarily unavailable." if request.url.path == "/auth/register" else "Verification is temporarily unavailable." if request.url.path in {"/auth/verify-email", "/auth/resend-verification"} else "Profile is temporarily unavailable." if request.url.path == "/users/me" else "Listings are temporarily unavailable." if request.url.path.startswith("/listings") or request.url.path == "/categories" else "Authentication is temporarily unavailable."
         return JSONResponse(status_code=500, content={"detail": detail})
 
     app.include_router(router)
     app.include_router(users_router)
     app.include_router(listings_router)
+    app.include_router(listing_photos_router)
     return app

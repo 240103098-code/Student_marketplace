@@ -59,17 +59,19 @@ def canonical_image(raw):
 
 
 class ImageStorage:
-    def __init__(self, root):
+    def __init__(self, root, namespace='avatars'):
+        if namespace not in {'avatars','listings'}:raise ImageStorageError('Storage namespace is invalid')
+        self.namespace = namespace
         self.root = Path(root).absolute()
 
     def path(self, relative, owner):
-        if not isinstance(relative, str) or not re.fullmatch(rf'avatars/{owner}/[0-9a-f]{{32}}\.(jpg|png|webp)', relative):
+        if not isinstance(relative, str) or not re.fullmatch(rf'{self.namespace}/{owner}/[0-9a-f]{{32}}\.(jpg|png|webp)', relative):
             raise ImageStorageError('Stored image path is invalid')
         candidate = self.root / relative
         try:
             if self.root.is_symlink() or self.root.resolve() != self.root:
                 raise ImageStorageError('Upload root is unsafe')
-            for path in [self.root / 'avatars', self.root / 'avatars' / str(owner), candidate]:
+            for path in [self.root / self.namespace, self.root / self.namespace / str(owner), candidate]:
                 if path.is_symlink() or path.resolve() != path:
                     raise ImageStorageError('Image path is unsafe')
                 path.resolve().relative_to(self.root)
@@ -78,7 +80,7 @@ class ImageStorage:
         return candidate
 
     def write(self, image, owner):
-        relative = f'avatars/{owner}/{uuid.uuid4().hex}.{image.extension}'
+        relative = f'{self.namespace}/{owner}/{uuid.uuid4().hex}.{image.extension}'
         path = self.path(relative, owner)
         created_file = False
         try:
