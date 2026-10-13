@@ -326,3 +326,10 @@ Choose **My Listings** at /my-listings after verified sign-in. All or individual
 Main thumbnails use Bearer-authenticated binary fetch and revoked blob URLs on changes/unmount; Removed images are not fetched or publicly exposed. GET /listings/mine accepts only strict limit/offset/status, defaults twenty/max fifty, and rejects owner spoofing or duplicate/unsupported query keys. Response totals/counts apply to the current owner and filter. See API notes for exact page/DTO/query bounds. The new-listing uncertainty path can now link to this real review screen without guessing whether an ambiguous upload succeeded.
 
 All 154 backend tests passed with actual isolated PostgreSQL/disposable filesystem/controlled SMTP, including six owner/query/status/tie-sort/pagination/private-photo/session/dispatch cases. The route-order test checks the registered router directly and retains actual HTTP assertions, avoiding FastAPI included-router wrapper internals. All 69 frontend tests and build passed, including six dashboard loading/retry/empty/status/page/action/blob-cleanup/session cases. No dependencies or schema changes were required; test PostgreSQL stopped.
+
+
+## Mark an Active listing Sold
+
+On My Listings, an Active card offers Mark Sold, followed by Confirm Sold or Cancel. Confirmation calls the owner-only endpoint without state/owner fields. Pending controls prevent duplicate clicks; confirmed success reloads actual dashboard data. Failed/uncertain responses make no Sold claim and ask you to review/reload before retrying. Sold is retained privately, absent from Active, and no longer gives buyers photo access; your own photos remain readable. This action has no undo/reactivation and changes no item metadata, timestamps, reports or files.
+
+All 160 backend tests passed with real isolated PostgreSQL/filesystem/SMTP, including six Sold transition/idempotence/concurrency/state/ownership/eligibility/stale-guard/rollback/preservation/privacy cases. All 71 frontend tests and build passed, including confirmation/cancel/pending/contract/success-reload/failure cases. No dependencies/schema changes; PostgreSQL stopped after verification.

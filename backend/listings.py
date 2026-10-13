@@ -95,3 +95,16 @@ def own_listings_page(database,user_id,token,settings,*,limit,offset,status,cloc
             data['photos']=photos.get(item.id,[])
             items.append(data)
         return {'items':items,'total':total,'count':len(items),'limit':limit,'offset':offset,'status':status}
+
+
+class ListingSoldForbidden(Exception):
+    pass
+
+
+def mark_own_listing_sold(database,user_id,token,listing_id,settings,*,clock):
+    with database.session() as session:
+        listing=locked_own_listing(session,user_id,token,listing_id,settings,clock)
+        if listing.status not in {'active','sold'}:raise ListingSoldForbidden()
+        listing.status='sold'
+        session.flush()
+        return {'id':listing.id,'status':'sold','published_at':listing.published_at}

@@ -34,6 +34,11 @@ function Thumbnail({photo}){
   },[auth.get,photo.url]);
   return loading?<p>Loading private photo…</p>:error?<p>Photo is unavailable.</p>:<img className="listing-thumbnail" src={preview} alt="Main listing photo"/>;
 }
+function SoldAction({item,onSaved}){
+ const auth=useAuth();const [confirm,setConfirm]=useState(false),[pending,setPending]=useState(false),[error,setError]=useState('');const busy=useRef(false);
+ async function submit(){if(busy.current)return;busy.current=true;setPending(true);setError('');try{const result=await auth.post(`/listings/${item.id}/sold`);if(result.status!==200||result.data?.id!==item.id||result.data.status!=='sold')throw new ApiError('response');onSaved();}catch{setError('Sold status could not be confirmed. Review or reload your listings before retrying.');}finally{busy.current=false;setPending(false);}}
+ return <div>{confirm?<><p>Mark this listing Sold? Buyers will lose access; there is no undo.</p><button className="button primary" disabled={pending} onClick={submit}>{pending?'Marking Sold…':'Confirm Sold'}</button><button className="button secondary" disabled={pending} onClick={()=>{setConfirm(false);setError('');}}>Cancel</button></>:<button className="button secondary" onClick={()=>setConfirm(true)}>Mark Sold</button>}{pending&&<p role="status">Confirming Sold status…</p>}{error&&<p role="alert" className="form-feedback error">{error}</p>}</div>;
+}
 export function MyListings({navigate}){
   const auth=useAuth();
   const [status,setStatus]=useState('all');
@@ -64,6 +69,7 @@ export function MyListings({navigate}){
         {item.status==='pending'&&<p>Awaiting manual admin review; not public.</p>}
         {item.status==='rejected'&&<p>Rejected: {item.rejection_reason||'No reason is available.'} Editing is unavailable; deletion and recreation are required.</p>}
         {item.status==='removed'&&<p>Removed by moderation; editing and photos are unavailable.</p>}
+        {item.status==='active'&&<SoldAction item={item} onSaved={()=>setRetry(value=>value+1)}/>}
         {['pending','active','sold'].includes(item.status)&&<a href={`/listings/${item.id}/edit`} onClick={navigate}>Edit price or description</a>}
       </li>)}</ul>
       <div className="actions"><button className="button secondary" disabled={loading||offset===0} onClick={()=>setOffset(value=>Math.max(0,value-20))}>Previous page</button><button className="button secondary" disabled={loading||offset+20>=page.total} onClick={()=>setOffset(value=>value+20)}>Next page</button></div>
