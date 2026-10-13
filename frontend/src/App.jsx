@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AuthProvider, useAuth } from './Auth.jsx';
 import { RecoveryRequestForm, ResetPasswordForm } from './RecoveryForms.jsx';
+import { Marketplace } from './Marketplace.jsx';
 import { MyListings } from './MyListings.jsx';
 import { EditListingForm } from './EditListingForm.jsx';
 import { NewListingForm } from './NewListingForm.jsx';
@@ -29,7 +30,7 @@ const views = {
   },
   '/marketplace': {
     title: 'Marketplace',
-    description: 'Listings will appear here when the marketplace is ready.',
+    description: 'Browse approved listings from verified university students. Search or filter to find what you need.',
   },
 };
 
@@ -92,6 +93,8 @@ function AppShell() {
     }
   }, [path, auth.status]);
 
+  useEffect(()=>{if(path==='/'&&auth.status==='authenticated'){window.history.replaceState(null,'','/marketplace');setPath('/marketplace');}},[path,auth.status]);
+
   async function signOut() {
     if (logoutBusy.current) return;
     logoutBusy.current = true; setLogoutPending(true); setLogoutError('');
@@ -123,10 +126,10 @@ function AppShell() {
       <a className="skip-link" href="#main">Skip to content</a>
       <header className="site-header">
         <div className="header-inner">
-          <a className="brand" href="/" onClick={navigate}>Student Marketplace</a>
+          <a className="brand" href={auth.status==='authenticated'?'/marketplace':'/'} onClick={navigate}>Student Marketplace</a>
           <nav aria-label="Main navigation">
             {navigation.filter(([href]) => auth.status !== 'authenticated' || !['/login', '/register', '/verify'].includes(href)).map(([href, label]) => (
-              <a key={href} href={href} onClick={navigate} aria-current={path === href ? 'page' : undefined}>{label}</a>
+              <a key={href} href={href==='/'&&auth.status==='authenticated'?'/marketplace':href} onClick={navigate} aria-current={path === href ? 'page' : undefined}>{label}</a>
             ))}
             {auth.status === 'authenticated' && <>
               <a href="/listings/new" onClick={navigate}>Create listing</a>
@@ -139,13 +142,14 @@ function AppShell() {
         </div>
       </header>
       <main id="main" className="main-content" tabIndex={-1}>
-        <div className="preview-label">{['/register', '/verify'].includes(path) ? 'University accounts' : 'Preview · Coming soon'}</div>
+        <div className="preview-label">{['/register', '/verify'].includes(path) ? 'University accounts' : auth.status==='authenticated' ? 'University marketplace' : 'University community'}</div>
         <h1 ref={heading} tabIndex={-1}>{view.title}</h1>
         <p className="intro">{view.description}</p>
         {auth.message && <p role="status" className="form-feedback">{auth.message}</p>}
         {logoutError && <p role="alert" className="form-feedback error">{logoutError}</p>}
         {logoutPending && <p role="status">Confirming sign-out...</p>}
         {guarded && <p role="status">Checking your session...</p>}
+        {path === '/marketplace' && !guarded && <Marketplace />}
         {path === '/my-listings' && !guarded && <MyListings navigate={navigate} />}
         {editId && !guarded && <EditListingForm listingId={editId} key={editId} />}
         {path === '/listings/new' && !guarded && <NewListingForm navigate={navigate} />}
@@ -168,7 +172,7 @@ function AppShell() {
         {!views[path] && !editId && <a className="button secondary" href="/" onClick={navigate}>Back to home</a>}
         <aside className="preview-note" aria-label="Preview information">
           <span className="note-dot" aria-hidden="true" />
-          <p>University accounts and browser sessions are available. Marketplace listings are still being prepared.</p>
+          <p>Only verified university students can access approved marketplace listings. Contact and listing detail screens will be added next.</p>
         </aside>
       </main>
       <footer className="site-footer">Student Marketplace <span aria-hidden="true">·</span> For your university community</footer>

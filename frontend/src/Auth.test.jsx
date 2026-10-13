@@ -14,6 +14,8 @@ function setup(routes = {}) {
   fetchMock.mockImplementation((url, options) => {
     const path = new URL(url).pathname;
     if (routes[path]) return routes[path](options);
+    if(path==='/listings')return Promise.resolve(response(200,{items:[],total:0,count:0,limit:20,offset:0}));
+    if(path==='/categories')return Promise.resolve(response(200,['Electronics','Clothing','Books','Furniture','Other'].map((label,index)=>({id:index+1,key:['electronics','clothing','books','furniture','other'][index],label}))));
     if (path === '/listings/mine') return Promise.resolve(response(200,{items:[],total:0,count:0,limit:20,offset:0,status:null}));
     if (path === '/auth/csrf') return Promise.resolve(response(401));
     throw new Error('Unexpected test route');
