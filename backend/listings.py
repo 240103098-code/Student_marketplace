@@ -1,10 +1,10 @@
 """Contact-gated creation with current account/session checks under lock."""
 
 from pydantic import ValidationError
-from sqlalchemy import select
+from sqlalchemy import select, func
 
 from backend.authentication import AuthenticationError
-from backend.models import Category, Listing, RefreshSession, User
+from backend.models import Category, Listing, ListingPhoto, RefreshSession, User
 from backend.profile_schemas import ProfilePatch
 from backend.tokens import AccessTokenError, validate_access_token
 
@@ -72,3 +72,26 @@ def update_own_listing(database,user_id,token,listing_id,payload,settings,*,cloc
         for field,value in payload.model_dump(exclude_unset=True).items():setattr(listing,field,value)
         session.flush()
         return listing
+
+
+def own_listings_page(database,user_id,token,settings,*,limit,offset,status,clock):
+    from backend.avatars import locked_avatar_user
+    with database.session() as session:
+        locked_avatar_user(session,user_id,token,settings,clock)
+        filters=[Listing.owner_id==user_id]
+        if status is not None:filters.append(Listing.status==status)
+        total=session.scalar(select(func.count()).select_from(Listing).where(*filters))
+        rows=list(session.scalars(select(Listing).where(*filters).order_by(Listing.created_at.desc(),Listing.id.desc()).limit(limit).offset(offset)))
+        ids=[item.id for item in rows if item.status!='removed']
+        photos={id:[] for id in ids}
+        if ids:
+            for photo in session.scalars(select(ListingPhoto).where(ListingPhoto.listing_id.in_(ids)).order_by(ListingPhoto.listing_id,ListingPhoto.position)):
+                group=photos[photo.listing_id]
+                group.append({'id':photo.id,'position':photo.position,'is_main':not group,'url':f'/listings/{photo.listing_id}/photos/{photo.id}'})
+        items=[]
+        for item in rows:
+            data={field:getattr(item,field) for field in ['id','title','description','price','currency','category_id','condition','status','created_at','published_at']}
+            data['rejection_reason']=item.rejection_reason if item.status=='rejected' else None
+            data['photos']=photos.get(item.id,[])
+            items.append(data)
+        return {'items':items,'total':total,'count':len(items),'limit':limit,'offset':offset,'status':status}

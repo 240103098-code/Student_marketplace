@@ -77,7 +77,7 @@ export function NewListingForm({ navigate }) {
     }catch(failure){
       if(!knownFailures.has(failure.status)){
         setUncertain(true);
-        setError(listingRef.current?'The last photo response is uncertain. It may have been saved. Do not upload it again blindly; check saved listings before retrying when that screen is available.':'The creation response is uncertain. A listing may have been created. Do not submit again blindly; check saved listings before retrying when that screen is available.');
+        setError(listingRef.current?'The last photo response is uncertain. It may have been saved. Do not upload it again blindly; check My Listings before deciding what to do next.':'The creation response is uncertain. A listing may have been created. Do not submit again blindly; check My Listings before deciding what to do next.');
       }else if(!listingRef.current){
         setContactError(failure.status===400);
         setError(failure.status===400?'Add a valid contact method to your profile before creating a listing.':'Listing creation was rejected or rolled back. Check your details and retry.');
@@ -105,6 +105,7 @@ export function NewListingForm({ navigate }) {
     {contactError&&<a href="/profile" onClick={navigate}>Add your profile contact</a>}
     <button className="button primary" disabled={!!pending||uncertain||complete}>{pending?'Saving…':listing?'Retry remaining photos':'Create Pending listing'}</button>
     {listing&&<a href={`/listings/${listing.id}/edit`} onClick={navigate}>Edit price or description</a>}
+    {(listing||uncertain)&&<a href="/my-listings" onClick={navigate}>Review My Listings</a>}
     {(listing||uncertain)&&<a href="/profile" onClick={navigate}>Go to your profile</a>}
   </form>;
 }

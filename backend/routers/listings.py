@@ -8,8 +8,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Path
 from pydantic import ValidationError
 
 from backend.authentication import AuthenticationError, authentication_required, require_verified_user
-from backend.listing_schemas import ListingCreateRequest, OwnListingResponse, ListingEditRequest, ListingEditResponse
-from backend.listings import SellerContactRequired, create_own_listing, fixed_categories, ListingUnavailable, ListingEditForbidden, read_own_listing_edit, update_own_listing
+from backend.listing_schemas import ListingCreateRequest, OwnListingResponse, ListingEditRequest, ListingEditResponse, MineListingsPage
+from backend.listings import SellerContactRequired, create_own_listing, fixed_categories, ListingUnavailable, ListingEditForbidden, read_own_listing_edit, update_own_listing, own_listings_page
 
 router=APIRouter(tags=['listing submission'])
 
@@ -59,6 +59,32 @@ def submit_listing(request:Request,user=Depends(require_verified_user),payload=D
 @router.get('/categories')
 def categories(request:Request,user=Depends(require_verified_user)):
     return fixed_categories(request.app.state.database)
+
+
+def mine_query(request:Request):
+    values={}
+    try:
+        for key,value in request.query_params.multi_items():
+            if key not in {'limit','offset','status'} or key in values:raise ValueError()
+            values[key]=value
+        import re
+        for key in ['limit','offset']:
+            if key in values and not re.fullmatch(r'(?:0|[1-9][0-9]*)',values[key]):raise ValueError()
+        limit=int(values.get('limit','20'));offset=int(values.get('offset','0'))
+        status=values.get('status')
+        if not 1<=limit<=50 or not 0<=offset<=9223372036854775807 or (status is not None and status not in {'pending','active','sold','rejected','removed'}):raise ValueError()
+        return {'limit':limit,'offset':offset,'status':status}
+    except (ValueError,OverflowError):
+        raise HTTPException(status_code=422,detail='Invalid My Listings query.') from None
+
+
+@router.get('/listings/mine',response_model=MineListingsPage)
+def my_listings(request:Request,user=Depends(require_verified_user),query=Depends(mine_query)):
+    try:
+        return own_listings_page(request.app.state.database,user.id,
+            request.headers['authorization'].split(' ',1)[1],request.app.state.settings,
+            **query,clock=request.app.state.clock)
+    except AuthenticationError:raise authentication_required() from None
 
 
 async def exact_edit_payload(request:Request):

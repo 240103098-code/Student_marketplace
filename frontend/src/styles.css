@@ -72,3 +72,10 @@ textarea:disabled, select:disabled { opacity: 0.65; }
 .listing-previews img { width: 160px; height: 120px; max-width: 100%; object-fit: cover; border-radius: 8px; }
 .listing-previews li { margin-top: 18px; }
 .listing-previews p { font-size: 13px; }
+.dashboard-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+.dashboard-controls select { font: inherit; padding: 10px; border: 1px solid #bcc9c1; border-radius: 8px; max-width: 100%; }
+.listing-cards { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 18px; }
+.listing-card { padding: 20px; border: 1px solid #d5dfd8; border-radius: 12px; min-width: 0; overflow-wrap: anywhere; }
+.listing-card h2 { font-size: 22px; }
+.listing-card p { font-size: 14px; line-height: 1.6; }
+.listing-thumbnail { width: 160px; height: 120px; max-width: 100%; object-fit: cover; border-radius: 8px; }

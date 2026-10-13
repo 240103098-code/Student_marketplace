@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AuthProvider, useAuth } from './Auth.jsx';
 import { RecoveryRequestForm, ResetPasswordForm } from './RecoveryForms.jsx';
+import { MyListings } from './MyListings.jsx';
 import { EditListingForm } from './EditListingForm.jsx';
 import { NewListingForm } from './NewListingForm.jsx';
 import { AvatarControl } from './AvatarControl.jsx';
@@ -46,7 +47,7 @@ function protectedPath(path) { return protectedPaths.includes(path)||!!editListi
 export function safeReturnPath(path) { return protectedPath(path) ? path : '/marketplace'; }
 views['/account/password'] = { title: 'Change password', description: 'Confirm your current password to set a new one. This signs out every session for your account.' };
 views['/profile'] = { title: 'Profile', description: 'View and edit your name and optional external contact details. Your verified university email stays fixed.' };
-views['/my-listings'] = { title: 'My Listings', description: 'Your listing tools are being prepared.' };
+views['/my-listings'] = { title: 'My Listings', description: 'Review your own listings and their actual publication or moderation state.' };
 
 const navigation = [
   ['/', 'Home'],
@@ -145,6 +146,7 @@ function AppShell() {
         {logoutError && <p role="alert" className="form-feedback error">{logoutError}</p>}
         {logoutPending && <p role="status">Confirming sign-out...</p>}
         {guarded && <p role="status">Checking your session...</p>}
+        {path === '/my-listings' && !guarded && <MyListings navigate={navigate} />}
         {editId && !guarded && <EditListingForm listingId={editId} key={editId} />}
         {path === '/listings/new' && !guarded && <NewListingForm navigate={navigate} />}
         {path === '/profile' && !guarded && <><AvatarControl /><ProfileForm /></>}

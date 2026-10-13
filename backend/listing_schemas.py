@@ -100,3 +100,26 @@ class ListingEditResponse(BaseModel):
 
     @field_serializer('price')
     def canonical_price(self,value):return format(value,'.2f')
+
+
+class ListingPhotoSummary(BaseModel):
+    id:int
+    position:int
+    is_main:bool
+    url:str
+
+
+class MineListingResponse(OwnListingResponse):
+    status:Literal['pending','active','sold','rejected','removed']
+    published_at:datetime|None
+    rejection_reason:str|None
+    photos:list[ListingPhotoSummary]
+
+
+class MineListingsPage(BaseModel):
+    items:list[MineListingResponse]
+    total:int
+    count:int
+    limit:int
+    offset:int
+    status:Literal['pending','active','sold','rejected','removed']|None
