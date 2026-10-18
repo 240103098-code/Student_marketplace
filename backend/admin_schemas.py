@@ -58,3 +58,25 @@ class AdminListingDetail(AdminListingSummary):
  description:str
  rejection_reason:str|None
  photos:list[ListingPhotoSummary]
+
+
+class AdminReportListing(BaseModel):
+ id:int
+ title:str
+ status:Literal['pending','active','sold','rejected','removed']
+ url:str
+
+class AdminReportResponse(BaseModel):
+ id:int
+ reason:Literal['spam','prohibited_items','misleading_information']
+ created_at:datetime
+ reviewed_at:datetime|None
+ listing:AdminReportListing
+
+class AdminReportsPage(BaseModel):
+ items:list[AdminReportResponse]
+ total:int
+ count:int
+ limit:int
+ offset:int
+ state:Literal['unreviewed','reviewed','all']

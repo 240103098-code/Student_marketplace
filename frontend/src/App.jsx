@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AuthProvider, useAuth } from './Auth.jsx';
 import { RecoveryRequestForm, ResetPasswordForm } from './RecoveryForms.jsx';
+import { AdminReports } from './AdminReports.jsx';
 import { AdminListings,AdminListingDetail } from './AdminListings.jsx';
 import { AdminUsers } from './AdminUsers.jsx';
 import { AdminLanding } from './AdminLanding.jsx';
@@ -46,7 +47,8 @@ views['/listings/new'] = { title: 'Create a listing', description: 'Describe you
 views['/admin']={title:'Administration',description:'Access is checked against your current university account permissions.'};
 views['/admin/users']={title:'User review',description:'Review university accounts and manage student suspension.'};
 views['/admin/listings']={title:'Listing review',description:'Inspect current listing states and remove inappropriate buyer-visible content.'};
-const protectedPaths = ['/admin/listings','/admin/users','/admin', '/marketplace', '/profile', '/my-listings', '/account/password', '/listings/new'];
+views['/admin/reports']={title:'Report review',description:'Review listing reports separately from listing moderation.'};
+const protectedPaths = ['/admin/reports','/admin/listings','/admin/users','/admin', '/marketplace', '/profile', '/my-listings', '/account/password', '/listings/new'];
 function editListingId(path) {
   const match=/^\/listings\/([1-9][0-9]{0,18})\/edit$/.exec(path);
   return match && BigInt(match[1])<=9223372036854775807n ? match[1] : null;
@@ -159,6 +161,7 @@ function AppShell() {
         {logoutError && <p role="alert" className="form-feedback error">{logoutError}</p>}
         {logoutPending && <p role="status">Confirming sign-out...</p>}
         {guarded && <p role="status">Checking your session...</p>}
+        {path === '/admin/reports' && !guarded && <AdminReports navigate={navigate} />}
         {path === '/admin/listings' && !guarded && <AdminListings navigate={navigate} />}
         {adminListing && !guarded && <AdminListingDetail listingId={adminListing} key={adminListing} navigate={navigate} />}
         {path === '/admin/users' && !guarded && <AdminUsers navigate={navigate} />}

@@ -96,3 +96,39 @@ def review_photo(listing_id:Annotated[int,Path(ge=1,le=9223372036854775807)],pho
 async def remove_listing(listing_id:Annotated[int,Path(ge=1,le=9223372036854775807)],request:Request,user=Depends(require_admin_user)):
  await require_empty_action(request,'Removal requests accept no fields.')
  return await run_in_threadpool(listing_call,request,user,remove_admin_listing,listing_id)
+
+
+from backend.admin_schemas import AdminReportsPage
+from backend.admin_reports import admin_reports_page,mark_admin_report_reviewed,AdminReportUnavailable
+
+
+def report_page_query(request:Request):
+ try:
+  import re
+  values={}
+  for key,value in request.query_params.multi_items():
+   if key not in {'limit','offset','state'} or key in values:raise ValueError()
+   if key!='state' and not re.fullmatch(r'(?:0|[1-9][0-9]*)',value):raise ValueError()
+   values[key]=value
+  limit=int(values.get('limit','20'));offset=int(values.get('offset','0'));state=values.get('state','unreviewed')
+  if not 1<=limit<=50 or not 0<=offset<=9223372036854775807 or state not in {'unreviewed','reviewed','all'}:raise ValueError()
+  return {'limit':limit,'offset':offset,'state':state}
+ except (ValueError,OverflowError):raise HTTPException(status_code=422,detail='Invalid admin report query.') from None
+
+
+def report_call(request,user,operation,*args,**kwargs):
+ try:return operation(request.app.state.database,user.id,request.headers['authorization'].split(' ',1)[1],*args,settings=request.app.state.settings,clock=request.app.state.clock,**kwargs)
+ except AuthenticationError:raise authentication_required() from None
+ except AdminAccessDenied:raise HTTPException(status_code=403,detail='Administrator access required.') from None
+ except AdminReportUnavailable:raise HTTPException(status_code=404,detail='Report is unavailable.') from None
+
+
+@router.get('/reports',response_model=AdminReportsPage)
+def review_reports(request:Request,user=Depends(require_admin_user),query=Depends(report_page_query)):
+ return report_call(request,user,admin_reports_page,**query)
+
+
+@router.post('/reports/{report_id}/review')
+async def review_report(report_id:Annotated[int,Path(ge=1,le=9223372036854775807)],request:Request,user=Depends(require_admin_user)):
+ await require_empty_action(request,'Review requests accept no fields.')
+ return await run_in_threadpool(report_call,request,user,mark_admin_report_reviewed,report_id)
