@@ -66,3 +66,26 @@ def remove_avatar(request: Request, user=Depends(require_verified_user)):
     except AuthenticationError:
         raise authentication_required() from None
     return {'detail': 'Profile photo removed.', 'cleanup_pending': pending}
+
+
+from backend.account_deletion import delete_own_account
+from backend.schemas import DeleteAccountRequest
+from backend.passwords import WrongCurrentPassword
+from backend.sessions import clear_refresh_cookie
+from backend.routers.listings import read_exact_listing_payload
+from fastapi.responses import JSONResponse
+
+
+@router.delete('/me')
+async def delete_account(request:Request,user=Depends(require_verified_user)):
+    if request.query_params:raise HTTPException(status_code=422,detail='Invalid account deletion request.')
+    payload=await read_exact_listing_payload(request,DeleteAccountRequest,'Invalid account deletion request.')
+    try:
+        result=await run_in_threadpool(delete_own_account,request.app.state.database,user.id,
+            request.headers['authorization'].split(' ',1)[1],payload.current_password.get_secret_value(),
+            request.app.state.settings,clock=request.app.state.clock)
+    except AuthenticationError:raise authentication_required() from None
+    except WrongCurrentPassword:raise HTTPException(status_code=400,detail='Current password is incorrect.') from None
+    response=JSONResponse(result)
+    clear_refresh_cookie(response,request.app.state.settings)
+    return response

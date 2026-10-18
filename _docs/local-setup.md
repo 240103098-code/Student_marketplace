@@ -407,3 +407,20 @@ Provision/sign in as an eligible admin using the commands above, open Admin → 
 Reject listing opens a labeled 1–300 character reason and confirmation/cancel. POST /admin/listings/{id}/reject sends only the trimmed reason. Rejected records remain private and the seller's My Listings shows feedback and delete/recreate guidance. Identical rejection retries preserve feedback; different reasons or incompatible states conflict. Price/description edits of published records retain approval. Removal, report review and seller hard deletion remain distinct actions.
 
 Pending controls prevent duplicate requests. Success reloads the authoritative detail; ambiguous/network/5xx/conflicting results require explicit review reload and never automatically replay a decision or claim publication. Server transactions lock actor/seller accounts in ascending id order before the listing and recheck live permissions/state. See API notes for safe responses, strict inputs, eligibility and retry semantics. Automated coverage includes real Pending creation/photo→approval visibility, rejection privacy, decision races/rollback and frontend confirmation/error/reload interactions; independent desktop/mobile/keyboard browser QA remains required.
+
+
+## Permanent own-account deletion and scoped cleanup retry
+
+Open Profile after verified sign-in, read Delete account permanently, then Delete my account. Enter the current untrimmed 12–128 character password and explicitly confirm or cancel. This permanently removes identity, contacts, sessions, owned listings/photos/reports and reports authored elsewhere. Admins have the same right; provision another verified admin first if administration must continue. No restore exists.
+
+Confirmed DELETE /users/me success clears the refresh cookie and private browser auth/form state and shows public sign-in guidance. If cleanup_pending is true, account deletion already committed and image cleanup remains for an operator. Network/uncertain failure does not prove either outcome: the form does not repeat the request automatically; review through a fresh sign-in first. Wrong-password and validation errors permit correction without claiming deletion.
+
+Before an operational deletion/recovery workflow, capture only the exact numeric account id and owned listing ids through authorized database review. No deleted personal account record is retained. To retry cleanup for absent account 123 and its previously captured absent listings 456 and 789, run from the configured repository root:
+
+```
+.venv/Scripts/python.exe -m backend.account_cleanup 123 --confirm-user-id 123 --listing-id 456 --confirm-listing-id 456 --listing-id 789 --confirm-listing-id 789
+```
+
+Use real captured ids, never example ids against arbitrary data. Both ordered listing-id lists must match; existing account/listing records cause refusal before any cleanup. Omit listing pairs only when retrying the absent avatar namespace alone. The helper uses generated direct image names and existing absence-checked listing recovery; it does not recurse/remove directories or touch unrelated files, and rejects junction/symlink escape. A nonzero result means retry is pending or refused; diagnostics are sanitized. Database and filesystem cleanup are not atomic: rows commit first, and disk/response interruption can leave orphan images. Keep configured storage and database available; never reset identity sequences to reuse deleted ids. No global service or scheduler is installed.
+
+Automated coverage uses temporary image directories and dedicated disposable PostgreSQL for cascades/isolation, stale guards, current-password checks, admin self-deletion, rollback, missing files, cleanup failure/recovery, actual junction safety and races with login/refresh/listing/admin actions. Frontend tests cover explicit confirmation, pending prevention, safe failures, auth clearing and cleanup feedback. Independent desktop/mobile/keyboard browser QA remains required.

@@ -171,6 +171,14 @@ export function createSessionClient(notify) {
         throw error;
       }
     },
+    async deleteAccount(currentPassword) {
+      if (refreshFlight) await refreshFlight;
+      if (!token) throw new ApiError('session');
+      const result = await requestJson('/users/me', {method:'DELETE',headers:{Authorization:`Bearer ${token}`},payload:{current_password:currentPassword}});
+      if(result.status!==200||result.data?.deleted!==true||typeof result.data.cleanup_pending!=='boolean')throw new ApiError('response');
+      clear(result.data.cleanup_pending?'Your account was permanently deleted. Image cleanup remains pending; an operator can retry.':'Your account was permanently deleted. Please sign in with another account or register again.');
+      return result.data;
+    },
     async logout() {
       // Wait for any already-running rotation before revoking the browser's family.
       if (refreshFlight) await refreshFlight;
@@ -194,6 +202,6 @@ export function AuthProvider({ children }) {
     client.current.restore();
     return () => client.current.dispose();
   }, []);
-  return <AuthContext.Provider value={{ ...state, login: client.current.login, logout: client.current.logout, get: client.current.get, adminCheck: client.current.adminCheck, adminGet:client.current.adminGet, adminPatch:client.current.adminPatch, adminPost:client.current.adminPost, post: client.current.post, remove: client.current.remove, patch: client.current.patch, avatar: client.current.avatar, changePassword: client.current.changePassword, resetPassword: client.current.resetPassword }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ ...state, login: client.current.login, logout: client.current.logout, get: client.current.get, adminCheck: client.current.adminCheck, adminGet:client.current.adminGet, adminPatch:client.current.adminPatch, adminPost:client.current.adminPost, post: client.current.post, remove: client.current.remove, patch: client.current.patch, avatar: client.current.avatar, deleteAccount: client.current.deleteAccount, changePassword: client.current.changePassword, resetPassword: client.current.resetPassword }}>{children}</AuthContext.Provider>;
 }
 export function useAuth() { return useContext(AuthContext); }

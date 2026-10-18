@@ -12,6 +12,7 @@ import { EditListingForm } from './EditListingForm.jsx';
 import { NewListingForm } from './NewListingForm.jsx';
 import { AvatarControl } from './AvatarControl.jsx';
 import { ProfileForm } from './ProfileForm.jsx';
+import { AccountDeletion } from './AccountDeletion.jsx';
 import { PasswordForm } from './PasswordForm.jsx';
 import { LoginForm } from './LoginForm.jsx';
 import { RegistrationForm, VerificationForm } from './AccountForms.jsx';
@@ -171,7 +172,7 @@ function AppShell() {
         {detailId && !guarded && <ListingDetail listingId={detailId} key={detailId} navigate={navigate} />}
         {editId && !guarded && <EditListingForm listingId={editId} key={editId} />}
         {path === '/listings/new' && !guarded && <NewListingForm navigate={navigate} />}
-        {path === '/profile' && !guarded && <><AvatarControl /><ProfileForm /></>}
+        {path === '/profile' && !guarded && <><AvatarControl /><ProfileForm /><AccountDeletion onDeleted={()=>goTo('/login')}/></>}
         {path === '/forgot-password' && <RecoveryRequestForm initialEmail={recovery.email} cooldowns={recovery.cooldowns} navigate={navigate} onRequested={(email, deadline) => setRecovery(previous => ({ email, cooldowns: { ...previous.cooldowns, [email]: deadline } }))} />}
         {path === '/reset-password' && <ResetPasswordForm initialEmail={recovery.email} navigate={navigate} onReset={() => goTo('/login')} />}
         {path === '/account/password' && !guarded && <PasswordForm onChanged={() => goTo('/login')} />}
