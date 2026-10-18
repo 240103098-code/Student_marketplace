@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AuthProvider, useAuth } from './Auth.jsx';
 import { RecoveryRequestForm, ResetPasswordForm } from './RecoveryForms.jsx';
+import { AdminUsers } from './AdminUsers.jsx';
 import { AdminLanding } from './AdminLanding.jsx';
 import { ListingDetail } from './ListingDetail.jsx';
 import { Marketplace } from './Marketplace.jsx';
@@ -42,7 +43,8 @@ views['/reset-password'] = { title: 'Reset password', description: 'Enter your u
 views['/listings/new'] = { title: 'Create a listing', description: 'Describe your item and optionally add photos. New listings wait for manual admin review before publication.' };
 
 views['/admin']={title:'Administration',description:'Access is checked against your current university account permissions.'};
-const protectedPaths = ['/admin', '/marketplace', '/profile', '/my-listings', '/account/password', '/listings/new'];
+views['/admin/users']={title:'User review',description:'Review university accounts and manage student suspension.'};
+const protectedPaths = ['/admin/users','/admin', '/marketplace', '/profile', '/my-listings', '/account/password', '/listings/new'];
 function editListingId(path) {
   const match=/^\/listings\/([1-9][0-9]{0,18})\/edit$/.exec(path);
   return match && BigInt(match[1])<=9223372036854775807n ? match[1] : null;
@@ -154,6 +156,7 @@ function AppShell() {
         {logoutError && <p role="alert" className="form-feedback error">{logoutError}</p>}
         {logoutPending && <p role="status">Confirming sign-out...</p>}
         {guarded && <p role="status">Checking your session...</p>}
+        {path === '/admin/users' && !guarded && <AdminUsers navigate={navigate} />}
         {path === '/admin' && !guarded && <AdminLanding navigate={navigate} />}
         {path === '/marketplace' && !guarded && <Marketplace navigate={navigate} />}
         {path === '/my-listings' && !guarded && <MyListings navigate={navigate} />}
