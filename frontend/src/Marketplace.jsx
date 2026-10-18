@@ -19,12 +19,13 @@ export function pageValid(data,offset){
  }
  return data;
 }
-export function Photo({photo,alt="Main listing photo"}){
+export function Photo({photo,alt="Main listing photo",admin=false}){
  const auth=useAuth(),[src,setSrc]=useState(null),[error,setError]=useState(false);
- useEffect(()=>{let active=true,url=null;setSrc(null);setError(false);auth.get(photo.url,true).then(result=>{
+ const get=admin?auth.adminGet:auth.get;
+ useEffect(()=>{let active=true,url=null;setSrc(null);setError(false);get.call(auth,photo.url,true).then(result=>{
   if(result.status!==200||!['image/jpeg','image/png','image/webp'].includes(result.data?.type))throw new ApiError('response');
   if(active){url=URL.createObjectURL(result.data);setSrc(url);}
- }).catch(()=>{if(active)setError(true);});return()=>{active=false;if(url)URL.revokeObjectURL(url);};},[auth.get,photo.url]);
+ }).catch(()=>{if(active)setError(true);});return()=>{active=false;if(url)URL.revokeObjectURL(url);};},[get,photo.url]);
  return error?<p>Photo is unavailable.</p>:src?<img className="marketplace-thumbnail" src={src} alt={alt}/>:<p>Loading private photo…</p>;
 }
 export function Marketplace({navigate}){

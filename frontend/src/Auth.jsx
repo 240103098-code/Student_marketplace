@@ -106,14 +106,19 @@ export function createSessionClient(notify) {
       try{const result=await this.get('/admin/me',false,true);if(started!==generation||result.status!==200||result.data?.id!==confirmedUser?.id||result.data?.is_admin!==true)throw new ApiError('response');if(!confirmedUser.is_admin){confirmedUser={...confirmedUser,is_admin:true};notify({status:'authenticated',user:confirmedUser,message:''});}return result;}
       catch(error){if(started===generation&&error.status===403&&confirmedUser){confirmedUser={...confirmedUser,is_admin:false};notify({status:'authenticated',user:confirmedUser,message:''});}throw error;}
     },
-    async adminGet(path){
+    async adminGet(path,binary=false){
       const started=generation;
-      try{return await this.get(path,false,true);}
+      try{return await this.get(path,binary,true);}
       catch(error){if(started===generation&&error.status===403&&confirmedUser){confirmedUser={...confirmedUser,is_admin:false};notify({status:'authenticated',user:confirmedUser,message:''});}throw error;}
     },
     async adminPatch(path,payload){
       if(!token)throw new ApiError('session');const started=generation;
       try{return await requestJson(path,{method:'PATCH',payload,headers:{Authorization:`Bearer ${token}`}});}
+      catch(error){if(started===generation){if(error.status===401)clear(expiredMessage);else if(error.status===403&&confirmedUser){confirmedUser={...confirmedUser,is_admin:false};notify({status:'authenticated',user:confirmedUser,message:''});}}throw error;}
+    },
+    async adminPost(path,payload){
+      if(!token)throw new ApiError('session');const started=generation;
+      try{return await requestJson(path,{method:'POST',payload,headers:{Authorization:`Bearer ${token}`}});}
       catch(error){if(started===generation){if(error.status===401)clear(expiredMessage);else if(error.status===403&&confirmedUser){confirmedUser={...confirmedUser,is_admin:false};notify({status:'authenticated',user:confirmedUser,message:''});}}throw error;}
     },
     async remove(path) {
@@ -189,6 +194,6 @@ export function AuthProvider({ children }) {
     client.current.restore();
     return () => client.current.dispose();
   }, []);
-  return <AuthContext.Provider value={{ ...state, login: client.current.login, logout: client.current.logout, get: client.current.get, adminCheck: client.current.adminCheck, adminGet:client.current.adminGet, adminPatch:client.current.adminPatch, post: client.current.post, remove: client.current.remove, patch: client.current.patch, avatar: client.current.avatar, changePassword: client.current.changePassword, resetPassword: client.current.resetPassword }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ ...state, login: client.current.login, logout: client.current.logout, get: client.current.get, adminCheck: client.current.adminCheck, adminGet:client.current.adminGet, adminPatch:client.current.adminPatch, adminPost:client.current.adminPost, post: client.current.post, remove: client.current.remove, patch: client.current.patch, avatar: client.current.avatar, changePassword: client.current.changePassword, resetPassword: client.current.resetPassword }}>{children}</AuthContext.Provider>;
 }
 export function useAuth() { return useContext(AuthContext); }

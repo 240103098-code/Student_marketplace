@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AuthProvider, useAuth } from './Auth.jsx';
 import { RecoveryRequestForm, ResetPasswordForm } from './RecoveryForms.jsx';
+import { AdminListings,AdminListingDetail } from './AdminListings.jsx';
 import { AdminUsers } from './AdminUsers.jsx';
 import { AdminLanding } from './AdminLanding.jsx';
 import { ListingDetail } from './ListingDetail.jsx';
@@ -44,13 +45,15 @@ views['/listings/new'] = { title: 'Create a listing', description: 'Describe you
 
 views['/admin']={title:'Administration',description:'Access is checked against your current university account permissions.'};
 views['/admin/users']={title:'User review',description:'Review university accounts and manage student suspension.'};
-const protectedPaths = ['/admin/users','/admin', '/marketplace', '/profile', '/my-listings', '/account/password', '/listings/new'];
+views['/admin/listings']={title:'Listing review',description:'Inspect current listing states and remove inappropriate buyer-visible content.'};
+const protectedPaths = ['/admin/listings','/admin/users','/admin', '/marketplace', '/profile', '/my-listings', '/account/password', '/listings/new'];
 function editListingId(path) {
   const match=/^\/listings\/([1-9][0-9]{0,18})\/edit$/.exec(path);
   return match && BigInt(match[1])<=9223372036854775807n ? match[1] : null;
 }
 function detailListingId(path){const match=/^\/listings\/([1-9][0-9]{0,18})$/.exec(path);return match&&BigInt(match[1])<=9223372036854775807n?match[1]:null;}
-function protectedPath(path) { return protectedPaths.includes(path)||!!editListingId(path)||!!detailListingId(path); }
+function adminListingId(path){const match=/^\/admin\/listings\/([1-9][0-9]{0,18})$/.exec(path);return match&&BigInt(match[1])<=9223372036854775807n?match[1]:null;}
+function protectedPath(path) { return protectedPaths.includes(path)||!!editListingId(path)||!!detailListingId(path)||!!adminListingId(path); }
 export function safeReturnPath(path) { return protectedPath(path) ? path : '/marketplace'; }
 views['/account/password'] = { title: 'Change password', description: 'Confirm your current password to set a new one. This signs out every session for your account.' };
 views['/profile'] = { title: 'Profile', description: 'View and edit your name and optional external contact details. Your verified university email stays fixed.' };
@@ -120,9 +123,9 @@ function AppShell() {
     setPath(nextPath);
   }
 
-  const editId=editListingId(path),detailId=detailListingId(path);
+  const editId=editListingId(path),detailId=detailListingId(path),adminListing=adminListingId(path);
   const guarded = protectedPath(path) && auth.status !== 'authenticated';
-  const view = guarded ? { title: 'Checking your session', description: 'Please wait while we confirm access.' } : editId ? { title: 'Edit listing', description: 'Change only price and description. Existing approval and publication stay unchanged.' } : detailId ? {title:'Listing details',description:'Contact the seller directly to arrange your purchase.'} : views[path] || {
+  const view = guarded ? { title: 'Checking your session', description: 'Please wait while we confirm access.' } : editId ? { title: 'Edit listing', description: 'Change only price and description. Existing approval and publication stay unchanged.' } : adminListing ? {title:'Admin listing review',description:'Private review of listing content and retained records.'} : detailId ? {title:'Listing details',description:'Contact the seller directly to arrange your purchase.'} : views[path] || {
     title: 'Page not found',
     description: 'We could not find this page. Head back home to explore the preview.',
   };
@@ -156,6 +159,8 @@ function AppShell() {
         {logoutError && <p role="alert" className="form-feedback error">{logoutError}</p>}
         {logoutPending && <p role="status">Confirming sign-out...</p>}
         {guarded && <p role="status">Checking your session...</p>}
+        {path === '/admin/listings' && !guarded && <AdminListings navigate={navigate} />}
+        {adminListing && !guarded && <AdminListingDetail listingId={adminListing} key={adminListing} navigate={navigate} />}
         {path === '/admin/users' && !guarded && <AdminUsers navigate={navigate} />}
         {path === '/admin' && !guarded && <AdminLanding navigate={navigate} />}
         {path === '/marketplace' && !guarded && <Marketplace navigate={navigate} />}
@@ -179,7 +184,7 @@ function AppShell() {
             <a className="button secondary" href="/register" onClick={navigate}>Create an account</a>
           </div>
         )}
-        {!views[path] && !editId && !detailId && <a className="button secondary" href="/" onClick={navigate}>Back to home</a>}
+        {!views[path] && !editId && !detailId && !adminListing && <a className="button secondary" href="/" onClick={navigate}>Back to home</a>}
         <aside className="preview-note" aria-label="Preview information">
           <span className="note-dot" aria-hidden="true" />
           <p>Only verified university students can access approved marketplace listings. Negotiate, pay and arrange pickup directly with the seller.</p>
