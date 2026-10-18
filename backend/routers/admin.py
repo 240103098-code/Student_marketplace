@@ -132,3 +132,29 @@ def review_reports(request:Request,user=Depends(require_admin_user),query=Depend
 async def review_report(report_id:Annotated[int,Path(ge=1,le=9223372036854775807)],request:Request,user=Depends(require_admin_user)):
  await require_empty_action(request,'Review requests accept no fields.')
  return await run_in_threadpool(report_call,request,user,mark_admin_report_reviewed,report_id)
+
+
+from backend.publication import decide_publication,PublicationConflict,SellerPublicationIneligible
+from backend.admin_schemas import ListingRejectionRequest
+
+
+def publication_call(request,user,listing_id,**kwargs):
+ try:return listing_call(request,user,decide_publication,listing_id,**kwargs)
+ except SellerPublicationIneligible:raise HTTPException(status_code=409,detail='Seller must be verified and unsuspended before approval.') from None
+ except PublicationConflict:raise HTTPException(status_code=409,detail='Listing decision conflicts with its current state. Reload review.') from None
+
+
+@router.post('/listings/{listing_id}/approve')
+async def approve_listing(listing_id:Annotated[int,Path(ge=1,le=9223372036854775807)],request:Request,user=Depends(require_admin_user)):
+ await require_empty_action(request,'Approval requests accept no fields.')
+ return await run_in_threadpool(publication_call,request,user,listing_id)
+
+
+async def rejection_payload(request:Request):
+ if request.query_params:raise HTTPException(status_code=422,detail='Invalid rejection request.')
+ return await read_exact_listing_payload(request,ListingRejectionRequest,'Invalid rejection request.')
+
+
+@router.post('/listings/{listing_id}/reject',openapi_extra={'requestBody':{'required':True,'content':{'application/json':{'schema':ListingRejectionRequest.model_json_schema()}}}})
+def reject_listing(listing_id:Annotated[int,Path(ge=1,le=9223372036854775807)],request:Request,user=Depends(require_admin_user),payload=Depends(rejection_payload)):
+ return publication_call(request,user,listing_id,reason=payload.reason)

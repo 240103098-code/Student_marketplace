@@ -2,7 +2,7 @@
 from datetime import datetime
 from decimal import Decimal
 from typing import Literal
-from pydantic import BaseModel,ConfigDict,Field,field_serializer
+from pydantic import BaseModel,ConfigDict,Field,field_serializer,field_validator
 
 class SuspensionRequest(BaseModel):
  model_config=ConfigDict(extra='forbid',hide_input_in_errors=True)
@@ -80,3 +80,13 @@ class AdminReportsPage(BaseModel):
  limit:int
  offset:int
  state:Literal['unreviewed','reviewed','all']
+
+
+class ListingRejectionRequest(BaseModel):
+ model_config=ConfigDict(extra='forbid',hide_input_in_errors=True)
+ reason:str=Field(strict=True,min_length=1,max_length=300)
+ @field_validator('reason',mode='before')
+ @classmethod
+ def trim_reason(cls,value):
+  if not isinstance(value,str) or '\x00' in value:raise ValueError('Invalid rejection reason')
+  return value.strip()
