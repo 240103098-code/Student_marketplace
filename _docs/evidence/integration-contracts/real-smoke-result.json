@@ -1,0 +1,31 @@
+{
+  "result": "PASS",
+  "node": "v24.19.0",
+  "playwright": "1.62.1",
+  "browser": "155.0.4283.45",
+  "real_api_responses": 98,
+  "stages": [
+    "register-verify-seller",
+    "register-verify-buyer",
+    "register-verify-admin",
+    "seller-profile-listing-photo",
+    "pending-private",
+    "admin-approve",
+    "buyer-search-filter-detail",
+    "buyer-report-admin-queue",
+    "admin-remove-buyer-hidden",
+    "rejection-owner-feedback",
+    "suspension-session-denial",
+    "sold-delete",
+    "account-cleanup"
+  ],
+  "desktop": "real-desktop.png",
+  "mobile": "real-mobile.png",
+  "admin": "real-admin-reports.png",
+  "smtp": "controlled loopback protocol; external inbox unverified",
+  "cleanup": "complete",
+  "python": "3.13.15",
+  "recorded_at": "2026-10-19T21:16:16.761591+00:00",
+  "postgresql": "postgres (PostgreSQL) 18.6",
+  "mock_warning_or_controls": "absent in actual real-mode browser"
+}

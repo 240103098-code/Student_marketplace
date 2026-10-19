@@ -284,3 +284,6 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,
 .admin-page .admin-empty { text-align: center; padding: 32px 20px; background: var(--surface); border: 1px dashed var(--line); border-radius: var(--radius); color: var(--muted); }
 @media(max-width:760px) { .admin-page .admin-detail-columns { grid-template-columns: minmax(0,1fr); } .admin-page .listing-cards { grid-template-columns: minmax(0,1fr); } }
 @media(max-width:600px) { .admin-page .admin-overview,.admin-page .admin-gallery,.admin-page .listing-card,.admin-page .admin-decisions .admin-action { padding: 18px; } .admin-page .admin-nav { gap: 2px; } .admin-page .admin-nav a { padding: 10px; } }
+
+.mock-panel { padding:16px max(20px,calc((100vw - 1120px)/2)); background:#fff2c8; border-bottom:3px solid #8b5b00; color:#332600; font-size:14px; overflow-wrap:anywhere; }
+.mock-panel strong { display:block; } .mock-panel select { margin:8px; max-width:100%; } .mock-panel p { max-width:100%; }

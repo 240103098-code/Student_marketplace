@@ -1,3 +1,4 @@
+import {transport} from './transport.js';
 export class ApiError extends Error {
   constructor(kind, status = 0) {
     super('The request could not be confirmed.');
@@ -20,7 +21,7 @@ function apiOrigin() {
 export async function requestJson(path, { method = 'GET', payload, body, responseType, headers = {} } = {}) {
   let response;
   try {
-    response = await fetch(`${apiOrigin()}${path}`, {
+    response = await transport(`${apiOrigin()}${path}`, {
       method, credentials: 'include', headers: { ...(payload === undefined ? {} : { 'Content-Type': 'application/json' }), ...headers }, ...(payload === undefined ? (body === undefined ? {} : { body }) : { body: JSON.stringify(payload) }),
     });
   } catch (error) {

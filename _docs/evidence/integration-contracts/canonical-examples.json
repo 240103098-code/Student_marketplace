@@ -1,0 +1,38 @@
+{
+  "catalog": {
+    "items": [
+      {
+        "id": 1,
+        "title": "Synthetic campus textbook",
+        "price": "2500.00",
+        "currency": "KZT",
+        "category_id": 3,
+        "condition": "used",
+        "published_at": "2026-01-01T12:00:00Z",
+        "main_photo": {
+          "id": 1,
+          "position": 1,
+          "is_main": true,
+          "url": "/listings/1/photos/1"
+        }
+      }
+    ],
+    "total": 1,
+    "count": 1,
+    "limit": 20,
+    "offset": 0
+  },
+  "photo": {
+    "id": 1,
+    "position": 1,
+    "is_main": true,
+    "url": "/listings/1/photos/1"
+  },
+  "create_request": {
+    "title": "Synthetic new book",
+    "description": "Synthetic description for contract checks.",
+    "price": "10.00",
+    "category_id": 3,
+    "condition": "used"
+  }
+}

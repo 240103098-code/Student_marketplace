@@ -39,3 +39,7 @@ The published shell foundation is now applied to existing student screens; sourc
 ## Admin route adaptation (#42)
 
 The shared foundation now styles actual admin overview/navigation, users, listing review/private gallery/publication/removal and reports. Responsive cards and distinct confirmation boundaries preserve fresh server authority, real data, safe pending/error states and all existing contracts. [Coverage and real-stack evidence](admin-screens.md) records desktop/mobile checks. No source placeholders, data, auth, dependencies or backend changes were imported. #43 remains the explicit mock/contract/final integration follow-up; #44 stays deferred.
+
+## Final transport and contract integration (#43)
+
+[Final guide](integration-contracts.md) documents the explicit development-only synthetic transport, production exclusion/refusal, canonical gradual typed boundary, actual FastAPI OpenAPI export/check and final real/mock browser evidence. Real API remains default with no offline/auth-error fallback. Source repository is unchanged and has no automatic sync. Prior package evidence/history is preserved; SQLite (#44) remains deferred.

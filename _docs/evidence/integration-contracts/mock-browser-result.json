@@ -1,0 +1,18 @@
+{
+  "result": "PASS",
+  "real_api_requests": 0,
+  "browser": "155.0.4283.45",
+  "storage_entries": 0,
+  "reload": "signs out and resets memory",
+  "checks": [
+    "warning persistent",
+    "student profile and Pending creation/multipart photo",
+    "admin approve",
+    "buyer filtered detail and report",
+    "admin first review",
+    "permission denial",
+    "429 error",
+    "390px overflow",
+    "reload reset"
+  ]
+}

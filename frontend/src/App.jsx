@@ -1,5 +1,6 @@
+import {isMockMode} from './transport.js';
 import {SiteHeader} from './SiteHeader.jsx';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { AuthProvider, useAuth } from './Auth.jsx';
 import { RecoveryRequestForm, ResetPasswordForm } from './RecoveryForms.jsx';
 import { AdminReports } from './AdminReports.jsx';
@@ -18,6 +19,7 @@ import { PasswordForm } from './PasswordForm.jsx';
 import { LoginForm } from './LoginForm.jsx';
 import { RegistrationForm, VerificationForm } from './AccountForms.jsx';
 
+const MockPanel=import.meta.env.DEV&&isMockMode?lazy(()=>import('./MockPanel.jsx')):null;
 const views = {
   '/': {
     title: 'Your campus marketplace',
@@ -129,6 +131,7 @@ function AppShell() {
   return (
     <>
       <a className="skip-link" href="#main">Skip to content</a>
+      {MockPanel&&<Suspense fallback={<p role="status">Loading synthetic demo controls…</p>}><MockPanel/></Suspense>}
       <SiteHeader auth={auth} path={path} navigate={navigate} signOut={signOut} logoutPending={logoutPending} logoutError={logoutError}/>
       <main id="main" className={`main-content ${path.startsWith('/admin')?'admin-page':'student-page'} ${['/login','/register','/verify','/forgot-password','/reset-password','/account/password'].includes(path)?'auth-page':''}`} data-page={path} tabIndex={-1}>
         <div className="preview-label">{['/register', '/verify'].includes(path) ? 'University accounts' : auth.status==='authenticated' ? 'University marketplace' : 'University community'}</div>
@@ -170,7 +173,7 @@ function AppShell() {
           <p>Only verified university students can access approved marketplace listings. Negotiate, pay and arrange pickup directly with the seller.</p>
         </aside>
       </main>
-      <footer className="site-footer">Student Marketplace <span aria-hidden="true">·</span> For your university community</footer>
+      <footer className="site-footer">Student Marketplace <span aria-hidden="true">В·</span> For your university community</footer>
     </>
   );
 }

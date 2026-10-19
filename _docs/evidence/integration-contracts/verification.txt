@@ -1,0 +1,20 @@
+Issue #43 engineer verification, 2026-10-20 Asia/Qyzylorda
+Clean isolated sibling frontend copy: npm ci PASS, TypeScript7.0.2 boundary PASS,
+22 files/155 frontend tests PASS, production build PASS.
+Target's original node_modules restored via exact-lock npm install after Windows
+native lock prevented clean-ci removal; user's existing preview process untouched.
+Read-only preview / and /src/App.jsx both HTTP200 afterward.
+Final focused six transport tests and typecheck PASS after mock CSRF alignment.
+node tools/check_frontend_build.mjs PASS: actual real production output contains
+no mock fixtures/controls/chunk; mock build rejected in production/development modes.
+python -m tools.export_openapi --check PASS; no runtime services/secrets needed.
+Backend full guarded PostgreSQL run:261 tests,260 passed, one new assertion failed
+(expected422 instead of actual established400 for wrong multipart field).
+Corrected test/mock to actual400; affected eight real-PG browsing/contract tests PASS.
+No existing backend assertions or runtime behavior changed. Zero skips.
+Actual real-stack smoke PASS98API responses, no mock warning/controls,
+owned PostgreSQL/FastAPI/React/controlled-SMTP services and disposable data cleaned.
+Explicit mock browser journey PASS, zero real API traffic and browser storage,
+student creation/photo/Pending/admin approval/buyer search/detail/report/adminreview,
+warning/permission/429/mobile overflow/reload reset. Synthetic screenshots viewed.
+Earlier evidence and source remain unchanged. External inbox/production unverified.

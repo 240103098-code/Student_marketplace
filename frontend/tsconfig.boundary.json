@@ -1,0 +1,1 @@
+{"compilerOptions":{"strict":true,"noEmit":true,"target":"ES2022","module":"ESNext","moduleResolution":"Bundler","lib":["ES2022","DOM"]},"include":["src/contracts.d.ts","src/api.d.ts","src/contract-boundary.ts"]}

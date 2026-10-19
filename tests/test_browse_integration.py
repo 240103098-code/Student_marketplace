@@ -86,3 +86,27 @@ class BrowsePostgreSQLTest(unittest.TestCase):
     future=pool.submit(self.browse);self.assertTrue(ready.wait(5))
     with self.database.session() as s:revoke_user_sessions(s,self.buyer.id,self.now)
     release.set();result=future.result(timeout=5);self.assertEqual(result.status_code,401);self.assertNotIn('items',result.json())
+
+ def test_frontend_mock_contract_matches_real_catalog_multipart_and_binary(self):
+  import json
+  from backend.config import REPOSITORY_ROOT
+  from backend.listing_schemas import BrowseListingsPage
+  from test_avatar_integration import picture
+  examples=json.loads((REPOSITORY_ROOT/'_docs/evidence/integration-contracts/canonical-examples.json').read_text())
+  real=self.browse();self.assertEqual(real.status_code,200);body=real.json()
+  BrowseListingsPage.model_validate(body)
+  self.assertEqual(set(body),set(examples['catalog']))
+  self.assertEqual(set(body['items'][0]),set(examples['catalog']['items'][0]))
+  self.assertIsInstance(body['items'][0]['id'],int);self.assertIsInstance(body['items'][0]['category_id'],int)
+  self.assertRegex(body['items'][0]['price'],r'^\d+\.\d{2}$')
+  with self.database.session() as session:
+   item=session.get(Listing,self.item.id);item.status='pending';item.published_at=None
+  wrong=self.client.post(f'/listings/{self.item.id}/photos',headers=self.headers,files={'file':('synthetic.png',picture(),'image/png')})
+  self.assertEqual(wrong.status_code,400)
+  uploaded=self.client.post(f'/listings/{self.item.id}/photos',headers=self.headers,files={'image':('synthetic.png',picture(),'image/png')})
+  self.assertEqual(uploaded.status_code,201);photo=uploaded.json()
+  self.assertEqual(set(photo),set(examples['photo'])|{'listing_id'})
+  binary=self.client.get(photo['url'],headers=self.headers)
+  self.assertEqual(binary.status_code,200);self.assertEqual(binary.headers['content-type'],'image/png')
+  self.assertIn('no-store',binary.headers['cache-control']);self.assertTrue(binary.content.startswith(b'\x89PNG'))
+  self.assertEqual(self.client.get(photo['url'],headers=self.buyer_headers).status_code,404)
