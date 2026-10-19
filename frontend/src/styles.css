@@ -229,3 +229,58 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,
 .student-page .empty-state { padding: 32px 20px; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: var(--radius); background: var(--surface); }
 @media(max-width:760px) { .student-page .settings-grid,.student-page .detail-columns { grid-template-columns: minmax(0,1fr); } .student-page .marketplace-filters { grid-template-columns: minmax(0,1fr); padding: 18px; } .student-page .marketplace-filters > div:first-child { grid-column: auto; } }
 @media(max-width:600px) { .student-page.auth-page { padding-top: 28px; } .student-page .account-form { padding: 22px 18px; } .student-page .danger-zone,.student-page .listing-overview,.student-page .detail-columns section { padding: 18px; } .student-page .dashboard-controls .button { margin-left: 0; width: 100%; text-align: center; } .student-page .listing-cards { grid-template-columns: minmax(0,1fr); } }
+
+/* Protected administration screens (#42), isolated from student feature layouts. */
+.admin-page > section { margin-top: 28px; }
+.admin-page .admin-nav { display: flex; flex-wrap: wrap; gap: 6px; margin: 20px 0; padding: 8px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.admin-page .admin-nav a { padding: 10px 14px; font-weight: 600; color: var(--muted); }
+.admin-page .admin-nav a[aria-current="page"] { background: var(--teal-soft); color: var(--teal); }
+.admin-page h2 { font-size: 22px; line-height: 1.4; overflow-wrap: anywhere; }
+.admin-page p { line-height: 1.7; overflow-wrap: anywhere; }
+.admin-page .admin-shortcuts { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,260px),1fr)); gap: 20px; margin: 24px 0; }
+.admin-page .admin-shortcuts section { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; display: flex; flex-direction: column; align-items: flex-start; box-shadow: var(--shadow-card); }
+.admin-page .admin-shortcuts h3 { font-size: 18px; margin: 0; }
+.admin-page .admin-shortcuts p { color: var(--muted); font-size: 14px; flex: 1; }
+.admin-page .admin-shortcuts a { margin-top: 12px; }
+.admin-page .dashboard-controls { border: 1px solid var(--line); padding: 18px; border-radius: var(--radius); background: var(--surface); }
+.admin-page .dashboard-controls label { font-size: 14px; font-weight: 650; }
+.admin-page .dashboard-controls select { background: var(--surface); color: var(--ink); border-color: var(--line); min-height: 44px; }
+.admin-page .admin-count { margin: 22px 0; font-size: 14px; color: var(--muted); }
+.admin-page .listing-cards { grid-template-columns: repeat(auto-fill,minmax(min(100%,300px),1fr)); gap: 20px; align-items: start; }
+.admin-page .listing-card { background: var(--surface); box-shadow: var(--shadow-card); padding: 22px; border-color: var(--line); }
+.admin-page .listing-card h2 { font-size: 18px; margin: 0 0 12px; }
+.admin-page .listing-card h2 a { text-underline-offset: 4px; }
+.admin-page .listing-card time { color: var(--muted); font-size: 13px; }
+.admin-page .admin-status { display: inline-block; font-size: 13px; font-weight: 650; line-height: 1.6; border-radius: 6px; padding: 7px 10px; background: var(--teal-soft); color: var(--teal); }
+.admin-page .admin-status[data-state="pending"],.admin-page .admin-status[data-state="unreviewed"],.admin-page .admin-status[data-state="unverified"] { background: var(--pending-soft); color: var(--pending); }
+.admin-page .admin-status[data-state="rejected"],.admin-page .admin-status[data-state="removed"],.admin-page .admin-status[data-state="suspended"] { background: var(--danger-soft); color: var(--danger); }
+.admin-page .admin-status[data-state="sold"],.admin-page .admin-status[data-state="reviewed"] { background: var(--paper); color: var(--muted); }
+.admin-page .admin-protected { background: var(--paper); padding: 10px; color: var(--muted); border-radius: 8px; font-size: 13px; }
+.admin-page .admin-action { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--line); }
+.admin-page .admin-action > button { margin: 4px 8px 4px 0; }
+.admin-page .admin-action h3 { margin-top: 0; font-size: 18px; }
+.admin-page .danger { background: var(--danger); color: #fff; border: 1px solid var(--danger); }
+.admin-page .danger:hover { background: oklch(.43 .17 27); }
+.admin-page .danger-outline { background: var(--surface); color: var(--danger); border: 1px solid color-mix(in oklch,var(--danger),white 50%); }
+.admin-page .danger-outline:hover { background: var(--danger-soft); }
+.admin-page .admin-overview { background: var(--surface); padding: 24px; border: 1px solid var(--line); border-radius: var(--radius); }
+.admin-page .admin-overview h2 { font-size: clamp(24px,3vw,32px); margin: 0 0 12px; }
+.admin-page .admin-owner { color: var(--muted); border-top: 1px solid var(--line); padding-top: 16px; }
+.admin-page .admin-detail-columns { display: grid; grid-template-columns: minmax(0,1.5fr) minmax(280px,1fr); gap: 24px; margin-top: 24px; align-items: start; }
+.admin-page .admin-gallery { background: var(--surface); padding: 22px; border: 1px solid var(--line); border-radius: var(--radius); }
+.admin-page .admin-gallery .marketplace-thumbnail { display: block; width: 100%; height: auto; aspect-ratio: 4/3; max-height: 480px; object-fit: contain; background: var(--paper); }
+.admin-page .admin-gallery .actions { margin-top: 16px; }
+.admin-page button[aria-pressed="true"] { background: var(--teal-soft); border-color: var(--teal); color: var(--teal); }
+.admin-page .admin-decisions { display: grid; gap: 20px; min-width: 0; }
+.admin-page .admin-decisions .admin-action { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); margin: 0; padding: 22px; }
+.admin-page .admin-decisions .admin-publication { border-top: 3px solid var(--teal); }
+.admin-page .admin-decisions .admin-removal { border-top: 3px solid var(--danger); }
+.admin-page .admin-removal h3 { color: var(--danger); }
+.admin-page .admin-decisions .account-form { border: 0; padding: 0; box-shadow: none; max-width: none; margin-top: 10px; width: 100%; }
+.admin-page .admin-decisions .account-form textarea { background: var(--paper); border-color: var(--line); min-height: 130px; }
+.admin-page .admin-action .actions { margin-top: 18px; gap: 10px; }
+.admin-page [role="alert"] { background: var(--danger-soft); border: 1px solid color-mix(in oklch,var(--danger),white 65%); padding: 12px; border-radius: 8px; color: var(--danger); }
+.admin-page section > [role="status"]:not(.admin-count) { border-left: 3px solid var(--teal); background: var(--teal-soft); padding: 12px; border-radius: 6px; }
+.admin-page .admin-empty { text-align: center; padding: 32px 20px; background: var(--surface); border: 1px dashed var(--line); border-radius: var(--radius); color: var(--muted); }
+@media(max-width:760px) { .admin-page .admin-detail-columns { grid-template-columns: minmax(0,1fr); } .admin-page .listing-cards { grid-template-columns: minmax(0,1fr); } }
+@media(max-width:600px) { .admin-page .admin-overview,.admin-page .admin-gallery,.admin-page .listing-card,.admin-page .admin-decisions .admin-action { padding: 18px; } .admin-page .admin-nav { gap: 2px; } .admin-page .admin-nav a { padding: 10px; } }

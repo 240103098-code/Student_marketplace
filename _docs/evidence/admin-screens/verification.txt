@@ -1,0 +1,13 @@
+Issue #42 engineer verification (2026-10-20 Asia/Qyzylorda)
+Frontend: node ../../npm-runtime/package/bin/npm-cli.js run test -- --run --maxWorkers=2
+21 files, 149 tests PASS; assertions/timeouts unchanged.
+Build: node ../../npm-runtime/package/bin/npm-cli.js run build — PASS.
+Backend: .venv/Scripts/python.exe -m unittest discover -s tests -v
+Guarded dedicated PostgreSQL18.6 database on loopback55434; 257 tests, zero skips, PASS. PostgreSQL stopped afterward.
+Real browser: documented tools.local_demo command with dedicated disposable PostgreSQL and Edge executable.
+PASS; 107 actual API responses; controlled SMTP fixture; all owned services/data cleaned.
+Nine screenshots reviewed; synthetic content and grey identity masking.
+1280x900/390x844 no document horizontal overflow, keyboard gallery selection,
+suspension/removal confirmation focus and cancellation restoration PASS.
+Source reference remains unchanged. No backend/API/schema/dependency changes.
+No external email or production deployment verified.

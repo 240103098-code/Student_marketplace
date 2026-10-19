@@ -1,0 +1,46 @@
+{
+  "result": "PASS",
+  "node": "v24.19.0",
+  "playwright": "1.62.1",
+  "browser": "155.0.4283.45",
+  "real_api_responses": 107,
+  "stages": [
+    "register-verify-seller",
+    "register-verify-buyer",
+    "register-verify-admin",
+    "admin-visual-users",
+    "seller-profile-listing-photo",
+    "pending-private",
+    "admin-approve",
+    "buyer-search-filter-detail",
+    "buyer-report-admin-queue",
+    "admin-remove-buyer-hidden",
+    "rejection-owner-feedback",
+    "suspension-session-denial",
+    "sold-delete",
+    "account-cleanup"
+  ],
+  "smtp": "controlled loopback protocol; external inbox unverified",
+  "cleanup": "complete",
+  "python": "3.13.15",
+  "recorded_at": "2026-10-19T20:48:13.956101+00:00",
+  "postgresql": "postgres (PostgreSQL) 18.6",
+  "screenshots": [
+    "overview-desktop.png",
+    "pending-desktop.png",
+    "pending-mobile.png",
+    "rejection-mobile.png",
+    "reports-desktop.png",
+    "reports-mobile.png",
+    "users-confirm-mobile.png",
+    "users-desktop.png",
+    "users-mobile.png"
+  ],
+  "browser_assertions": [
+    "1280px and 390px layouts have no document horizontal overflow",
+    "Keyboard opens suspension confirmation; cancel restores trigger focus without mutation",
+    "Keyboard selects protected gallery photo",
+    "Removal confirmation receives focus; cancel restores trigger focus without mutation",
+    "Pending rejection form remains separate from removal; preview cancelled"
+  ]
+}

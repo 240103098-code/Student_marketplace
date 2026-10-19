@@ -1,0 +1,3 @@
+import React,{useEffect,useRef} from 'react';
+export function AdminNav({navigate}){return <nav className="admin-nav" aria-label="Administration sections">{[['/admin','Overview'],['/admin/users','Users'],['/admin/listings','Listings'],['/admin/reports','Reports']].map(([href,label])=><a key={href} href={href} onClick={navigate} aria-current={window.location.pathname===href?'page':undefined}>{label}</a>)}</nav>;}
+export function useConfirmationFocus(open){const trigger=useRef(null),previous=useRef(false);useEffect(()=>{if(previous.current&&!open)trigger.current?.focus();previous.current=!!open;},[open]);return trigger;}

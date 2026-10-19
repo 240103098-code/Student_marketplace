@@ -35,3 +35,7 @@ Verification: 146 frontend tests/build and 257 actual-PostgreSQL backend tests (
 ## Student route adaptation (#41)
 
 The published shell foundation is now applied to existing student screens; source placeholders were not copied. Shared FormIntro markup and scoped CSS style auth/recovery/verification, profile/avatar/contacts, password/deletion, marketplace filters/cards, detail/gallery/contact/report, create/edit and My Listings states/actions. No auth/API/business logic, backend, schema, provider, source files or dependencies changed. [Student coverage and real-stack evidence](student-screens.md) records the screen map and deliberate card/gallery/destructive-boundary adaptations. Admin visuals (#42) and explicit mock/contract/final integration (#43) are still follow-ups; SQLite (#44) stays deferred.
+
+## Admin route adaptation (#42)
+
+The shared foundation now styles actual admin overview/navigation, users, listing review/private gallery/publication/removal and reports. Responsive cards and distinct confirmation boundaries preserve fresh server authority, real data, safe pending/error states and all existing contracts. [Coverage and real-stack evidence](admin-screens.md) records desktop/mobile checks. No source placeholders, data, auth, dependencies or backend changes were imported. #43 remains the explicit mock/contract/final integration follow-up; #44 stays deferred.

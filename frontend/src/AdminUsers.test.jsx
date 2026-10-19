@@ -31,3 +31,7 @@ test('stale user-page response cannot overwrite a new route, expired mutations r
 test('expired suspension response sends no automatic mutation retry and requires sign in',async()=>{
  setup(()=>Promise.resolve(res(200,page([user()]))),()=>Promise.resolve(res(401,{})));await open();await screen.findByRole('button',{name:'Suspend student'});fireEvent.click(screen.getByRole('button',{name:'Suspend student'}));fireEvent.click(screen.getByRole('button',{name:'Confirm suspension'}));await screen.findByRole('heading',{name:'Sign in'});expect(actions()).toHaveLength(1);expect(screen.queryByRole('heading',{name:'student2@sdu.edu.kz'})).toBeNull();
 });
+
+test('suspension confirmation moves focus and cancel returns it without a mutation',async()=>{
+ setup(()=>Promise.resolve(res(200,page([user()]))));await open();const trigger=await screen.findByRole('button',{name:'Suspend student'});trigger.focus();fireEvent.click(trigger);expect(document.activeElement).toBe(screen.getByRole('button',{name:'Confirm suspension'}));fireEvent.click(screen.getByRole('button',{name:'Cancel'}));expect(document.activeElement).toBe(screen.getByRole('button',{name:'Suspend student'}));expect(actions()).toHaveLength(0);
+});

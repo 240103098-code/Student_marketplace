@@ -33,3 +33,7 @@ test('photo demotion removes private review without logging out student access',
 test('stale detail/photo results cannot overwrite another route',async()=>{
  let finish;setup(undefined,()=>new Promise(r=>{finish=r;}));await open('/admin/listings/7');await waitFor(()=>expect(typeof finish).toBe('function'));act(()=>{window.history.pushState(null,'','/admin');window.dispatchEvent(new PopStateEvent('popstate'));});await screen.findByRole('heading',{name:'Administration'});await act(async()=>finish(res(200,detail())));expect(screen.queryByText(detail().description)).toBeNull();expect(create).not.toHaveBeenCalled();
 });
+
+test('removal confirmation cancel restores keyboard focus without removing the listing',async()=>{
+ setup();await open('/admin/listings/7');const trigger=await screen.findByRole('button',{name:'Remove listing'});trigger.focus();fireEvent.click(trigger);expect(document.activeElement).toBe(screen.getByRole('button',{name:'Confirm removal'}));fireEvent.click(screen.getByRole('button',{name:'Cancel removal'}));expect(document.activeElement).toBe(screen.getByRole('button',{name:'Remove listing'}));expect(removes()).toHaveLength(0);expect(screen.getByText(detail().description)).toBeTruthy();
+});
