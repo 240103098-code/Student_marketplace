@@ -1,3 +1,4 @@
+import {FormIntro} from './StudentUI.jsx';
 import React, { useEffect, useRef, useState } from 'react';
 import { ApiError } from './api.js';
 import { useAuth } from './Auth.jsx';
@@ -52,7 +53,7 @@ export function EditListingForm({ listingId }) {
   }
   if(loading)return <p role="status">Loading your listing…</p>;
   if(!baseline)return <section><p role="alert" className="form-feedback error">{error}</p><button className="button secondary" onClick={()=>setRetry(value=>value+1)}>Retry listing</button></section>;
-  return <form className="account-form" aria-label="Edit listing" aria-busy={pending} onSubmit={save} noValidate>
+  return <form className="account-form" aria-label="Edit listing" aria-busy={pending} onSubmit={save} noValidate><FormIntro title="Price and description">Published approval stays in place. Other item details are read-only.</FormIntro>
     <label htmlFor="edit-title">Title (read-only)</label><input id="edit-title" value={baseline.title} readOnly/>
     <label htmlFor="edit-status">Status (read-only)</label><input id="edit-status" value={baseline.status} readOnly/>
     <label htmlFor="edit-publication">Publication (read-only)</label><input id="edit-publication" value={baseline.published_at||'Not published'} readOnly/>

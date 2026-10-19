@@ -1,3 +1,4 @@
+import {FormIntro} from './StudentUI.jsx';
 import React, { useEffect, useRef, useState } from 'react';
 import { ApiError } from './api.js';
 import { useAuth } from './Auth.jsx';
@@ -56,7 +57,7 @@ export function ProfileForm() {
   }
   if (loading) return <p role="status">Loading your profile…</p>;
   if (!baseline) return <section><p role="alert" className="form-feedback error">{error}</p><button className="button secondary" onClick={() => setRetry(previous => previous + 1)}>Retry loading profile</button></section>;
-  return <form className="account-form" aria-label="Own profile" aria-busy={pending} onSubmit={save} noValidate>
+  return <form className="account-form" aria-label="Own profile" aria-busy={pending} onSubmit={save} noValidate><FormIntro title="Profile and contacts">Your email is verified and fixed. Share only the external contact details you want buyers to use.</FormIntro>
     <label htmlFor="profile-email">Verified university email</label>
     <input id="profile-email" type="email" value={baseline.email} readOnly aria-describedby="profile-email-help" />
     <p id="profile-email-help" className="field-help">Verified. University email cannot be changed.</p>

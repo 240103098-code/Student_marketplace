@@ -1,3 +1,4 @@
+import {FormIntro} from './StudentUI.jsx';
 import React, { useRef, useState } from 'react';
 import { useAuth } from './Auth.jsx';
 
@@ -23,7 +24,7 @@ export function PasswordForm({ onChanged }) {
       setError(failure.status === 400 ? 'Current password is incorrect. Please try again.' : 'Password change could not be confirmed. Please try again.');
     } finally { busy.current = false; setPending(false); }
   }
-  return <form className="account-form" aria-label="Change password" onSubmit={submit} noValidate>
+  return <form className="account-form" aria-label="Change password" onSubmit={submit} noValidate><FormIntro title="Update your password">Confirm your current password. A successful change ends every session.</FormIntro>
     <label htmlFor="current-password">Current password</label>
     <input id="current-password" type="password" autoComplete="current-password" value={current} onChange={event => setCurrent(event.target.value)} disabled={pending} required />
     <label htmlFor="new-password">New password</label>

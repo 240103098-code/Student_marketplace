@@ -149,3 +149,83 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,
 @media(max-width:600px) { .header-inner { padding: 8px 20px; } .main-content { padding: 28px 20px 48px; } .account-form,.avatar-control,.listing-card,.panel { padding: 18px; } .site-footer { padding: 24px 20px; } }
 @media(prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto!important; transition:none!important; animation:none!important; } }
 .form-feedback.info { background: var(--teal-soft); color: var(--ink); border-color: var(--line); }
+
+/* Student feature screens (#41); admin layouts retain their existing presentation. */
+.student-page.auth-page { max-width: 680px; padding-top: 48px; }
+.student-page.auth-page .account-form { max-width: none; margin-top: 28px; }
+.student-page .form-intro { width: 100%; margin: 0 0 6px; }
+.student-page .form-intro h2 { margin: 0 0 8px; font-size: 20px; line-height: 1.35; }
+.student-page .form-intro p { color: var(--muted); font-size: 14px; line-height: 1.6; margin: 0 0 8px; }
+.student-page .account-form { gap: 0; padding: 28px; }
+.student-page .account-form > label:first-of-type { margin-top: 12px; }
+.student-page .account-form > a { display: inline-block; margin-top: 14px; line-height: 1.6; }
+.student-page .account-form input[readonly] { background: var(--paper); color: var(--muted); border-style: dashed; }
+.student-page .account-form input[type="file"] { padding: 12px; background: var(--paper); cursor: pointer; }
+.student-page input::file-selector-button { border: 1px solid var(--line); padding: 8px 12px; margin-right: 10px; border-radius: 6px; background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; }
+.student-page input { max-width: 100%; }
+.student-page input[type="text"][inputmode="numeric"] { font-variant-numeric: tabular-nums; letter-spacing: .18em; }
+.student-page .form-feedback { margin: 18px 0 0; overflow-wrap: anywhere; }
+.student-page .form-links { width: 100%; padding-top: 18px; border-top: 1px solid var(--line); }
+.student-page .form-links a { text-underline-offset: 3px; }
+.student-page .settings-grid { display: grid; grid-template-columns: minmax(240px,.8fr) minmax(0,1.6fr); gap: 24px; margin-top: 32px; align-items: start; }
+.student-page .settings-grid .avatar-control,.student-page .settings-grid .account-form { width: 100%; max-width: none; margin-top: 0; }
+.student-page .avatar-control h2 { margin-top: 0; font-size: 20px; }
+.student-page .avatar-preview { width: 144px; height: 144px; border-radius: 50%; border: 4px solid var(--teal-soft); margin: 18px 0; }
+.student-page .avatar-control input { border: 1px dashed var(--line); padding: 10px; border-radius: 8px; }
+.student-page .avatar-control > button { margin-top: 16px; }
+.student-page .danger-zone { margin-top: 32px; padding: 24px; background: var(--surface); border: 1px solid color-mix(in oklch,var(--danger),white 65%); border-left: 4px solid var(--danger); border-radius: var(--radius); }
+.student-page .danger-zone h2 { margin-top: 0; font-size: 20px; color: var(--danger); }
+.student-page .danger-zone > p { max-width: 760px; line-height: 1.7; }
+.student-page .danger-zone .account-form { padding: 0; border: 0; box-shadow: none; margin-top: 20px; }
+.student-page .danger { background: var(--danger); color: white; border: 1px solid var(--danger); }
+.student-page .danger:hover { background: oklch(.43 .17 27); }
+.student-page .danger-outline { background: var(--surface); color: var(--danger); border: 1px solid color-mix(in oklch,var(--danger),white 50%); }
+.student-page .danger-outline:hover { background: var(--danger-soft); }
+.student-page .marketplace-filters { padding: 24px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); grid-template-columns: repeat(4,minmax(0,1fr)); box-shadow: var(--shadow-card); }
+.student-page .marketplace-filters > div:first-child { grid-column: 1 / -1; }
+.student-page .marketplace-filters .field-help { font-size: 13px; }
+.student-page .results-summary { margin: 28px 0 18px; color: var(--muted); font-size: 14px; }
+.student-page .listing-cards { grid-template-columns: repeat(auto-fill,minmax(min(100%,280px),1fr)); gap: 22px; align-items: start; }
+.student-page .listing-card { padding: 18px; overflow: hidden; }
+.student-page .listing-card h2 { margin: 16px 0 8px; font-size: 20px; line-height: 1.4; }
+.student-page .listing-card h2 a { text-decoration: none; }
+.student-page .listing-card h2 a:hover { color: var(--teal); text-decoration: underline; text-underline-offset: 4px; }
+.student-page .card-photo { display: grid; place-items: center; background: var(--paper); border-radius: 8px; min-height: 190px; overflow: hidden; }
+.student-page .card-photo p { color: var(--muted); }
+.student-page .marketplace-thumbnail { height: 210px; }
+.student-page .listing-price { color: var(--teal); font-size: 22px; font-weight: 750; margin: 10px 0; }
+.student-page .listing-card .listing-price { font-size: 22px; }
+.student-page .listing-card time { font-size: 12px; color: var(--muted); }
+.student-page .dashboard-controls { border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; background: var(--surface); }
+.student-page .dashboard-controls .button { margin-left: auto; }
+.student-page .status-summary { display: inline-block; border-radius: 6px; padding: 7px 10px; font-weight: 650; background: var(--teal-soft); color: var(--teal); }
+.student-page .status-summary[data-state="pending"] { background: var(--pending-soft); color: var(--pending); }
+.student-page .status-summary[data-state="rejected"],.student-page .status-summary[data-state="removed"] { background: var(--danger-soft); color: var(--danger); }
+.student-page .status-summary[data-state="sold"] { background: var(--paper); color: var(--muted); }
+.student-page .listing-thumbnail { width: 100%; height: 180px; object-fit: cover; }
+.student-page .moderation-note { background: var(--danger-soft); padding: 12px; border-radius: 8px; }
+.student-page .listing-action { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.student-page .listing-action button { margin: 4px 8px 4px 0; }
+.student-page .listing-card > a { display: inline-block; margin-top: 16px; text-underline-offset: 4px; }
+.student-page .listing-overview { margin-top: 24px; padding: 24px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+.student-page .listing-overview h2 { font-size: clamp(24px,3vw,32px); margin: 0 0 12px; overflow-wrap: anywhere; }
+.student-page .detail-price { font-weight: 700; color: var(--teal); font-size: 20px; }
+.student-page .detail-columns { display: grid; grid-template-columns: minmax(0,1.5fr) minmax(280px,1fr); gap: 24px; align-items: start; margin-top: 24px; }
+.student-page .detail-columns section { padding: 22px; margin-top: 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); min-width: 0; }
+.student-page .detail-columns section h3 { margin-top: 0; font-size: 18px; }
+.student-page .detail-columns section p { line-height: 1.7; overflow-wrap: anywhere; }
+.student-page .detail-sidebar { display: grid; gap: 24px; min-width: 0; }
+.student-page .detail-sidebar .account-form { padding: 0; border: 0; box-shadow: none; margin-top: 8px; max-width: none; }
+.student-page .detail-sidebar a.button { display: block; text-align: center; }
+.student-page section[aria-label="Listing photo gallery"] .marketplace-thumbnail { width: 100%; height: auto; min-height: 220px; max-height: 480px; aspect-ratio: 4/3; object-fit: contain; background: var(--paper); }
+.student-page section[aria-label="Listing photo gallery"] .actions { margin-top: 16px; }
+.student-page button[aria-pressed="true"] { background: var(--teal-soft); color: var(--teal); border-color: var(--teal); }
+.student-page .listing-previews { display: grid; grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); gap: 12px; padding-left: 22px; width: 100%; }
+.student-page .listing-previews li { padding: 12px; background: var(--paper); border: 1px solid var(--line); border-radius: 8px; margin-top: 0; min-width: 0; }
+.student-page .listing-previews img { width: 100%; height: 140px; object-fit: cover; }
+.student-page .listing-previews button { width: 100%; }
+.student-page form[aria-label="New listing"],.student-page form[aria-label="Edit listing"] { max-width: 800px; }
+.student-page p[role="alert"] { padding: 12px; background: var(--danger-soft); border-radius: 8px; line-height: 1.6; }
+.student-page .empty-state { padding: 32px 20px; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: var(--radius); background: var(--surface); }
+@media(max-width:760px) { .student-page .settings-grid,.student-page .detail-columns { grid-template-columns: minmax(0,1fr); } .student-page .marketplace-filters { grid-template-columns: minmax(0,1fr); padding: 18px; } .student-page .marketplace-filters > div:first-child { grid-column: auto; } }
+@media(max-width:600px) { .student-page.auth-page { padding-top: 28px; } .student-page .account-form { padding: 22px 18px; } .student-page .danger-zone,.student-page .listing-overview,.student-page .detail-columns section { padding: 18px; } .student-page .dashboard-controls .button { margin-left: 0; width: 100%; text-align: center; } .student-page .listing-cards { grid-template-columns: minmax(0,1fr); } }

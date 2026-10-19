@@ -1,3 +1,4 @@
+import {FormIntro} from './StudentUI.jsx';
 import {retryGuidance} from './api.js';
 import React, { useEffect, useRef, useState } from 'react';
 import { ApiError, postJson, universityEmail } from './api.js';
@@ -35,7 +36,7 @@ export function RecoveryRequestForm({ initialEmail, cooldowns, onRequested, navi
     } catch (failure) { setError(failure.status===429?retryGuidance(failure):'The recovery request could not be confirmed. Please try again.'); }
     finally { busy.current = false; setPending(false); }
   }
-  return <form className="account-form" aria-label="Password recovery" aria-busy={pending} onSubmit={submit} noValidate>
+  return <form className="account-form" aria-label="Password recovery" aria-busy={pending} onSubmit={submit} noValidate><FormIntro title="Request a reset code">Only an eligible verified account can receive an email.</FormIntro>
     <label htmlFor="recovery-email">University email</label>
     <input id="recovery-email" type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} disabled={pending} required />
     {error && <p role="alert" className="form-feedback error">{error}</p>}
@@ -73,7 +74,7 @@ export function ResetPasswordForm({ initialEmail, navigate, onReset }) {
       setError(failure.status === 400 ? 'The reset code could not be accepted. Check your details or request a replacement. Codes last ten minutes; after five incorrect attempts you need a new code.' : 'Password reset could not be confirmed. Please try again.');
     } finally { busy.current = false; setPending(false); }
   }
-  return <form className="account-form" aria-label="Password reset" aria-busy={pending} onSubmit={submit} noValidate>
+  return <form className="account-form" aria-label="Password reset" aria-busy={pending} onSubmit={submit} noValidate><FormIntro title="Choose a new password">Use the recovery code sent to your university inbox.</FormIntro>
     <label htmlFor="reset-email">University email</label>
     <input id="reset-email" type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} disabled={pending} required />
     <label htmlFor="reset-code">Reset code</label>

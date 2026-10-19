@@ -130,7 +130,7 @@ function AppShell() {
     <>
       <a className="skip-link" href="#main">Skip to content</a>
       <SiteHeader auth={auth} path={path} navigate={navigate} signOut={signOut} logoutPending={logoutPending} logoutError={logoutError}/>
-      <main id="main" className="main-content" tabIndex={-1}>
+      <main id="main" className={`main-content ${path.startsWith('/admin')?'admin-page':'student-page'} ${['/login','/register','/verify','/forgot-password','/reset-password','/account/password'].includes(path)?'auth-page':''}`} data-page={path} tabIndex={-1}>
         <div className="preview-label">{['/register', '/verify'].includes(path) ? 'University accounts' : auth.status==='authenticated' ? 'University marketplace' : 'University community'}</div>
         <h1 ref={heading} tabIndex={-1}>{view.title}</h1>
         <p className="intro">{view.description}</p>
@@ -148,7 +148,7 @@ function AppShell() {
         {detailId && !guarded && <ListingDetail listingId={detailId} key={detailId} navigate={navigate} />}
         {editId && !guarded && <EditListingForm listingId={editId} key={editId} />}
         {path === '/listings/new' && !guarded && <NewListingForm navigate={navigate} />}
-        {path === '/profile' && !guarded && <><AvatarControl /><ProfileForm /><AccountDeletion onDeleted={()=>goTo('/login')}/></>}
+        {path === '/profile' && !guarded && <><div className="settings-grid"><AvatarControl /><ProfileForm /></div><AccountDeletion onDeleted={()=>goTo('/login')}/></>}
         {path === '/forgot-password' && <RecoveryRequestForm initialEmail={recovery.email} cooldowns={recovery.cooldowns} navigate={navigate} onRequested={(email, deadline) => setRecovery(previous => ({ email, cooldowns: { ...previous.cooldowns, [email]: deadline } }))} />}
         {path === '/reset-password' && <ResetPasswordForm initialEmail={recovery.email} navigate={navigate} onReset={() => goTo('/login')} />}
         {path === '/account/password' && !guarded && <PasswordForm onChanged={() => goTo('/login')} />}

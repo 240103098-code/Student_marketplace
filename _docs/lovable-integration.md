@@ -30,3 +30,8 @@ Follow local-setup.md for pinned target install and actual backend. For a shell-
 This completes the shared shell foundation only. Keep the original forty tasks/history unchanged; the separate integration sequence is **#45 → #41 student screens → #42 admin screens → #43 explicit development mock/contract completion and final real-stack verification**. **#44 SQLite assessment is deferred**, outside frontend integration. Independent QA verifies each package; orchestrator publishes the exact approved commit, then independent QA confirms publication and closes it. Engineer never closes.
 
 Verification: 146 frontend tests/build and 257 actual-PostgreSQL backend tests (zero skips) passed; see [record](evidence/lovable-shell/verification.txt). Owned source/target Vite and PostgreSQL services were stopped. No target dependencies changed.
+
+
+## Student route adaptation (#41)
+
+The published shell foundation is now applied to existing student screens; source placeholders were not copied. Shared FormIntro markup and scoped CSS style auth/recovery/verification, profile/avatar/contacts, password/deletion, marketplace filters/cards, detail/gallery/contact/report, create/edit and My Listings states/actions. No auth/API/business logic, backend, schema, provider, source files or dependencies changed. [Student coverage and real-stack evidence](student-screens.md) records the screen map and deliberate card/gallery/destructive-boundary adaptations. Admin visuals (#42) and explicit mock/contract/final integration (#43) are still follow-ups; SQLite (#44) stays deferred.

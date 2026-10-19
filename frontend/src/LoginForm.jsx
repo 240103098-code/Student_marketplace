@@ -1,3 +1,4 @@
+import {FormIntro} from './StudentUI.jsx';
 import {retryGuidance} from './api.js';
 import React, { useRef, useState } from 'react';
 import { universityEmail } from './api.js';
@@ -21,7 +22,7 @@ export function LoginForm({ navigate, onSignedIn }) {
     catch (failure) { setError(failure.status===429?retryGuidance(failure):failure.status === 401 ? 'Invalid credentials or account unavailable.' : 'Sign-in could not be confirmed. Please try again.'); }
     finally { busy.current = false; setPending(false); }
   }
-  return <form className="account-form" aria-label="Sign in" onSubmit={submit} noValidate>
+  return <form className="account-form" aria-label="Sign in" onSubmit={submit} noValidate><FormIntro title="Sign in securely">Use your verified university account.</FormIntro>
     <label htmlFor="login-email">University email</label>
     <input id="login-email" type="email" autoComplete="username" value={email} onChange={event => setEmail(event.target.value)} disabled={pending} required />
     <label htmlFor="login-password">Password</label>

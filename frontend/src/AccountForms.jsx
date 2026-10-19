@@ -1,3 +1,4 @@
+import {FormIntro} from './StudentUI.jsx';
 import {retryGuidance} from './api.js';
 import React, { useEffect, useRef, useState } from 'react';
 import { ApiError, postJson, universityEmail } from './api.js';
@@ -47,7 +48,7 @@ export function RegistrationForm({ onRegistered, navigate }) {
   }
 
   return (
-    <form className="account-form" onSubmit={submit} noValidate aria-label="Registration" aria-busy={pending}>
+    <form className="account-form" onSubmit={submit} noValidate aria-label="Registration" aria-busy={pending}><FormIntro title="University account">Register with your own sdu.edu.kz address and verify it by email.</FormIntro>
       <label htmlFor="register-email">University email</label>
       <input id="register-email" type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} disabled={pending} aria-describedby="register-email-help" required />
       <p id="register-email-help" className="field-help">Use your sdu.edu.kz address.</p>
@@ -118,7 +119,7 @@ export function VerificationForm({ initialEmail, cooldowns, onCooldown, navigate
   if (verified) return <section className="verification-success"><Feedback message="Your university email is verified." /><a className="button primary" href="/login" onClick={navigate}>Continue to sign in</a></section>;
 
   return (
-    <form className="account-form" onSubmit={event => request('verify', event)} noValidate aria-label="Email verification" aria-busy={!!pending}>
+    <form className="account-form" onSubmit={event => request('verify', event)} noValidate aria-label="Email verification" aria-busy={!!pending}><FormIntro title="Email confirmation">Enter the code from your inbox. Requests never guarantee delivery.</FormIntro>
       <label htmlFor="verify-email">University email</label>
       <input id="verify-email" type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} disabled={!!pending} required />
       <label htmlFor="verify-code">Verification code</label>

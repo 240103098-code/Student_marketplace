@@ -116,3 +116,5 @@ test('revoked authorization on PATCH removes protected fields without replay or 
   expect(patches()).toHaveLength(1);
   expect(fetchMock.mock.calls.filter(([url]) => url.endsWith('/auth/refresh'))).toHaveLength(1);
 });
+
+test('profile editing stays independent from destructive confirmation and cancellation',async()=>{setup();await open();expect(screen.getByRole('heading',{name:'Profile and contacts'})).toBeTruthy();expect(screen.getByRole('heading',{name:'Profile photo'})).toBeTruthy();change('Name','Unsaved contact name');fireEvent.click(screen.getByRole('button',{name:'Delete my account'}));expect(screen.getByRole('form',{name:'Confirm permanent deletion'})).toBeTruthy();fireEvent.click(screen.getByRole('button',{name:'Cancel deletion'}));expect(screen.queryByRole('form',{name:'Confirm permanent deletion'})).toBeNull();expect(screen.getByLabelText('Name').value).toBe('Unsaved contact name');expect(screen.getByLabelText('Verified university email').readOnly).toBe(true);expect(patches()).toHaveLength(0);expect(fetchMock.mock.calls.some(([,o])=>o.method==='DELETE')).toBe(false);});

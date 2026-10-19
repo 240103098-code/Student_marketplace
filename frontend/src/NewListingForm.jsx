@@ -1,3 +1,4 @@
+import {FormIntro} from './StudentUI.jsx';
 import {retryGuidance} from './api.js';
 import React, { useEffect, useRef, useState } from 'react';
 import { ApiError } from './api.js';
@@ -88,7 +89,7 @@ export function NewListingForm({ navigate }) {
   }
   if(!categories)return <section>{categoryError?<><p role="alert" className="form-feedback error">{categoryError}</p><button className="button secondary" onClick={()=>setRetry(previous=>previous+1)}>Retry categories</button></>:<p role="status">Loading categories…</p>}</section>;
   const locked=!!listing||!!pending||uncertain;
-  return <form className="account-form" aria-label="New listing" aria-busy={!!pending} onSubmit={submit} noValidate>
+  return <form className="account-form" aria-label="New listing" aria-busy={!!pending} onSubmit={submit} noValidate><FormIntro title="Item details">New listings stay private until manual admin approval.</FormIntro>
     <label htmlFor="listing-title">Title</label><input id="listing-title" value={fields.title} onChange={event=>update('title',event.target.value)} disabled={locked} aria-describedby="listing-title-help"/>
     <p id="listing-title-help" className="field-help">3–120 characters after trimming.</p>
     <label htmlFor="listing-description">Description</label><textarea id="listing-description" value={fields.description} onChange={event=>update('description',event.target.value)} disabled={locked} aria-describedby="listing-description-help"/>

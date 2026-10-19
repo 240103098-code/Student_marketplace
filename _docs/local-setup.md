@@ -77,7 +77,7 @@ if ($testExit -ne 0) { throw 'Backend tests failed' }
 
 Choose an unused dedicated loopback port. Local trust applies only to this synthetic isolated test cluster. Keep its path/name and reuse only after verifying ownership and empty application tables; never reset an arbitrary existing cluster. Linux/macOS use the corresponding binaries without `.exe` and their normal non-root PostgreSQL account requirements.
 
-The final complete run passes **257 backend tests with zero skips**, including actual PostgreSQL/filesystem and controlled loopback SMTP. Frontend passes **146 tests** and build. Detailed commands/results are recorded in [demo verification](demo.md); controlled SMTP messages are held only in fixture memory, without any external mail. Windows low-level asyncio needs permission for its local socketpair.
+The final complete run passes **257 backend tests with zero skips**, including actual PostgreSQL/filesystem and controlled loopback SMTP. Frontend passes **147 tests** and build. Detailed commands/results are recorded in [demo verification](demo.md); controlled SMTP messages are held only in fixture memory, without any external mail. Windows low-level asyncio needs permission for its local socketpair.
 
 ## One-command real-stack smoke
 
@@ -99,3 +99,5 @@ The process-local limiter tracks at most 10,000 active hashed keys, fails closed
 **No production deployment or distributed guarantee is claimed. Live external university-inbox delivery remains unverified.** Supply a real provider securely and intentionally register your own university inbox to perform that separate operator check. Local protocol SMTP success does not prove provider/inbox delivery, encrypted transport or production readiness. Backlog/history archives and the established plan remain preserved.
 
 The source/reference and target shell inspection commands for the separate Lovable visual integration are recorded in [lovable-integration.md](lovable-integration.md). Real API mode and the setup above remain the default; no new runtime dependency or provider is needed for the shared shell.
+
+Student route visual coverage and fresh real-stack screenshots are documented in [student-screens.md](student-screens.md). For resource-constrained verification use `npm run test -- --run --maxWorkers=2`; this runs every frontend case without changing assertions/timeouts or skipping cases.
