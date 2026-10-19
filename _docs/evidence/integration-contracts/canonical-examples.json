@@ -4,7 +4,7 @@
       {
         "id": 1,
         "title": "Graphing calculator, works perfectly",
-        "price": "38000.00",
+        "price": "15000.00",
         "currency": "KZT",
         "category_id": 1,
         "condition": "used",
@@ -19,7 +19,7 @@
       {
         "id": 2,
         "title": "Noise-cancelling over-ear headphones",
-        "price": "62000.00",
+        "price": "20000.00",
         "currency": "KZT",
         "category_id": 1,
         "condition": "used",
@@ -34,7 +34,7 @@
       {
         "id": 3,
         "title": "24-inch IPS monitor, 1080p",
-        "price": "45000.00",
+        "price": "30000.00",
         "currency": "KZT",
         "category_id": 1,
         "condition": "used",
@@ -64,7 +64,7 @@
       {
         "id": 5,
         "title": "Winter down jacket, size M",
-        "price": "25000.00",
+        "price": "12000.00",
         "currency": "KZT",
         "category_id": 2,
         "condition": "used",

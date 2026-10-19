@@ -47,3 +47,5 @@ The shared foundation now styles actual admin overview/navigation, users, listin
 ## Supplied photo correction (#47)
 
 [Six original product JPEGs](mock-original-photos.md) are restored exclusively to the development mock catalog, with byte/hash provenance and matching source titles/categories/prices. Real PostgreSQL is not seeded; production assets/fixtures remain excluded. The source repository and earlier evidence remain unchanged.
+
+Current demo pricing has four intentional user overrides in #48; [photo/pricing provenance](mock-original-photos.md) separates source prices from demo prices. Original product photos and real-backend content are unchanged.
