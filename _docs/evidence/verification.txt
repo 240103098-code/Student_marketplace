@@ -1,0 +1,29 @@
+2026-10-19 — final local MVP verification (synthetic data only)
+
+Runtime: Python 3.13.15; Node v24.19.0; npm 12.2.0; PostgreSQL 18.6; Playwright 1.62.1; Edge 155.0.4283.45.
+
+Backend, repository root:
+.venv/Scripts/python.exe -m unittest discover -s tests -v
+Environment: dedicated loopback TEST_DATABASE_URL=postgresql+psycopg://issue4_admin@127.0.0.1:55434/student_marketplace_test_issue4 and matching TEST_DATABASE_CONFIRM=student_marketplace_test_issue4; owned PostgreSQL started/stopped around the command.
+Result: Ran 257 tests in 119.198s; OK. Zero skipped tests. Controlled loopback SMTP only. PostgreSQL stopped afterward.
+
+Frontend, frontend directory:
+node ../../npm-runtime/package/bin/npm-cli.js ci
+Result: added 90 packages, and audited 91 packages in 3s; found 0 vulnerabilities (automatic npm summary, not a comprehensive security scan).
+node ../../npm-runtime/package/bin/npm-cli.js run test -- --run
+Result: 20 test files passed; 142 tests passed.
+node ../../npm-runtime/package/bin/npm-cli.js run build
+Result: Vite 8.3.4 production build passed; 38 modules transformed.
+
+Real stack, repository root:
+.venv/Scripts/python.exe -m tools.local_demo --postgres-bin ../pg-runtime/pgsql/bin --confirm-disposable-demo student-marketplace-local-demo --browser-executable "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"
+Result: PASS, repeated using independent fresh clusters; final run observed 98 real API responses. Desktop/mobile/admin evidence in demo-result.json and demo-*.png. Owned services stopped and private cluster/upload/build artifacts removed.
+
+Failure cleanup:
+Same smoke command with --node set to the Python executable deliberately failed at React production build with exit 1. Its started PostgreSQL/API services stopped and no generated local-demo directory remained. A subsequent valid invocation passed. The invalid command is a failure-path test, not the normal operator command.
+
+Documentation checks:
+git diff --check passed.
+_docs/tasks.md has exactly sequential tasks 1 through 40. _docs/tasks.md, _docs/plan.md and _docs/backlog-history.md are unchanged.
+
+No production deployment, real SMTP provider/university-inbox delivery or distributed limiter guarantee is claimed. No external emails/contacts were sent/opened. Screenshots contain synthetic listing content only; no passwords, verification codes, tokens or private identities are recorded.

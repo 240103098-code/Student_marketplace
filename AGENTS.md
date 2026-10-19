@@ -3,12 +3,14 @@ Commands
 - Python 3.11 or newer is supported (verified with Python 3.13.15). Run these commands from the repository root on Windows; use `.venv/bin/python` on other platforms.
 - `python -m venv .venv` - create the isolated Python environment.
 - `.venv/Scripts/python.exe -m pip install -r requirements.lock` - install the pinned Python dependencies.
-- `.venv/Scripts/python.exe -m unittest discover -s tests -v` - run service-free tests; real PostgreSQL tests are opt-in using the dedicated database contract in `_docs/local-setup.md`.
+- `.venv/Scripts/python.exe -m unittest discover -s tests -v` - run the backend suite; require guarded real PostgreSQL for the complete 257-test run, as documented in `_docs/local-setup.md`.
 - `.venv/Scripts/python.exe -m backend.database check` - explicitly check configured PostgreSQL connectivity.
 - `.venv/Scripts/python.exe -m alembic upgrade head` / `downgrade base` - apply/revert migrations. Current head creates account/code/refresh and category/listing/photo/report tables; use downgrades only on disposable data.
-- From `frontend`, `npm ci`, `npm run test -- --run`, and `npm run build` install/test/build the React preview shell; `npm run dev` serves it at http://127.0.0.1:5173/ (Ctrl+C to stop).
+- From `frontend`, `npm ci`, `npm run test -- --run`, and `npm run build` install/test/build the React application; `npm run dev` serves it at http://127.0.0.1:5173/ (Ctrl+C to stop).
 - Frontend verification uses Node 24.19.0 and npm 12.2.0; see `_docs/local-setup.md` for supported versions and workspace-local npm.
 - `.venv/Scripts/python.exe -m uvicorn backend.main:create_runtime_app --factory --host 127.0.0.1 --port 8000 --no-proxy-headers` - start the configured backend; stop with Ctrl+C. Apply migrations first.
+
+- `.venv/Scripts/python.exe -m tools.local_demo --postgres-bin <PostgreSQL-bin> --confirm-disposable-demo student-marketplace-local-demo [--browser-executable <browser>]` - real-stack smoke; see `_docs/demo.md` for prerequisites, isolation, evidence and limitations.
 
 Rules
 
