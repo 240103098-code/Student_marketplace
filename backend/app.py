@@ -21,7 +21,7 @@ from backend.sessions import CsrfError
 from backend.images import ImageInputError, ImageStorageError
 
 
-def create_app(settings: Settings, database: Database | None = None, *, sender=None, clock=None):
+def create_app(settings: Settings, database: Database | None = None, *, sender=None, clock=None, limiter=None):
     owns_database = database is None
     database = Database(settings) if database is None else database
 
@@ -38,6 +38,10 @@ def create_app(settings: Settings, database: Database | None = None, *, sender=N
     app.state.database = database
     app.state.email_sender = SmtpSender(settings) if sender is None else sender
     app.state.clock = utc_now if clock is None else clock
+    from backend.abuse import Limiter
+    from backend.security_boundary import SecurityBoundary
+    app.state.limiter=Limiter(lambda:app.state.clock()) if limiter is None else limiter
+    app.add_middleware(SecurityBoundary,limiter=app.state.limiter)
     app.add_middleware(CORSMiddleware, allow_origins=settings.frontend_origins,
         allow_credentials=True, allow_methods=["GET", "POST", "PATCH", "DELETE"],
         allow_headers=["Authorization", "Content-Type", "X-CSRF-Token"], expose_headers=["Retry-After"])

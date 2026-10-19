@@ -1,3 +1,4 @@
+from backend.abuse import user_quota
 from fastapi import APIRouter, Depends, HTTPException, Request
 from starlette.concurrency import run_in_threadpool
 from fastapi.responses import StreamingResponse
@@ -32,6 +33,7 @@ def edit_own_profile(payload: ProfilePatch, request: Request, user=Depends(requi
 
 @router.post('/me/avatar')
 async def upload_avatar(request: Request, user=Depends(require_verified_user)):
+    user_quota(request,user,'image-upload',30)
     raw = await read_image_upload(request)
     try:
         pending = await run_in_threadpool(mutate_avatar, request.app.state.database, user.id,

@@ -1,3 +1,4 @@
+from backend.abuse import user_quota
 from io import BytesIO
 from typing import Annotated
 
@@ -14,6 +15,7 @@ router=APIRouter(prefix='/listings',tags=['private listing photos'])
 
 @router.post('/{listing_id}/photos',status_code=201)
 async def upload_photo(listing_id:Annotated[int,Path(ge=1,le=9223372036854775807)],request:Request,user=Depends(require_verified_user)):
+    user_quota(request,user,'image-upload',30)
     raw=await read_image_upload(request)
     try:
         return await run_in_threadpool(append_listing_photo,request.app.state.database,user.id,

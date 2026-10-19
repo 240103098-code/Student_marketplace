@@ -1,3 +1,4 @@
+import {retryGuidance} from './api.js';
 import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from './Auth.jsx';
 
@@ -38,7 +39,7 @@ export function AvatarControl() {
       release(); setPreview(null);
       setFeedback(`${file ? 'Profile photo updated.' : 'Profile photo removed.'}${result.data?.cleanup_pending ? ' Old-file cleanup is pending.' : ''}`);
       setRetry(previous => previous+1);
-    } catch (failure) { setError(failure.status === 400 ? 'Choose a valid JPEG, PNG or WebP image within twenty million pixels.' : failure.status === 413 ? 'Choose an image up to five MiB.' : 'The photo change could not be confirmed. Please try again.'); }
+    } catch (failure) { setError(failure.status===429?retryGuidance(failure):failure.status === 400 ? 'Choose a valid JPEG, PNG or WebP image within twenty million pixels.' : failure.status === 413 ? 'Choose an image up to five MiB.' : 'The photo change could not be confirmed. Please try again.'); }
     finally { if (input.current) input.current.value = ''; busy.current = false; setPending(false); }
   }
   return <section className="avatar-control" aria-label="Profile photo">

@@ -22,3 +22,5 @@ test('self/private/malformed response errors are safe without changing logged-in
 test('current-session failure removes protected report content',async()=>{
  setup(()=>Promise.resolve(res(401,{})));await open();choose('spam');submit();await screen.findByRole('heading',{name:'Sign in'});expect(screen.queryByRole('form',{name:'Report listing'})).toBeNull();expect(reports()).toHaveLength(1);
 });
+
+test('quota rejection retains report input with honest Retry-After and no acceptance',async()=>{setup(()=>Promise.resolve(new Response('{}',{status:429,headers:{'Retry-After':'180'}})));await open();choose('spam');submit();await screen.findByRole('alert');expect(screen.getByRole('alert').textContent).toContain('Retry after 180 seconds');expect(screen.queryByText(/Report accepted for/)).toBeNull();expect(reports()).toHaveLength(1);});

@@ -1,3 +1,4 @@
+import {retryGuidance} from './api.js';
 import React, { useRef, useState } from 'react';
 import { universityEmail } from './api.js';
 import { useAuth } from './Auth.jsx';
@@ -17,7 +18,7 @@ export function LoginForm({ navigate, onSignedIn }) {
     if (Array.from(password).length < 12 || Array.from(password).length > 128) { setError('Use a password of 12–128 characters. Spaces are kept.'); return; }
     busy.current = true; setPending(true); setError('');
     try { await auth.login(normalized, password); setPassword(''); onSignedIn(); }
-    catch (failure) { setError(failure.status === 401 ? 'Invalid credentials or account unavailable.' : 'Sign-in could not be confirmed. Please try again.'); }
+    catch (failure) { setError(failure.status===429?retryGuidance(failure):failure.status === 401 ? 'Invalid credentials or account unavailable.' : 'Sign-in could not be confirmed. Please try again.'); }
     finally { busy.current = false; setPending(false); }
   }
   return <form className="account-form" aria-label="Sign in" onSubmit={submit} noValidate>

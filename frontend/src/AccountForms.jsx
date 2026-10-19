@@ -1,3 +1,4 @@
+import {retryGuidance} from './api.js';
 import React, { useEffect, useRef, useState } from 'react';
 import { ApiError, postJson, universityEmail } from './api.js';
 
@@ -6,6 +7,7 @@ function Feedback({ message, error = false }) {
 }
 
 function requestError(error, mode) {
+  if(error.status===429)return retryGuidance(error);
   if (error.status === 503) return 'Email delivery is unavailable right now. Please try again later.';
   if (mode === 'register' && error.status === 409) return 'This email is already registered. You can go to verification or sign in.';
   if (mode === 'verify' && error.status === 400) return 'The code could not be accepted. Check your details or request a new code when available. Codes last ten minutes; after five incorrect attempts you need a replacement.';

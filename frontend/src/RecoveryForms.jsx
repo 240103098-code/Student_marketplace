@@ -1,3 +1,4 @@
+import {retryGuidance} from './api.js';
 import React, { useEffect, useRef, useState } from 'react';
 import { ApiError, postJson, universityEmail } from './api.js';
 import { useAuth } from './Auth.jsx';
@@ -31,7 +32,7 @@ export function RecoveryRequestForm({ initialEmail, cooldowns, onRequested, navi
       if (result.status !== 202) throw new ApiError('response');
       onRequested(address, Date.now() + result.retryAfter * 1000);
       setFeedback('If this address is eligible, a password-reset email may arrive. Check your inbox; this response does not guarantee delivery.');
-    } catch { setError('The recovery request could not be confirmed. Please try again.'); }
+    } catch (failure) { setError(failure.status===429?retryGuidance(failure):'The recovery request could not be confirmed. Please try again.'); }
     finally { busy.current = false; setPending(false); }
   }
   return <form className="account-form" aria-label="Password recovery" aria-busy={pending} onSubmit={submit} noValidate>

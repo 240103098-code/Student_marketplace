@@ -96,3 +96,5 @@ test('photo load errors provide retry and authorization failure removes protecte
   expect(screen.queryByLabelText('Upload or replace profile photo')).toBeNull();
   expect(fetchMock.mock.calls.filter(([,options])=>options.method==='DELETE')).toHaveLength(1);
 });
+
+test('upload quota rejection shows wait guidance without claiming a photo update',async()=>{setup(o=>Promise.resolve(o.method==='GET'?response(404):new Response('{}',{status:429,headers:{'Retry-After':'120'}})));await open();choose();await screen.findByRole('alert');expect(screen.getByRole('alert').textContent).toContain('Retry after 120 seconds');expect(screen.queryByText('Profile photo updated.')).toBeNull();expect(fetchMock.mock.calls.filter(([url,o])=>url.endsWith('/users/me/avatar')&&o.method==='POST')).toHaveLength(1);});

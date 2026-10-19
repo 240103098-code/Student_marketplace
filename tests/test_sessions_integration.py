@@ -81,7 +81,7 @@ class RefreshSessionPostgreSQLTest(unittest.TestCase):
         for _ in range(2):
             result = self.client.get("/auth/csrf", headers=self.headers(raw, csrf))
             self.assertEqual(result.status_code, 200)
-            self.assertEqual(result.headers["Cache-Control"], "no-store")
+            self.assertEqual(result.headers["Cache-Control"], "private, no-store")
         self.assertEqual(snapshot, [(r.id, r.revoked_at, r.predecessor_id, r.successor_id) for r in self.sessions()])
 
     def test_rotation_preserves_fixed_expiry_and_access_family(self):

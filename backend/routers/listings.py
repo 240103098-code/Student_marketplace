@@ -1,3 +1,4 @@
+from backend.abuse import user_quota
 """Protected listing creation, owner management and marketplace browsing."""
 
 import json
@@ -45,6 +46,7 @@ async def exact_listing_payload(request:Request):
 
 @router.post('/listings',status_code=201,response_model=OwnListingResponse,openapi_extra={'requestBody':{'required':True,'content':{'application/json':{'schema':ListingCreateRequest.model_json_schema()}}}})
 def submit_listing(request:Request,user=Depends(require_verified_user),payload=Depends(exact_listing_payload)):
+    user_quota(request,user,'listing-create',10)
     try:
         listing=create_own_listing(request.app.state.database,user.id,
             request.headers['authorization'].split(' ',1)[1],payload,
@@ -199,6 +201,7 @@ async def exact_report_payload(request:Request):
 
 @router.post('/listings/{listing_id}/reports',status_code=202,openapi_extra={'requestBody':{'required':True,'content':{'application/json':{'schema':ListingReportRequest.model_json_schema()}}}})
 def submit_report(listing_id:Annotated[int,Path(ge=1,le=9223372036854775807)],request:Request,user=Depends(require_verified_user),payload=Depends(exact_report_payload)):
+    user_quota(request,user,'report-submit',10)
     try:
         return report_listing(request.app.state.database,user.id,request.headers['authorization'].split(' ',1)[1],
             listing_id,payload,request.app.state.settings,clock=request.app.state.clock)

@@ -27,7 +27,7 @@ export async function requestJson(path, { method = 'GET', payload, body, respons
     if (error instanceof ApiError) throw error;
     throw new ApiError('network');
   }
-  if (!response.ok) throw new ApiError('http', response.status);
+  if (!response.ok) { const error=new ApiError('http',response.status);const header=response.headers.get('Retry-After');error.retryAfter=/^[0-9]+$/.test(header||'')&&Number.isSafeInteger(Number(header))&&Number(header)>0?Number(header):60;throw error; }
   let data;
   try {
     data = response.status === 204 ? null : responseType === 'blob' ? await response.blob() : await response.json();
@@ -48,3 +48,5 @@ export function universityEmail(value) {
   if (!/^[\x00-\x7f]+$/.test(domain) || !/^[^\s@]+@sdu\.edu\.kz$/.test(normalized) || Array.from(normalized).length > 254) return null;
   return normalized;
 }
+
+export function retryGuidance(error){return `Too many requests. Retry after ${error.retryAfter||60} seconds. No action was performed by this request.`;}

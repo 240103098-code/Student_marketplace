@@ -91,6 +91,9 @@ class RegistrationPostgreSQLTest(unittest.TestCase):
             "name with space@sdu.edu.kz", "a" * 255 + "@sdu.edu.kz",
         ):
             with self.subTest(email=email):
+                # Isolate each validation case with a fresh finite store; quota behavior has dedicated tests.
+                from backend.abuse import Limiter
+                self.client.app.state.limiter=Limiter(self.client.app.state.clock)
                 response = self.client.post("/auth/register", json={"email": email, "password": PASSWORD})
                 self.assertEqual(response.status_code, 422)
                 self.assertEqual(response.json(), {"detail": "Invalid registration request."})

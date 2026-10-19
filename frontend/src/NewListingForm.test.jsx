@@ -118,3 +118,5 @@ test.each([['creation','network'],['photo','network'],['creation','server'],['ph
  expect(screen.queryByText('Creation complete. Awaiting manual admin review.')).toBeNull();expect(storage).not.toHaveBeenCalled();expect(window.location.search).toBe('');
  if(stage==='photo')expect(screen.getByText(/0 of 1 selected photos confirmed saved/)).toBeTruthy();
 });
+
+test('listing quota rejection is safe retry guidance without uncertain creation or false success',async()=>{setup({createListing:()=>Promise.resolve(new Response('{}',{status:429,headers:{'Retry-After':'240'}}))});await open();fill();submit();await screen.findByRole('alert');expect(screen.getByRole('alert').textContent).toContain('Retry after 240 seconds');expect(screen.getByRole('alert').textContent).not.toContain('may have been created');expect(screen.getByLabelText('Title').disabled).toBe(false);expect(fetchMock.mock.calls.filter(([url])=>new URL(url).pathname==='/listings')).toHaveLength(1);});

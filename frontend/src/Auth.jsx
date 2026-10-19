@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { ApiError, requestJson } from './api.js';
+import { ApiError, requestJson, retryGuidance } from './api.js';
 
 const AuthContext = createContext(null);
 const expiredMessage = 'Your session expired or is unavailable. Please sign in again.';
@@ -63,7 +63,7 @@ export function createSessionClient(notify) {
         const user = await confirm(candidate);
         if (started === generation) {confirmedUser=user;notify({ status: 'authenticated', user, message: '' });}
       } catch (error) {
-        if (started === generation) clear(error.status === 401 && !hadSession ? '' : expiredMessage);
+        if (started === generation) clear(error.status===429?retryGuidance(error):error.status === 401 && !hadSession ? '' : expiredMessage);
       }
     },
     async login(email, password) {
@@ -99,7 +99,7 @@ export function createSessionClient(notify) {
         if (!token || started !== generation) throw new ApiError('session');
         const renewed = token && token !== previous ? token : await refresh();
         return await requestJson(path, { responseType: binary ? 'blob' : undefined, headers: { Authorization: `Bearer ${renewed}` } });
-      } catch (error) { if(error.status!==403||!keepForbidden)clear(expiredMessage); throw error; }
+      } catch (error) { if(error.status!==403||!keepForbidden)clear(error.status===429?retryGuidance(error):expiredMessage); throw error; }
     },
     async adminCheck(){
       const started=generation;

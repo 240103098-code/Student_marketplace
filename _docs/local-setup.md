@@ -77,7 +77,7 @@ The registration-only backend startup command is documented below. Keep password
 After configuring ignored runtime settings and starting your PostgreSQL database, apply `.venv/Scripts/python.exe -m alembic upgrade head`. Then run this tested command from the repository root:
 
 ```powershell
-.venv/Scripts/python.exe -m uvicorn backend.main:create_runtime_app --factory --host 127.0.0.1 --port 8000 --no-access-log
+.venv/Scripts/python.exe -m uvicorn backend.main:create_runtime_app --factory --host 127.0.0.1 --port 8000 --no-proxy-headers --no-access-log
 ```
 
 Open `http://127.0.0.1:8000/docs` or `/openapi.json`; stop with Ctrl+C. Startup was verified on loopback with Python 3.13.15, FastAPI 0.143.0, and uvicorn 0.54.0. The explicit runtime factory loads validated settings, creates lazy database infrastructure, and disposes owned resources on normal shutdown. Injected borrowed infrastructure remains its caller's responsibility.
@@ -424,3 +424,12 @@ Before an operational deletion/recovery workflow, capture only the exact numeric
 Use real captured ids, never example ids against arbitrary data. Both ordered listing-id lists must match; existing account/listing records cause refusal before any cleanup. Omit listing pairs only when retrying the absent avatar namespace alone. The helper uses generated direct image names and existing absence-checked listing recovery; it does not recurse/remove directories or touch unrelated files, and rejects junction/symlink escape. A nonzero result means retry is pending or refused; diagnostics are sanitized. Database and filesystem cleanup are not atomic: rows commit first, and disk/response interruption can leave orphan images. Keep configured storage and database available; never reset identity sequences to reuse deleted ids. No global service or scheduler is installed.
 
 Automated coverage uses temporary image directories and dedicated disposable PostgreSQL for cascades/isolation, stale guards, current-password checks, admin self-deletion, rollback, missing files, cleanup failure/recovery, actual junction safety and races with login/refresh/listing/admin actions. Frontend tests cover explicit confirmation, pending prevention, safe failures, auth clearing and cleanup feedback. Independent desktop/mobile/keyboard browser QA remains required.
+
+
+## Abuse-control and transport verification
+
+Use the backend startup command with --no-proxy-headers and one process. The default limiter tracks at most 10,000 active hashed keys, prunes expiry and fails closed on capacity without dropping live counters. Registration:10/IP/hour; failed login:10/email-IP/15min; recovery:10/IP/hour; shared email requests:5/email/hour; refresh:60/IP/minute; create:10/user/hour; report:10/user/hour; uploads:30/user/hour. These are fixed windows with positive Retry-After, independent of whether an email/account exists. Registration/recovery IP attempts include rejected body validation. Successful login refunds only its own reserved slot. Existing code/cooldown/session protections remain enabled.
+
+Counters are in memory: restarting clears them, workers do not share them, and proxy peers can group clients. Do not trust X-Forwarded-For or add workers while claiming globally enforced limits. Full details, stream limits, concrete regression matrix and remaining operator responsibilities are in [security.md](security.md). JSON writes count actual bytes up to 64 KiB; multipart upload counts five MiB plus framing and closes spools on abort. App buffering limits do not replace server/proxy connection, body and timeout controls.
+
+Run the documented full dedicated PostgreSQL suite and frontend tests/build. tests/test_abuse.py includes low-level asyncio stream tests; Windows asyncio needs a local socketpair, so restricted environments must allow controlled loopback execution. Existing specialized validation tests may inject fresh finite limiter stores to isolate each input case; abuse tests exercise real limits without disabling them. No external email is sent by tests. Real SMTP credentials/inbox delivery and deployed HTTPS/TLS/proxy behavior remain unverified; no dependency scan or all-clear security guarantee is claimed.

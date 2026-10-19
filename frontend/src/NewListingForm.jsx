@@ -1,3 +1,4 @@
+import {retryGuidance} from './api.js';
 import React, { useEffect, useRef, useState } from 'react';
 import { ApiError } from './api.js';
 import { useAuth } from './Auth.jsx';
@@ -75,7 +76,8 @@ export function NewListingForm({ navigate }) {
       }
       setComplete(true);
     }catch(failure){
-      if(!knownFailures.has(failure.status)){
+      if(failure.status===429){setError(retryGuidance(failure)+(listingRef.current?' Your listing and previously confirmed photos remain saved; retry only remaining photos after the wait.':''));}
+      else if(!knownFailures.has(failure.status)){
         setUncertain(true);
         setError(listingRef.current?'The last photo response is uncertain. It may have been saved. Do not upload it again blindly; check My Listings before deciding what to do next.':'The creation response is uncertain. A listing may have been created. Do not submit again blindly; check My Listings before deciding what to do next.');
       }else if(!listingRef.current){

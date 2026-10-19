@@ -1,3 +1,4 @@
+from backend.abuse import quota,email_quota,peer
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
 from backend.registration import DuplicateEmailError, register_student
@@ -15,6 +16,7 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 
 @router.post("/register", status_code=201, response_model=RegistrationResponse)
 def register(payload: RegistrationRequest, request: Request):
+    email_quota(request,payload.email)
     try:
         user = register_student(request.app.state.database, payload.email,
             payload.password.get_secret_value(), request.app.state.settings, request.app.state.email_sender, clock=request.app.state.clock)
@@ -36,6 +38,7 @@ def verify_email(payload: VerifyEmailRequest, request: Request):
 
 @router.post("/resend-verification", status_code=202)
 def resend_verification(payload: ResendVerificationRequest, request: Request, response: Response):
+    email_quota(request,payload.email)
     try:
         resend_registration_code(request.app.state.database, payload.email,
             request.app.state.settings, request.app.state.email_sender, clock=request.app.state.clock)
@@ -48,11 +51,16 @@ def resend_verification(payload: ResendVerificationRequest, request: Request, re
 @router.post("/login", response_model=AccessTokenResponse)
 def login(payload: LoginRequest, request: Request, response: Response):
     validate_origin(request.app.state.settings, request.headers.get("origin"))
+    reservation=quota(request,('login-failure',payload.email+'|'+peer(request),10,900))
     try:
         user = authenticate_student(request.app.state.database, payload.email, payload.password.get_secret_value())
         grant = new_login_session(request.app.state.database, user.id, request.app.state.settings, clock=request.app.state.clock, verified_password_hash=user.password_hash)
     except AuthenticationError:
         raise HTTPException(status_code=401, detail="Invalid credentials or account unavailable.", headers={"WWW-Authenticate": "Bearer"}) from None
+    except BaseException:
+        request.app.state.limiter.refund(reservation)
+        raise
+    request.app.state.limiter.refund(reservation)
     token = issue_access_token(request.app.state.settings, user.id, grant.family_id, clock=request.app.state.clock)
     set_refresh_cookie(response, grant, request.app.state.settings, request.app.state.clock())
     return AccessTokenResponse(access_token=token, expires_in=request.app.state.settings.jwt_access_minutes * 60)
@@ -122,6 +130,7 @@ def change_password(payload: ChangePasswordRequest, request: Request, user=Depen
 def forgot_password(payload: ForgotPasswordRequest, request: Request, response: Response):
     from backend.recovery import request_password_reset
 
+    email_quota(request,payload.email)
     try:
         request_password_reset(request.app.state.database, payload.email,
             request.app.state.settings, request.app.state.email_sender, clock=request.app.state.clock)
