@@ -77,7 +77,7 @@ if ($testExit -ne 0) { throw 'Backend tests failed' }
 
 Choose an unused dedicated loopback port. Local trust applies only to this synthetic isolated test cluster. Keep its path/name and reuse only after verifying ownership and empty application tables; never reset an arbitrary existing cluster. Linux/macOS use the corresponding binaries without `.exe` and their normal non-root PostgreSQL account requirements.
 
-The final complete run passes **261 backend tests** (full run plus corrected targeted contract check; zero skips), including actual PostgreSQL/filesystem and controlled loopback SMTP. Frontend passes **155 tests** and build. Detailed commands/results are recorded in [demo verification](demo.md); controlled SMTP messages are held only in fixture memory, without any external mail. Windows low-level asyncio needs permission for its local socketpair.
+The final complete run passes **261 backend tests** (full run plus corrected targeted contract check; zero skips), including actual PostgreSQL/filesystem and controlled loopback SMTP. Frontend passes **157 tests** and build. Detailed commands/results are recorded in [demo verification](demo.md); controlled SMTP messages are held only in fixture memory, without any external mail. Windows low-level asyncio needs permission for its local socketpair.
 
 ## One-command real-stack smoke
 
@@ -111,3 +111,5 @@ Admin route visual coverage, confirmation focus checks and fresh desktop/mobile 
 If npm is missing from PATH in this workspace, from frontend use `node ../../npm-runtime/package/bin/npm-cli.js ci` (or run/test/build/typecheck) **only when that existing workspace-local npm file is present**. It is a local prerequisite, not part of this Git checkout. On another clean machine install the manifest-supported Node version and npm12.2+ first; alternatively invoke your installed npm-cli.js with the full path to node.exe. Python activation is optional: always use `.venv/Scripts/python.exe`. To run frontend without npm after installation, use the direct node/Vite command in the integration guide. Stop Vite/test processes before clean npm ci on Windows to release native-module locks. Ctrl+C stops servers; do not terminate unrelated previews.
 
 Source integration is an adaptation with no automatic Lovable synchronization. No Supabase or SQLite switch was added. Local protocol SMTP remains separate from intentional operator verification of real university-inbox delivery.
+
+The explicit mock catalog now includes the six original user-supplied product photos; see [photo provenance](mock-original-photos.md). These local demo assets do not seed the real PostgreSQL marketplace.

@@ -1,4 +1,5 @@
 // Synthetic, bounded UI demonstration. Never imported by a production real-mode build.
+import {photoFixtures,readLocalAsset} from './mockPhotos.js';
 import {listingPrice} from './listingValidation.js';
 const stamp='2026-01-01T12:00:00Z';
 const categories=['Electronics','Clothing','Books','Furniture','Other'].map((label,i)=>({id:i+1,key:label.toLowerCase(),label}));
@@ -7,12 +8,12 @@ const png=()=>new Blob([Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCA
 const reply=(status,data,headers={})=>new Response(status===204?null:JSON.stringify(data),{status,headers:{'Content-Type':'application/json','Cache-Control':'private, no-store',...headers}});
 const failure=status=>reply(status,{detail:'Synthetic demo request was rejected.'},status===429?{'Retry-After':'60'}:{});
 const copy=value=>structuredClone(value);
-export function createMockService(){
+export function createMockService({readAsset=readLocalAsset}={}){
  let users,items,reports,avatars,images,current,token,counter,nextId,scenario;
  function reset(){
   users=[['student-demo','Synthetic student','student'],['admin-demo','Synthetic administrator','admin'],['seller-demo','Synthetic seller','student'],['buyer-demo','Synthetic buyer','student']].map(([local,name,role],i)=>({id:i+1,email:local+'@sdu.edu.kz',name,role,verified:true,suspended:false,created_at:stamp,phone:null,telegram_username:null,external_contact_url:'https://example.invalid/synthetic-contact'}));
-  items=[{id:1,owner_id:3,title:'Synthetic campus textbook',description:'Clearly synthetic book for development UI demonstrations only.',price:'2500.00',currency:'KZT',category_id:3,condition:'used',status:'active',created_at:stamp,published_at:stamp,rejection_reason:null,photoIds:[1]}];
-  images=new Map([[1,png()]]);avatars=new Map();reports=[];current=null;token=null;counter=0;nextId=10;scenario='normal';
+  items=photoFixtures.map((fixture,index)=>({id:fixture.id,owner_id:3,title:fixture.title,description:'User-supplied product photo in a synthetic development listing only.',price:fixture.price,currency:'KZT',category_id:fixture.category_id,condition:'used',status:'active',created_at:new Date(Date.parse(stamp)-index*86400000).toISOString(),published_at:new Date(Date.parse(stamp)-index*86400000).toISOString(),rejection_reason:null,photoIds:[fixture.id]}));
+  images=new Map(photoFixtures.map(fixture=>[fixture.id,{asset:fixture.url}]));avatars=new Map();reports=[];current=null;token=null;counter=0;nextId=10;scenario='normal';
  }
  reset();
  const eligible=u=>u&&u.verified&&!u.suspended;
@@ -27,6 +28,7 @@ export function createMockService(){
  const seller=item=>{const u=users.find(u=>u.id===item.owner_id);return {id:u.id,email:u.email,name:u.name};};
  function page(rows,q,extra={}){const limit=Number(q.get('limit')||20),offset=Number(q.get('offset')||0);if(!Number.isInteger(limit)||limit<1||limit>50||!Number.isInteger(offset)||offset<0||offset>100000)return failure(422);const list=scenario==='empty'?[]:rows;const selected=list.slice(offset,offset+limit);return reply(200,{items:selected,total:list.length,count:selected.length,limit,offset,...extra});}
  function validListing(body){return typeof body.title==='string'&&body.title.trim().length>=3&&body.title.trim().length<=120&&typeof body.description==='string'&&body.description.trim().length>=10&&body.description.trim().length<=2000&&typeof body.price==='string'&&listingPrice(body.price)!==null&&Number.isInteger(body.category_id)&&body.category_id>=1&&body.category_id<=5&&['new','used'].includes(body.condition);}
+ async function imageBytes(id){const entry=images.get(id);if(entry?.asset){const blob=await readAsset(entry.asset);if(!(blob instanceof Blob)||blob.size<100)throw new Error('Demo photo unavailable.');return blob;}return entry;}
  async function fetchMock(url,options={}){
   const parsed=new URL(url),path=parsed.pathname,q=parsed.searchParams,method=options.method||'GET',headers=new Headers(options.headers);
   if(scenario==='loading'&&method==='GET')await new Promise(resolve=>setTimeout(resolve,800));
@@ -90,7 +92,7 @@ export function createMockService(){
    if(!item)return failure(404);const owner=item.owner_id===user.id;
    if(action.startsWith('photos')){
     if(method==='POST'&&!admin){if(!owner)return failure(404);if(item.status!=='pending'||item.photoIds.length>=5)return failure(409);if(!(options.body instanceof FormData)||!(options.body.get('image') instanceof Blob))return failure(400);const id=nextId++;images.set(id,png());item.photoIds.push(id);return reply(201,{...photo(item,id,item.photoIds.length-1),listing_id:item.id});}
-    const id=Number(action.split('/')[1]);if(!item.photoIds.includes(id)||!admin&&!(owner&&item.status!=='removed')&&!visible(item))return failure(404);return new Response(images.get(id),{headers:{'Content-Type':'image/png','Cache-Control':'private, no-store'}});
+    const id=Number(action.split('/')[1]);if(!item.photoIds.includes(id)||!admin&&!(owner&&item.status!=='removed')&&!visible(item))return failure(404);const image=await imageBytes(id);return new Response(image,{headers:{'Content-Type':image.type,'Cache-Control':'private, no-store'}});
    }
    if(admin){
     if(method==='GET'&&!action)return reply(200,{...base(item),rejection_reason:item.rejection_reason,seller:seller(item),photos:photos(item,true)});

@@ -38,5 +38,5 @@ class OpenApiContractTest(unittest.TestCase):
         BrowseListingsPage.model_validate(data['catalog'])
         ListingCreateRequest.model_validate(data['create_request'])
         ListingPhotoSummary.model_validate(data['photo'])
-        self.assertEqual(data['catalog']['items'][0]['price'],'2500.00')
+        self.assertEqual(data['catalog']['items'][0]['price'],'38000.00')
         self.assertEqual(data['photo']['url'],'/listings/1/photos/1')

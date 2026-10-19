@@ -1,0 +1,79 @@
+{
+  "source_repository": "https://github.com/240103098-code/sdu-student-marketplace",
+  "source_commit": "07305f1f4007f1b8de852db3cb707d085e9f6caf",
+  "ownership": "User-supplied repository; no license invented; exact original bytes, no transformation.",
+  "photos": [
+    {
+      "id": 1,
+      "photo_id": 1,
+      "title": "Graphing calculator, works perfectly",
+      "category_id": 1,
+      "condition": "used",
+      "price": "38000.00",
+      "source_path": "src/assets/listing-calculator.jpg",
+      "target_path": "frontend/src/mock-assets/listing-calculator.jpg",
+      "sha256": "e1a936d7eb88d27a8881b741f8ab1a12d54faf69a453f346d2cc814378d54d57",
+      "bytes": 125743
+    },
+    {
+      "id": 2,
+      "photo_id": 2,
+      "title": "Noise-cancelling over-ear headphones",
+      "category_id": 1,
+      "condition": "used",
+      "price": "62000.00",
+      "source_path": "src/assets/listing-headphones.jpg",
+      "target_path": "frontend/src/mock-assets/listing-headphones.jpg",
+      "sha256": "9efc06a92417c2909695a63a3227569335b321b5fb353679f01febdda27a043b",
+      "bytes": 93247
+    },
+    {
+      "id": 3,
+      "photo_id": 3,
+      "title": "24-inch IPS monitor, 1080p",
+      "category_id": 1,
+      "condition": "used",
+      "price": "45000.00",
+      "source_path": "src/assets/listing-monitor.jpg",
+      "target_path": "frontend/src/mock-assets/listing-monitor.jpg",
+      "sha256": "c7c9b787aec1d26b66e21cfa2ac6341171160e29359878fef78692c0041dbbcf",
+      "bytes": 83631
+    },
+    {
+      "id": 4,
+      "photo_id": 4,
+      "title": "Algorithms textbook bundle (4 books)",
+      "category_id": 3,
+      "condition": "used",
+      "price": "12000.00",
+      "source_path": "src/assets/listing-textbooks.jpg",
+      "target_path": "frontend/src/mock-assets/listing-textbooks.jpg",
+      "sha256": "f2d8fcb15a44ffc4b15bb1f9f05ac961d3e87050216721f67b84e00cba798801",
+      "bytes": 115173
+    },
+    {
+      "id": 5,
+      "photo_id": 5,
+      "title": "Winter down jacket, size M",
+      "category_id": 2,
+      "condition": "used",
+      "price": "25000.00",
+      "source_path": "src/assets/listing-jacket.jpg",
+      "target_path": "frontend/src/mock-assets/listing-jacket.jpg",
+      "sha256": "e47eaefb0cb3fcd50465d9e2ee696facc426a7a757da46bff25de461d26c3f77",
+      "bytes": 95288
+    },
+    {
+      "id": 6,
+      "photo_id": 6,
+      "title": "LED desk lamp with USB charging port",
+      "category_id": 4,
+      "condition": "used",
+      "price": "6500.00",
+      "source_path": "src/assets/listing-desklamp.jpg",
+      "target_path": "frontend/src/mock-assets/listing-desklamp.jpg",
+      "sha256": "180066c4a71938948d457d147b65bceee0d4d84798c8790f6b405950f40b1de2",
+      "bytes": 88302
+    }
+  ]
+}

@@ -3,22 +3,97 @@
     "items": [
       {
         "id": 1,
-        "title": "Synthetic campus textbook",
-        "price": "2500.00",
+        "title": "Graphing calculator, works perfectly",
+        "price": "38000.00",
         "currency": "KZT",
-        "category_id": 3,
+        "category_id": 1,
         "condition": "used",
-        "published_at": "2026-01-01T12:00:00Z",
+        "published_at": "2026-01-01T12:00:00.000Z",
         "main_photo": {
           "id": 1,
           "position": 1,
           "is_main": true,
           "url": "/listings/1/photos/1"
         }
+      },
+      {
+        "id": 2,
+        "title": "Noise-cancelling over-ear headphones",
+        "price": "62000.00",
+        "currency": "KZT",
+        "category_id": 1,
+        "condition": "used",
+        "published_at": "2025-12-31T12:00:00.000Z",
+        "main_photo": {
+          "id": 2,
+          "position": 1,
+          "is_main": true,
+          "url": "/listings/2/photos/2"
+        }
+      },
+      {
+        "id": 3,
+        "title": "24-inch IPS monitor, 1080p",
+        "price": "45000.00",
+        "currency": "KZT",
+        "category_id": 1,
+        "condition": "used",
+        "published_at": "2025-12-30T12:00:00.000Z",
+        "main_photo": {
+          "id": 3,
+          "position": 1,
+          "is_main": true,
+          "url": "/listings/3/photos/3"
+        }
+      },
+      {
+        "id": 4,
+        "title": "Algorithms textbook bundle (4 books)",
+        "price": "12000.00",
+        "currency": "KZT",
+        "category_id": 3,
+        "condition": "used",
+        "published_at": "2025-12-29T12:00:00.000Z",
+        "main_photo": {
+          "id": 4,
+          "position": 1,
+          "is_main": true,
+          "url": "/listings/4/photos/4"
+        }
+      },
+      {
+        "id": 5,
+        "title": "Winter down jacket, size M",
+        "price": "25000.00",
+        "currency": "KZT",
+        "category_id": 2,
+        "condition": "used",
+        "published_at": "2025-12-28T12:00:00.000Z",
+        "main_photo": {
+          "id": 5,
+          "position": 1,
+          "is_main": true,
+          "url": "/listings/5/photos/5"
+        }
+      },
+      {
+        "id": 6,
+        "title": "LED desk lamp with USB charging port",
+        "price": "6500.00",
+        "currency": "KZT",
+        "category_id": 4,
+        "condition": "used",
+        "published_at": "2025-12-27T12:00:00.000Z",
+        "main_photo": {
+          "id": 6,
+          "position": 1,
+          "is_main": true,
+          "url": "/listings/6/photos/6"
+        }
       }
     ],
-    "total": 1,
-    "count": 1,
+    "total": 6,
+    "count": 6,
     "limit": 20,
     "offset": 0
   },

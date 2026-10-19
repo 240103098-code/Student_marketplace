@@ -43,3 +43,7 @@ The shared foundation now styles actual admin overview/navigation, users, listin
 ## Final transport and contract integration (#43)
 
 [Final guide](integration-contracts.md) documents the explicit development-only synthetic transport, production exclusion/refusal, canonical gradual typed boundary, actual FastAPI OpenAPI export/check and final real/mock browser evidence. Real API remains default with no offline/auth-error fallback. Source repository is unchanged and has no automatic sync. Prior package evidence/history is preserved; SQLite (#44) remains deferred.
+
+## Supplied photo correction (#47)
+
+[Six original product JPEGs](mock-original-photos.md) are restored exclusively to the development mock catalog, with byte/hash provenance and matching source titles/categories/prices. Real PostgreSQL is not seeded; production assets/fixtures remain excluded. The source repository and earlier evidence remain unchanged.

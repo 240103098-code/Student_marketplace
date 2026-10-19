@@ -1,0 +1,57 @@
+{
+  "result": "PASS",
+  "real_api_requests": 0,
+  "local_asset_requests": 32,
+  "decoded_originals": [
+    {
+      "title": "Graphing calculator, works perfectly",
+      "width": 816,
+      "height": 816,
+      "sha256": "e1a936d7eb88d27a8881b741f8ab1a12d54faf69a453f346d2cc814378d54d57"
+    },
+    {
+      "title": "Noise-cancelling over-ear headphones",
+      "width": 816,
+      "height": 816,
+      "sha256": "9efc06a92417c2909695a63a3227569335b321b5fb353679f01febdda27a043b"
+    },
+    {
+      "title": "24-inch IPS monitor, 1080p",
+      "width": 816,
+      "height": 816,
+      "sha256": "c7c9b787aec1d26b66e21cfa2ac6341171160e29359878fef78692c0041dbbcf"
+    },
+    {
+      "title": "Algorithms textbook bundle (4 books)",
+      "width": 816,
+      "height": 816,
+      "sha256": "f2d8fcb15a44ffc4b15bb1f9f05ac961d3e87050216721f67b84e00cba798801"
+    },
+    {
+      "title": "Winter down jacket, size M",
+      "width": 816,
+      "height": 816,
+      "sha256": "e47eaefb0cb3fcd50465d9e2ee696facc426a7a757da46bff25de461d26c3f77"
+    },
+    {
+      "title": "LED desk lamp with USB charging port",
+      "width": 816,
+      "height": 816,
+      "sha256": "180066c4a71938948d457d147b65bceee0d4d84798c8790f6b405950f40b1de2"
+    }
+  ],
+  "browser": "155.0.4283.45",
+  "storage_entries": 0,
+  "reload": "signs out and resets memory",
+  "checks": [
+    "warning persistent",
+    "student profile and Pending creation/multipart photo",
+    "admin approve",
+    "buyer filtered detail and report",
+    "admin first review",
+    "permission denial",
+    "429 error",
+    "390px overflow",
+    "reload reset"
+  ]
+}

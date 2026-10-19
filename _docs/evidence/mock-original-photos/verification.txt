@@ -1,0 +1,16 @@
+Issue #47 engineer verification, 2026-10-20 Asia/Qyzylorda
+Reproduced previous explicit mock: Synthetic campus textbook detail decoded1x1.
+Six original JPEGs copied byte-for-byte; source/target SHA256 and size verified.
+Source repository remains clean at recorded commit; no source edits.
+Frontend157/157 tests PASS, TypeScript boundary PASS.
+node tools/check_frontend_build.mjs PASS: real production build excludes all six
+original JPEG hashes/fixture titles/asset names; mock builds refused.
+Three affected no-database backend OpenAPI/model/HTTP contract checks PASS.
+No backend runtime/schema/dependency changes; full PG suite not redundantly rerun.
+Actual Edge desktop1280/mobile390 mock browser journey PASS.
+All six detail blobs image/jpeg, SHA256 matches original; all decode816x816.
+Seller/admin protected image views verified, six-card catalog and detail viewed.
+32 permitted local bundled-asset reads, zero backend/external API requests.
+No browser storage writes; reset/delete/remove/linkage/privacy regressions PASS.
+Existing object-URL cleanup assertions retained. Own5179 server stopped;
+user5173 preview untouched, no npm install or global process changes.

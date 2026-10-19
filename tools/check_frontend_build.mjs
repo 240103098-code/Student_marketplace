@@ -2,13 +2,18 @@
 import {spawnSync} from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import {createHash} from 'node:crypto';
 import assert from 'node:assert/strict';
 const frontend=path.resolve(import.meta.dirname,'../frontend');
 const build=spawnSync(process.execPath,['node_modules/vite/bin/vite.js','build'],{cwd:frontend,env:{...process.env,VITE_SERVICE_MODE:'real'},encoding:'utf8',windowsHide:true});
 assert.equal(build.status,0,build.stderr);
+const provenance=JSON.parse(fs.readFileSync(path.resolve(frontend,'../_docs/mock-photo-provenance.json'),'utf8'));
+const sourceHashes=new Set(provenance.photos.map(photo=>photo.sha256));
 const assets=path.join(frontend,'dist/assets');
 for(const name of fs.readdirSync(assets)){
- const content=fs.readFileSync(path.join(assets,name),'utf8');
+ const bytes=fs.readFileSync(path.join(assets,name));assert.ok(!sourceHashes.has(createHash('sha256').update(bytes).digest('hex')),'Mock JPEG emitted into production');
+ const content=bytes.toString('utf8');
+ for(const photo of provenance.photos)assert.ok(!content.includes(photo.title)&&!name.includes(path.basename(photo.source_path,'.jpg')),'Mock product fixture emitted');
  for(const marker of ['student-demo@sdu.edu.kz','Synthetic campus textbook','SYNTHETIC DEMO','Reset synthetic fixtures','mockService'])assert.ok(!content.includes(marker),'Mock marker in production: '+marker);
  assert.ok(!name.startsWith('mock'),'Mock chunk emitted');
 }
