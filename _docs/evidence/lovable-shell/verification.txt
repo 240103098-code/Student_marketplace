@@ -1,0 +1,9 @@
+2026-10-20 — #45 visual shell verification
+Source: user-owned 240103098-code/sdu-student-marketplace @07305f1f4007f1b8de852db3cb707d085e9f6caf; no repository LICENSE file.
+Source install: actual Windows baseline Bun1.3.13 install --frozen-lockfile, 516 packages; Node24.19.0/Vite8.1.5 source loopback port5178. Source generated routeTree-only line endings restored after shutdown; source Git clean. No source commit/push.
+Browser: actual Edge155.0.4283.45 via pinned target Playwright1.62.1; source and target desktop1280x900/mobile390x844 and opened drawers captured. Source feature screens are placeholders; target keeps functional forms/routes.
+Target browser loopback Vite8.3.4 port5179 with default real API mode (no backend on port8000, honest session-unavailable message, no mocks). PASS keyboard Escape focus return, drawer close on genuine Register navigation and no390px horizontal overflow. Screenshots visually inspected; no credentials/private data.
+Frontend: node ../../npm-runtime/package/bin/npm-cli.js run test -- --run — 21 files, 146 tests passed. Production build passed, 39 modules transformed.
+Backend: .venv/Scripts/python.exe -m unittest discover -s tests -v — actual confirmed disposable PostgreSQL, 257 passed in147.078s, zero skips. Owned PostgreSQL stopped.
+Diff check passed. Original40-task backlog/history unchanged. No target dependency/backend/schema/API changes. Source/target owned Vite servers stopped.
+Independent QA must confirm the exact commit before publication; orchestrator publishes that approved commit, then independent QA verifies publication and closes the issue.

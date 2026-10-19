@@ -20,15 +20,17 @@ Lifecycle
 3. Engineer implements it
 4. QA verifies it
 5. On FAIL, back to step 3 with the QA comment as input
-6. On PASS, close the issue
-7. Repeat until the backlog is empty
+6. On PASS, the orchestrator publishes the exact QA-approved commit
+7. Independent QA verifies that exact commit is published, then closes the issue
+8. Repeat until the backlog is empty
 
 Rules
 
 - Do not skip step 2
 - The engineer does not close the issue
 - QA does not fix the code, only outputs PASS or FAIL
-- The orchestrator closes implementation issues as completed only after QA outputs PASS
+- The orchestrator publishes the exact approved commit only after independent QA PASS
+- Independent QA closes the issue only after confirming that exact approved commit is published; the engineer never closes
 
 Backlog consolidation
 
@@ -43,7 +45,7 @@ replacement links and close only superseded issues with reason `not_planned`.
 Those closures mean the separate records are superseded; they do not claim
 implementation or implementation QA PASS. Verify final issue counts and mapping.
 Surviving implementation packages still follow the lifecycle above and require
-independent QA PASS before completed closure. Keep one active package at a time;
+independent QA PASS and publication of the exact approved commit before independent QA completed closure. Keep one active package at a time;
 packages may require multiple focused commits rather than one session.
 
 Dependency authorization

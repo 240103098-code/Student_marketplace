@@ -8,7 +8,7 @@ Implemented: JWT access and rotating refresh sessions, password recovery/change,
 
 Read the [fresh-checkout setup guide](_docs/local-setup.md) for pinned installation, configuration, migrations, startup and full checks. The [one-command real-stack demo](_docs/demo.md) creates its own disposable PostgreSQL cluster and uses real React/FastAPI plus controlled loopback SMTP; it never resets a supplied database.
 
-Tested: Python 3.13.15, Node 24.19.0, npm 12.2.0, PostgreSQL 18.6, Playwright 1.62.1 and Edge 155.0.4283.45. Complete backend verification: 257 tests with real PostgreSQL; frontend: 142 interaction tests and production build. [Recorded demo evidence](_docs/evidence/demo-result.json) includes desktop/mobile screenshots and the real request count.
+Tested: Python 3.13.15, Node 24.19.0, npm 12.2.0, PostgreSQL 18.6, Playwright 1.62.1 and Edge 155.0.4283.45. Complete backend verification: 257 tests with real PostgreSQL; frontend: 146 interaction tests and production build. [Recorded demo evidence](_docs/evidence/demo-result.json) includes desktop/mobile screenshots and the real request count.
 
 ## Project documents
 
@@ -22,3 +22,5 @@ Tested: Python 3.13.15, Node 24.19.0, npm 12.2.0, PostgreSQL 18.6, Playwright 1.
 Track work in [this repository's GitHub issues](https://github.com/240103098-code/Student_marketplace/issues).
 
 This is a local MVP, with no production deployment or distributed rate-limit guarantee. Controlled SMTP protocol success does **not** verify delivery to a real university inbox; external provider credentials and an intentional operator inbox check remain outstanding.
+
+The user-owned Lovable visual foundation is being integrated in separate packages. [Source provenance, shell comparison and sequence](_docs/lovable-integration.md) document the shared shell (#45); student/admin screens and final mock/contract integration remain follow-up work.

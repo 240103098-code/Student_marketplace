@@ -1,3 +1,4 @@
+import {SiteHeader} from './SiteHeader.jsx';
 import React, { useEffect, useRef, useState } from 'react';
 import { AuthProvider, useAuth } from './Auth.jsx';
 import { RecoveryRequestForm, ResetPasswordForm } from './RecoveryForms.jsx';
@@ -20,7 +21,7 @@ import { RegistrationForm, VerificationForm } from './AccountForms.jsx';
 const views = {
   '/': {
     title: 'Your campus marketplace',
-    description: 'A simple place for students to discover useful things and connect with sellers. We are getting it ready for you.',
+    description: 'A simple place for students to discover useful things and connect with sellers. Buy, sell and pass useful things on within your university community.',
   },
   '/login': {
     title: 'Sign in',
@@ -61,14 +62,6 @@ export function safeReturnPath(path) { return protectedPath(path) ? path : '/mar
 views['/account/password'] = { title: 'Change password', description: 'Confirm your current password to set a new one. This signs out every session for your account.' };
 views['/profile'] = { title: 'Profile', description: 'View and edit your name and optional external contact details. Your verified university email stays fixed.' };
 views['/my-listings'] = { title: 'My Listings', description: 'Review your own listings and their actual publication or moderation state.' };
-
-const navigation = [
-  ['/', 'Home'],
-  ['/marketplace', 'Marketplace'],
-  ['/login', 'Sign in'],
-  ['/register', 'Register'],
-  ['/verify', 'Verify email'],
-];
 
 export function App() { return <AuthProvider><AppShell /></AuthProvider>; }
 
@@ -130,35 +123,18 @@ function AppShell() {
   const guarded = protectedPath(path) && auth.status !== 'authenticated';
   const view = guarded ? { title: 'Checking your session', description: 'Please wait while we confirm access.' } : editId ? { title: 'Edit listing', description: 'Change only price and description. Existing approval and publication stay unchanged.' } : adminListing ? {title:'Admin listing review',description:'Private review of listing content and retained records.'} : detailId ? {title:'Listing details',description:'Contact the seller directly to arrange your purchase.'} : views[path] || {
     title: 'Page not found',
-    description: 'We could not find this page. Head back home to explore the preview.',
+    description: 'We could not find this page. Head back home to explore the marketplace.',
   };
 
   return (
     <>
       <a className="skip-link" href="#main">Skip to content</a>
-      <header className="site-header">
-        <div className="header-inner">
-          <a className="brand" href={auth.status==='authenticated'?'/marketplace':'/'} onClick={navigate}>Student Marketplace</a>
-          <nav aria-label="Main navigation">
-            {navigation.filter(([href]) => auth.status !== 'authenticated' || !['/login', '/register', '/verify'].includes(href)).map(([href, label]) => (
-              <a key={href} href={href==='/'&&auth.status==='authenticated'?'/marketplace':href} onClick={navigate} aria-current={path === href ? 'page' : undefined}>{label}</a>
-            ))}
-            {auth.status === 'authenticated' && <>
-              {auth.user.is_admin&&<a href="/admin" onClick={navigate}>Admin</a>}
-              <a href="/listings/new" onClick={navigate}>Create listing</a>
-              <a href="/profile" onClick={navigate}>Profile</a>
-              <a href="/my-listings" onClick={navigate}>My Listings</a>
-              <a href="/account/password" onClick={navigate}>Change password</a>
-              <button className="button secondary" onClick={signOut} disabled={logoutPending}>{logoutPending ? 'Signing out...' : 'Sign out'}</button>
-            </>}
-          </nav>
-        </div>
-      </header>
+      <SiteHeader auth={auth} path={path} navigate={navigate} signOut={signOut} logoutPending={logoutPending} logoutError={logoutError}/>
       <main id="main" className="main-content" tabIndex={-1}>
         <div className="preview-label">{['/register', '/verify'].includes(path) ? 'University accounts' : auth.status==='authenticated' ? 'University marketplace' : 'University community'}</div>
         <h1 ref={heading} tabIndex={-1}>{view.title}</h1>
         <p className="intro">{view.description}</p>
-        {auth.message && <p role="status" className="form-feedback">{auth.message}</p>}
+        {auth.message && <p role="status" className="form-feedback info">{auth.message}</p>}
         {logoutError && <p role="alert" className="form-feedback error">{logoutError}</p>}
         {logoutPending && <p role="status">Confirming sign-out...</p>}
         {guarded && <p role="status">Checking your session...</p>}
