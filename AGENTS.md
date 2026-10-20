@@ -2,8 +2,8 @@ Commands
 
 - Python 3.11 or newer is supported (verified with Python 3.13.15). Run these commands from the repository root on Windows; use `.venv/bin/python` on other platforms.
 - `python -m venv .venv` - create the isolated Python environment.
-- `.venv/Scripts/python.exe -m pip install -r requirements.lock` - install the pinned Python dependencies.
-- `.venv/Scripts/python.exe -m unittest discover -s tests -v` - run the backend suite; require guarded real PostgreSQL for the complete 257-test run, as documented in `_docs/local-setup.md`.
+- `.venv/Scripts/python.exe -m pip install -r requirements-dev.lock` - install pinned runtime and contract-test dependencies (runtime-only: requirements.lock).
+- `.venv/Scripts/python.exe -m unittest discover -s tests -v` - run the backend suite; require guarded real PostgreSQL for the complete 267-test run, as documented in `_docs/local-setup.md`.
 - `.venv/Scripts/python.exe -m backend.database check` - explicitly check configured PostgreSQL connectivity.
 - `.venv/Scripts/python.exe -m alembic upgrade head` / `downgrade base` - apply/revert migrations. Current head creates account/code/refresh and category/listing/photo/report tables; use downgrades only on disposable data.
 - From `frontend`, `npm ci`, `npm run test -- --run`, and `npm run build` install/test/build the React application; `npm run dev` serves it at http://127.0.0.1:5173/ (Ctrl+C to stop).

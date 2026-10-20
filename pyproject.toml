@@ -17,3 +17,6 @@ dependencies = [
     "Pillow==12.3.0",
     "python-multipart==0.0.32",
 ]
+
+[project.optional-dependencies]
+dev = ["jsonschema==4.26.0"]

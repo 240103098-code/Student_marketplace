@@ -75,4 +75,6 @@ def create_app(settings: Settings, database: Database | None = None, *, sender=N
     app.include_router(users_router)
     app.include_router(listings_router)
     app.include_router(listing_photos_router)
+    from backend.openapi_contract import install_contract
+    install_contract(app)
     return app

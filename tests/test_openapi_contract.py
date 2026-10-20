@@ -19,7 +19,7 @@ class OpenApiContractTest(unittest.TestCase):
         self.assertIn('/admin/listings/{listing_id}/approve',paths)
         self.assertEqual(paths['/listings']['get']['responses']['200']['content']['application/json']['schema']['$ref'],'#/components/schemas/BrowseListingsPage')
         request=paths['/listings']['post']['requestBody']['content']['application/json']['schema']
-        self.assertEqual(set(request['required']),{'title','description','price','category_id','condition'})
+        self.assertEqual(set(schema()['components']['schemas'][request['$ref'].split('/')[-1]]['required']),{'title','description','price','category_id','condition'})
 
     def test_actual_http_validation_security_and_safe_error_contract_without_dependency_bypass(self):
         settings=Settings(APP_ENV='test',DATABASE_URL='postgresql+psycopg://schema_only@127.0.0.1/schema_only',JWT_SECRET_KEY='contract-only-'+'x'*48)

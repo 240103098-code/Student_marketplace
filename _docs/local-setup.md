@@ -12,7 +12,7 @@ From a clean checkout of https://github.com/240103098-code/Student_marketplace:
 
 ```powershell
 python -m venv .venv
-.venv/Scripts/python.exe -m pip install -r requirements.lock
+.venv/Scripts/python.exe -m pip install -r requirements-dev.lock
 New-Item -ItemType Directory -Force .venv/tmp | Out-Null
 $env:TEMP = (Resolve-Path .venv/tmp).Path
 $env:TMP = $env:TEMP
@@ -77,7 +77,7 @@ if ($testExit -ne 0) { throw 'Backend tests failed' }
 
 Choose an unused dedicated loopback port. Local trust applies only to this synthetic isolated test cluster. Keep its path/name and reuse only after verifying ownership and empty application tables; never reset an arbitrary existing cluster. Linux/macOS use the corresponding binaries without `.exe` and their normal non-root PostgreSQL account requirements.
 
-The final complete run passes **261 backend tests** (full run plus corrected targeted contract check; zero skips), including actual PostgreSQL/filesystem and controlled loopback SMTP. Frontend passes **157 tests** and build. Detailed commands/results are recorded in [demo verification](demo.md); controlled SMTP messages are held only in fixture memory, without any external mail. Windows low-level asyncio needs permission for its local socketpair.
+The final complete run passes **267 backend tests with zero skips**, including actual PostgreSQL/filesystem and controlled loopback SMTP. Frontend passes **157 tests** and build. Detailed commands/results are recorded in [demo verification](demo.md); controlled SMTP messages are held only in fixture memory, without any external mail. Windows low-level asyncio needs permission for its local socketpair.
 
 ## One-command real-stack smoke
 
@@ -113,3 +113,5 @@ If npm is missing from PATH in this workspace, from frontend use `node ../../npm
 Source integration is an adaptation with no automatic Lovable synchronization. No Supabase or SQLite switch was added. Local protocol SMTP remains separate from intentional operator verification of real university-inbox delivery.
 
 The explicit mock catalog now includes the six original user-supplied product photos; see [photo provenance](mock-original-photos.md). These local demo assets do not seed the real PostgreSQL marketplace.
+
+Canonical request/response/query/upload/security metadata now appears in the actual application OpenAPI as well as the committed export; see [contract inventory and iteration50](canonical-api-contract.md). Contract tests use pinned development-only jsonschema4.26.0 via requirements-dev.lock; runtime requirements.lock remains unchanged.

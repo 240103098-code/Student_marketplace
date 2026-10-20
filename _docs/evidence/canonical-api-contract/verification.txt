@@ -1,0 +1,17 @@
+Issue50 engineer verification,2026-10-20 Asia/Qyzylorda
+Actual app and committed export inventory:40 supported operations, no fake routes.
+All component JSON Schemas valid under Draft2020-12; local references resolve.
+New focused4 schema/no-service HTTP tests +2 real PostgreSQL contract journeys PASS.
+Full backend suite267 tests PASS, zero skips,74.478s; guarded disposable PostgreSQL18.6
+on127.0.0.1:55434 only, stopped in finally. User checkout/persistentDB49 untouched.
+Original261 assertions retained except updating earlier inline-schema test to resolve
+its equivalent canonical component reference; no runtime parser/service changes.
+Full frontend157 tests PASS; typecheck PASS after new CreatedPhoto/CategoryId declarations.
+Production build/isolation PASS, no fixture/photo/control leakage or dependencies added.
+Export/check deterministic without .env/load_settings/services/startup/secrets.
+Actual /openapi.json equality, route-change drift, safe422/413/401/403/429/headers,
+manual create/edit/action success/error shapes, multipart image/privatePNG bytes,
+admin approval/rejection/report/removal, cookie/CSRF/logout/capability checked.
+Last metadata review also accepts uppercase HTTPS scheme exactly as existing validator.
+Pinned dev-only jsonschema4.26.0 plus resolved dev lock; runtime lock unchanged.
+No new UI/browser flow or SMTP test required for documentation-only API metadata.
