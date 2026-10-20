@@ -1,8 +1,8 @@
 # Student Marketplace — Project Requirements
 
 **Project:** Student Marketplace
-**Status:** MVP decision baseline recorded; implementation in progress
-**Last recorded decision:** 2026-10-12 — university domain and manual approval confirmed; implementation defaults authorized
+**Status:** Functional MVP implemented; current storage/API iterations published; final connected-mode compliance matrix #53 pending
+**Product decision baseline:** 2026-10-12 — university domain and manual approval confirmed; implementation defaults authorized
 **Current storage decision (2026-10-20):** Durable local SQLite is the fresh-development default; explicit PostgreSQL remains compatible and volatile memory remains explicit. This dated choice supersedes the earlier PostgreSQL-only/deferred-SQLite assessment below without rewriting its history.
 **Remaining setup:** Deployment-specific SMTP credentials and local service configuration
 
@@ -130,7 +130,7 @@ These limits, categories, currency, and contact rules are implementation default
 
 ### Images — authorized implementation defaults
 
-Avatar and listing uploads accept JPEG, PNG, and WebP only, with a maximum five MiB per file and twenty megapixels. Validate decoded image content, reject SVG and unsupported content, and generate safe filenames. Store files beneath backend `uploads/` and paths in PostgreSQL; preserve listing photo order with the first uploaded image as main photo. Image access requires verified authorization.
+Avatar and listing uploads accept JPEG, PNG, and WebP only, with a maximum five MiB per file and twenty megapixels. Validate decoded image content, reject SVG and unsupported content, and generate safe filenames. Store files beneath the configured backend upload root and paths in the configured database; preserve listing photo order with the first uploaded image as main photo. Image access requires verified authorization.
 
 ### Item conditions
 
@@ -244,6 +244,8 @@ Admin provisioning is an authorized implementation default: a local CLI promotes
 
 ## 9. MVP feature checklist
 
+Historical planning checklist retained below; unchecked boxes are not a live implementation tracker. See [current task/evidence mapping](requirements-map.md), GitHub issues and [iterations](iterations.md) for completed behavior and the dated SQLite update.
+
 ### Student-facing
 
 - [ ] Register with approved university email and password
@@ -312,6 +314,8 @@ No MVP product-policy choice remains open in this baseline. SMTP hostname, port,
 
 ## 12. Decision history (questions 1–41 and current baseline)
 
+This retained numbered table is a historical **summary**, not a recovered verbatim interview. The inaccessible original question/answer bodies cannot be reconstructed from it. [Source-checked excerpts](brainstorm.md) identify the genuine current-thread domain/approval/default dialogue, its turn-level timestamp and the distinct assistant-proposed KZT default.
+
 The requirements above consolidate earlier choices. The following maps the established choices into a compact record; the original question numbers for decisions **1–25** are not all available in this transcript, so they are recorded by topic rather than assigning possibly inaccurate numbers.
 
 | Topic / question | Selected decision |
@@ -364,6 +368,8 @@ The requirements above consolidate earlier choices. The following maps the estab
 
 
 ## Forward storage iteration — issue #51
+
+Historical #51-stage summary, before the subsequent #44 decision below; its then-future SQLite wording is not the current default.
 
 The historical PostgreSQL architecture above remains the established persistent implementation. An explicit development/test `sqlite+pysqlite:///:memory:` option now runs the same real FastAPI services with portable shared models, full-transaction serialization and per-app temporary images; no records or images survive normal shutdown. It is separate from frontend mock mode, rejects production and retains real SMTP/JWT/operator eligibility checks. See [memory-backend setup](memory-backend.md). Persistent/default SQLite and migration strategy remain the next iteration in issue #44; this addition does not rewrite the earlier decisions or claim PostgreSQL migrations execute on SQLite.
 

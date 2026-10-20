@@ -8,9 +8,11 @@ Implemented: JWT access and rotating refresh sessions, password recovery/change,
 
 Read the [fresh-checkout setup guide](_docs/local-setup.md) for pinned installation, configuration, migrations, startup and full checks. The [SQLite setup/restart smoke](_docs/sqlite-setup.md) needs no PostgreSQL server. The [one-command real-stack demo](_docs/demo.md) creates its own disposable PostgreSQL cluster and uses real React/FastAPI plus controlled loopback SMTP; it never resets a supplied database.
 
-Tested: Python 3.13.15, Node 24.19.0, npm 12.2.0, PostgreSQL 18.6, Playwright 1.62.1 and Edge 155.0.4283.45. Backend suite: 292 tests spanning real PostgreSQL, volatile memory and persistent SQLite; [latest exact verification scopes](_docs/evidence/sqlite-persistence/verification.txt) distinguish the full run and focused corrections. Frontend: 157 interaction tests and production build. [Recorded demo evidence](_docs/evidence/demo-result.json) includes desktop/mobile screenshots and the real request count.
+Tested: Python 3.13.15, Node 24.19.0, npm 12.2.0, PostgreSQL 18.6, Playwright 1.62.1 and Edge 155.0.4283.45. Backend suite: 292 tests spanning real PostgreSQL, volatile memory and persistent SQLite; [engineer verification scopes](_docs/evidence/sqlite-persistence/verification.txt) retain the full run and focused corrections, while [independent QA](https://github.com/240103098-code/Student_marketplace/issues/44#issuecomment-6282635209) subsequently verified all292 with zero skips at the published storage commit. Frontend: 157 interaction tests and production build. [Recorded demo evidence](_docs/evidence/demo-result.json) includes desktop/mobile screenshots and the real request count.
 
 ## Project documents
+
+[Documentation index](_docs/index.md) separates current instructions from historical snapshots; [authentic selected dialogue](_docs/brainstorm.md), [actual iterations](_docs/iterations.md) and [requirements/evidence mapping](_docs/requirements-map.md) record provenance and remaining #53 scope.
 
 - [Established MVP requirements](_docs/plan.md)
 - [Exactly 40 backlog tasks](_docs/tasks.md) and [preserved history](_docs/backlog-history.md)

@@ -1,6 +1,8 @@
 
 # Backend API
 
+Current storage: [durable local SQLite default](sqlite-setup.md), explicit [real memory](memory-backend.md) or PostgreSQL. The same API/JWT/SMTP/CSRF contracts apply; SQLite serializes guard reads/writes using its documented transaction boundaries, PostgreSQL retains native row locks. SQLite BUSY/LOCKED exhaustion returns sanitized503/Retry-After1 without automatic mutation replay; recovery SMTP failure still returns generic202. [Documentation index](index.md) distinguishes current behavior from historical snapshots.
+
 ## Registration and verification screens
 
 React /register and /verify now call the registration, verification, and resend contracts below. The shared HTTP helper sends credentialed JSON with exactly the required fields, displays safe status-based feedback, and never echoes arbitrary response text or network exceptions. VITE_API_ORIGIN selects the API origin; its local default matches localhost or 127.0.0.1 with port 8000. Configure matching FRONTEND_ORIGINS and use one hostname consistently.
@@ -37,7 +39,7 @@ The persisted account is unverified, unsuspended, and has role student. A six-di
 
 SMTP delivery uses configured real transport with verified TLS/STARTTLS before authentication, a ten-second network timeout, and connection cleanup. Delivery failures roll back the caller transaction, including new account/code state and replacement invalidation. Duplicate registration does not send another message. Code issuance can be reused internally for replacement and password-reset purpose; resend and password-reset endpoints are documented below.
 
-Uniqueness is enforced by PostgreSQL, including concurrent requests; the transaction rolls back on conflict and later requests can still succeed. Responses and application logs do not echo submitted passwords, validation inputs, hashes, URLs, or database credentials. Database exceptions are converted to a generic response rather than driver details. Finite abuse controls are documented below and in security.md.
+Uniqueness is enforced by the configured database, including concurrent requests; the transaction rolls back on conflict and later requests can still succeed. Responses and application logs do not echo submitted passwords, validation inputs, hashes, URLs, or database credentials. Database exceptions are converted to a generic response rather than driver details. Finite abuse controls are documented below and in security.md.
 
 ## Application lifecycle
 
@@ -92,7 +94,7 @@ Tokens contain no email, password/hash, code, profile/contact data, role, or eli
 
 ## GET /auth/me
 
-Send `Authorization: Bearer <access token>`; access authorization uses Bearer; refresh/logout use their protected cookie contract below. The shared require_verified_user dependency validates the token and reloads current account and active session-family state from PostgreSQL on every request. Deleted/missing, unverified, or suspended accounts are rejected even while a signed token is unexpired. Success returns only id, normalized email, verified=true and the additive current-role is_admin boolean; no profile editing or listing data is implemented here.
+Send `Authorization: Bearer <access token>`; access authorization uses Bearer; refresh/logout use their protected cookie contract below. The shared require_verified_user dependency validates the token and reloads current account and active session-family state from the configured database on every request. Deleted/missing, unverified, or suspended accounts are rejected even while a signed token is unexpired. Success returns only id, normalized email, verified=true and the additive current-role is_admin boolean; this response exposes no profile-editing or listing payload.
 
 Missing/malformed Bearer credentials, invalid/expired tokens, and current ineligibility return 401 `{"detail":"Authentication required."}` with `WWW-Authenticate: Bearer`. Unexpected database errors on login/me return generic 500 `{"detail":"Authentication is temporarily unavailable."}`. Error responses and application logs do not echo credentials, tokens, raw validation input, or driver details.
 
@@ -174,7 +176,7 @@ Both endpoints use the existing current verified, unsuspended, session-bound Bea
 
 PATCH accepts a nonempty object containing only name, phone, telegram_username, and external_contact_url. Omitted fields remain unchanged; explicit contact null clears that field. Supplied name cannot be null: it is trimmed, nonblank, and 1–100 characters. Phone is `+` followed by 7–15 ASCII digits; Telegram username is 5–32 ASCII letters/digits/underscores. Blank non-null contact strings and wrong types are invalid. External contact URL is at most 2048 characters, HTTPS with a syntactically valid DNS/IP hostname and valid optional port, no credentials, whitespace or control characters. Unsafe schemes are rejected.
 
-Profile editing can leave every contact empty; at least one valid contact is required only by future listing submission. Email/id/role/verified/suspended/password/hash/avatar/session fields and all other unknown keys are forbidden. No partial write occurs on invalid input. The acting account is locked/reloaded and access/family eligibility is rechecked after waiting; a stale guard cannot update an account that became ineligible or revoked. Email, eligibility, role, password, avatar, sessions, and all other accounts remain unchanged.
+Profile editing can leave every contact empty; at least one valid contact is required by implemented listing submission. Email/id/role/verified/suspended/password/hash/avatar/session fields and all other unknown keys are forbidden. No partial write occurs on invalid input. The acting account is locked/reloaded and access/family eligibility is rechecked after waiting; a stale guard cannot update an account that became ineligible or revoked. Email, eligibility, role, password, avatar, sessions, and all other accounts remain unchanged.
 
 Successful GET/PATCH returns 200 with the same public own-profile shape. Missing/expired/revoked/ineligible authentication returns the existing sanitized 401 authentication-required contract. Invalid PATCH returns 422 `{"detail":"Invalid profile request."}`; database failure returns 500 `{"detail":"Profile is temporarily unavailable."}` and rolls back the whole update. Credentialed CORS explicitly permits PATCH only for configured frontend origins. These endpoints support the React editing screen described below; private avatar controls are documented below.
 
@@ -203,7 +205,7 @@ Generated owner-specific relative paths are stored only in User.avatar_path bene
 
 Revision 0003_listings follows 0002_accounts and adds exactly categories, listings, listing_photos, and listing_reports. Fixed category ids/keys/names are 1/electronics/Electronics, 2/clothing/Clothing, 3/books/Books, 4/furniture/Furniture, and 5/other/Other. Keys/names are unique and the fixed mapping is constrained; referenced category deletion is restricted.
 
-Listing owner FK cascades from users; category FK is required. Title is trimmed and 3–120 characters, description 10–2000. Price is PostgreSQL NUMERIC(12,2), 0 through 1,000,000,000 inclusive, with currency constrained to KZT. This is exact decimal storage, but PostgreSQL coerces excess input scale (1.005 becomes 1.01); the creation API explicitly rejects excess meaningful decimal precision before insertion. Condition tokens are new/used. Creation/publication timestamps are timezone-aware.
+Listing owner FK cascades from users; category FK is required. Title is trimmed and 3–120 characters, description 10–2000. Price is 0 through 1,000,000,000 inclusive, with currency constrained to KZT: SQLite stores exact integer cents through the shared ORM conversion, while PostgreSQL uses NUMERIC(12,2). This is exact decimal storage, but PostgreSQL coerces excess input scale (1.005 becomes 1.01); the creation API explicitly rejects excess meaningful decimal precision before insertion. Condition tokens are new/used. Creation/publication timestamps are timezone-aware.
 
 State tokens are pending, active, sold, rejected and removed. New rows default pending with null publication; pending cannot carry publication. Active/sold require publication, rejected requires a nonblank rejection_reason of at most 300 characters, and administrative removed is representable. No hidden/pause/expiration state exists. Manual approval/rejection and seller hard-delete services enforce the workflows documented below.
 
@@ -294,7 +296,7 @@ Only limit, offset, q, category_id, condition, min_price and max_price query par
 
 Optional q is at most 200 decoded characters before trimming. Outer whitespace is trimmed; absent/empty/whitespace-only text means ordinary browsing. Unicode control characters (including C0/C1 controls) are rejected, as are duplicate q and unknown keys, using the same sanitized marketplace-query 422 without echoing search text.
 
-Nonblank q performs a parameterized, case-insensitive literal substring match against title OR description. Percent, underscore and the chosen escape character (!) are escaped as literal text; quotes and SQL-looking strings cannot change the query. Unicode comparison follows PostgreSQL's configured case-insensitive text comparison. This is simple substring search: no stemming, relevance ranking, accent folding or search engine is promised.
+Nonblank q performs a parameterized, case-insensitive literal substring match against title OR description. Percent, underscore and the chosen escape character (!) are escaped as literal text; quotes and SQL-looking strings cannot change the query. PostgreSQL Unicode comparison follows its configured collation; SQLite uses the registered Python Unicode lower() function. Universal cross-collation equivalence is not promised. This is simple substring search: no stemming, relevance ranking, accent folding or search engine is promised.
 
 The same keyword and visibility predicates determine items and total; publication date/id descending order, bounded paging, safe card fields and authenticated main-photo access remain unchanged. No matches return an ordinary empty page. Matching description content does not expose full descriptions in cards. The working search/filter UI is documented below; listing details are documented below.
 
@@ -414,7 +416,7 @@ See security.md for the 10,000-key fail-closed capacity, process-salted keys, fi
 
 ## Real-stack local demonstration
 
-The implemented React/FastAPI contracts are exercised together by the explicit disposable smoke command in [demo.md](demo.md), using a fresh PostgreSQL cluster, migrated fixed categories and protocol SMTP held only in fixture memory. The principal seller/buyer/admin path uses actual UI/API requests, no mocked responses and no public development-code endpoint. Desktop/mobile evidence contains synthetic listing content only. External contact hrefs are inspected without opening them. Production SMTP/TLS behavior retains its existing configuration/verification; the controlled plaintext protocol substitution exists only in the explicitly invoked local harness and does not prove live provider/inbox delivery.
+Current React/FastAPI/SQLite contracts and restart persistence are exercised by [SQLite smoke](sqlite-setup.md). The original PostgreSQL variant remains the explicit disposable smoke command in [demo.md](demo.md), using a fresh PostgreSQL cluster, migrated fixed categories and protocol SMTP held only in fixture memory. The principal seller/buyer/admin path uses actual UI/API requests, no mocked responses and no public development-code endpoint. Desktop/mobile evidence contains synthetic listing content only. External contact hrefs are inspected without opening them. Production SMTP/TLS behavior retains its existing configuration/verification; the controlled plaintext protocol substitution exists only in the explicitly invoked local harness and does not prove live provider/inbox delivery.
 
 ## Generated schema and frontend transport contracts (#43)
 

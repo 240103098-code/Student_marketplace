@@ -1,6 +1,6 @@
 # Shared visual foundation
 
-Adapted from the user-authorized Lovable source described in [provenance](lovable-integration.md). The shared foundation is applied to student screens in issue41; admin adaptation continues in issue42.
+Adapted from the user-authorized Lovable source described in [provenance](lovable-integration.md). The shared foundation is applied to student screens in issue41; admin adaptation is completed in issue42. These visual primitives apply across the real SQLite/memory/PostgreSQL modes and explicit synthetic mock; storage/auth mode never changes server authority. [Current docs index](index.md) links setup and dated screen evidence.
 
 - Paper: oklch(0.975 0.008 85); surface:white; ink:oklch(0.22 0.02 255).
 - Primary/focus: deep teal oklch(0.45 0.08 195), with pale teal emphasis. Border:oklch(0.88 0.012 85).

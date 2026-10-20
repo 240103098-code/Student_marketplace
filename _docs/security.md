@@ -49,3 +49,6 @@ Responses passing through the application boundary receive Cache-Control: privat
 | Frontend truthful 429, no acceptance/success/replay and preserved saved content | frontend/src/RateFeedback.test.jsx, ListingReport.test.jsx, NewListingForm.test.jsx, AvatarControl.test.jsx |
 
 Run the whole backend suite with the documented dedicated disposable PostgreSQL contract and controlled loopback SMTP, then frontend tests/build. Independent QA must verify actual rendered desktop/mobile/keyboard behavior. Use real operator-managed HTTPS and secure cookies in production; preserve certificate verification and STARTTLS-before-auth settings. Never replace missing SMTP configuration with a demo code, disable TLS verification, trust arbitrary proxy headers or publish the upload directory as a static mount.
+
+
+Current SQLite/memory transaction and storage boundaries are documented in [SQLite setup](sqlite-setup.md) and [memory mode](memory-backend.md). They retain shared auth/CSRF/rate/image rules; SQLite uses BEGIN IMMEDIATE before guards with bounded safe503, while PostgreSQL keeps native row locks. Dated security evidence above is preserved; [iterations](iterations.md) links the current independent292-test result and pending #53 matrix.

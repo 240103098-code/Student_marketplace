@@ -1,6 +1,6 @@
 # Final frontend integration (#43)
 
-The user-owned Lovable reference has been adapted to the existing React/Vite implementation. The source repository remains read-only; there is **no automatic Lovable synchronization**, source backend, Supabase, Firebase or provider replacement. Published #45/#41/#42 provide the shell, student and admin visuals. This package adds explicit development mocks, a gradual typed boundary and actual-app OpenAPI verification. SQLite (#44) remains deferred.
+The user-owned Lovable reference has been adapted to the existing React/Vite implementation. The source repository remains read-only; there is **no automatic Lovable synchronization**, source backend, Supabase, Firebase or provider replacement. Published #45/#41/#42 provide the shell, student and admin visuals. This package adds explicit development mocks, a gradual typed boundary and actual-app OpenAPI verification. [Persistent SQLite](sqlite-setup.md) is now the fresh real-development default; [memory](memory-backend.md) and PostgreSQL remain explicit alternatives. The original #43 results below are dated snapshots.
 
 ## Select real or synthetic development mode
 
@@ -35,7 +35,7 @@ To reproduce the synthetic browser journey with the mock server running, from th
 
 | Source concept | Canonical target boundary |
 | --- | --- |
-| Arbitrary string/UUID identifiers | PostgreSQL bigint JSON integers; UI rejects unsafe/nonpositive JS integers. No UUID substitution. |
+| Arbitrary string/UUID identifiers | Positive integer JSON identifiers (PostgreSQL bigint, SQLite generated INTEGER); UI rejects unsafe/nonpositive JS integers. No UUID substitution. |
 | Category labels/slugs | Fixed numeric IDs1–5 plus key/label DTOs. |
 | Numeric/demo currency | KZT and exact two-decimal **strings**; real validation rejects excess meaningful precision before persistence. |
 | Fixture status/report names | Pending/Active/Sold/Rejected/Removed; reason enums spam, prohibited_items, misleading_information. |
@@ -64,7 +64,7 @@ node tools/check_frontend_build.mjs
 
 At the completed #43 stage, manually parsed Request routes still had incomplete machine schemas. #50 now supplies machine-readable request/result/query/multipart/binary/security/error metadata on the actual app; see [current canonical contract](canonical-api-contract.md). Runtime rules that JSON Schema cannot enforce still require the supplemental contract. The actual supplemental contract is [api.md](api.md):15-minute HS256 access JWTs in Authorization:Bearer, seven-day fixed-family refresh_token cookie (HttpOnly, SameSite=Lax, host-only, Path=/auth, Secure in production), GET/auth/csrf bootstrap, X-CSRF-Token and allowed Origin on refresh/logout, exact credentialed CORS origins and current DB eligibility/admin checks. Login/refresh use cookies; no browser storage token is introduced. Multipart uses image; protected images return image/jpeg/png/webp with private,no-store and nosniff. Safe errors expose detail only, no raw input; status/Retry-After drive client feedback. Consult API/security docs for endpoint-specific400/401/403/404/409/413/422/429/503 behavior. Current #50 annotations describe these interfaces; OpenAPI itself does not enforce dynamic role, state, Origin, duplicate-wire-field or normalization rules.
 
-## Verification and evidence
+## Verification and evidence — #43 snapshot (2026-10-20)
 
 - Clean isolated frontend copy: npm ci, typecheck, **155 interaction tests**, production build PASS. An existing user preview held a native Windows module, so clean-ci proof used sibling work/frontend-clean-43; ordinary target packages were restored from the same lock without stopping that preview, and both its page and compiled App returned200. Stop running servers before ordinary clean npm ci.
 - Full guarded PostgreSQL backend run:261 tests,260 passed; only the newly written wrong-multipart-field assertion expected422 instead of the established safe400. Corrected test and mock to400; all **eight affected actual-PostgreSQL tests then passed**, including upload and private binary contracts. Existing260 assertions were unchanged. Dedicated PostgreSQL was stopped after each run.
@@ -73,3 +73,5 @@ At the completed #43 stage, manually parsed Request routes still had incomplete 
 - [Final real-mode smoke](evidence/integration-contracts/real-smoke-result.json): **98 real API responses**, real production React/FastAPI/fresh PostgreSQL/controlled loopback SMTP, full student/admin journey PASS and owned-service/data cleanup complete. Actual browser confirms no mock warning/controls. Viewed [desktop](evidence/integration-contracts/real-desktop.png), [mobile](evidence/integration-contracts/real-mobile.png), [admin](evidence/integration-contracts/real-admin-reports.png). Earlier demo/student/admin evidence and history remain intact.
 
 Controlled SMTP protocol success is **not verified internet/university inbox delivery**. Production is not deployed. Mock checks prove UI behavior only; real backend tests/smoke establish the documented local boundaries. Independent QA and exact-commit publication remain required before issue closure.
+
+Current totals are292 backend/157 frontend; the [iteration log](iterations.md) links independent full-run evidence and newer storage/browser results. Earlier counts above retain their original #43 scopes. Final comprehensive cross-mode verification remains #53, not a completed claim of this historical integration report.

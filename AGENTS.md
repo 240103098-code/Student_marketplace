@@ -8,7 +8,7 @@ Commands
 - `.venv/Scripts/python.exe -m alembic -c alembic-sqlite.ini upgrade head` / `downgrade base` (fresh local SQLite); explicit PostgreSQL uses `-c alembic.ini` - apply/revert migrations. Separate SQLite `sqlite_0001` and PostgreSQL heads create account/code/refresh and category/listing/photo/report tables; use downgrades only on disposable data.
 - From `frontend`, `npm ci`, `npm run test -- --run`, and `npm run build` install/test/build the React application; `npm run dev` serves it at http://127.0.0.1:5173/ (Ctrl+C to stop).
 - Frontend verification uses Node 24.19.0 and npm 12.2.0; see `_docs/local-setup.md` for supported versions and workspace-local npm.
-- `.venv/Scripts/python.exe -m uvicorn backend.main:create_runtime_app --factory --host 127.0.0.1 --port 8000 --no-proxy-headers` - start the configured backend; stop with Ctrl+C. Apply migrations first.
+- `.venv/Scripts/python.exe -m uvicorn backend.main:create_runtime_app --factory --host 127.0.0.1 --port 8000 --no-proxy-headers --no-access-log` - start the configured backend; stop with Ctrl+C. Apply migrations first.
 
 - `.venv/Scripts/python.exe -m tools.local_demo --postgres-bin <PostgreSQL-bin> --confirm-disposable-demo student-marketplace-local-demo [--browser-executable <browser>]` - real-stack smoke; see `_docs/demo.md` for prerequisites, isolation, evidence and limitations.
 
@@ -22,6 +22,8 @@ Rules
   those issues. Document dependency changes in the implementation report.
 
 ## Documents
+
+- `_docs/index.md` identifies current instructions, authentic selected history and preserved snapshots.
 
 - Read `_docs/process.md` before starting work.
 - Before writing tests, read `_docs/testing-guidelines.md`.

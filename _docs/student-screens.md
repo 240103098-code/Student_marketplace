@@ -1,5 +1,7 @@
 # Student screen adaptation (#41)
 
+Historical #41 screen/evidence snapshot from 2026-10-20; its counts describe that commit. Current storage/setup and newer tests are indexed in [documentation](index.md) and [iterations](iterations.md).
+
 Built on published shell foundation fe84d68d441c63631e09827e2fb246720a1884be and the user-owned Lovable source provenance in [lovable-integration.md](lovable-integration.md). Source feature routes are placeholders; this adapts the target's actual working forms and data rather than importing those empty pages or sample records.
 
 ## Coverage and deliberate presentation changes
@@ -32,4 +34,4 @@ Frontend command: `npm run test -- --run --maxWorkers=2` — **147 passed**, all
 
 Backend command: `.venv/Scripts/python.exe -m unittest discover -s tests -v` with the existing guarded disposable PostgreSQL lifecycle — **257 passed, zero skips**. Real-stack smoke was repeated after visual refinements and passed. See [exact verification record](evidence/student-screens/verification.txt). Owned services stopped; disposable data removed; diff check passed.
 
-The integration is not yet complete: admin screen adaptation (#42) and explicit development mock/contract completion with final integration verification (#43) remain. SQLite is deferred (#44). Local protocol SMTP does not prove real university-inbox delivery or production readiness; no external person/contact was messaged/opened.
+At this #41 snapshot, #42/#43 were follow-ups; both are now implemented, and #44 makes SQLite the fresh default. The final comprehensive connected-mode matrix remains #53. Local protocol SMTP does not prove real university-inbox delivery or production readiness; no external person/contact was messaged/opened.

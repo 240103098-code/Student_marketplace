@@ -1,0 +1,11 @@
+# Documentation/history verification — 2026-10-20
+
+Base implementation: `3b7523f72c93f8f73b464a10245b55655867bace`. This issue52 change is documentation-only; no runtime tests/dependencies/implementations are changed or new full runtime pass claimed.
+
+- Independently read original conversation `6accae5c-3d0c-83eb-8e6e-77038797cac5`: exactly5 late turns, no attachments, hasMore=false, nextCursor=null; original assistant bodies are unresolved content references.
+- Independently read current thread `01a13075-b92b-7310-bbc5-97444c092bc3`, initial page plus4 older cursor pages to exhaustion; selected only safe relevant dialogue. Verified question `call_R6wTVvV7kKhzfZLW4WBnItDV`, structured reply `01a1308a-6370-7ce0-8b0f-e01b0f4bce15`, assistant clarification and turn-start timestamp listed in [brainstorm](../../brainstorm.md).
+- All13 blockquote excerpts were extracted from that Markdown and matched as exact substrings against retrieved source message/question/answer fields. KZT remains labelled assistant-proposed; no invented interview, expanded unresolved reply or per-message timestamp.
+- Relative Markdown links in all changed/new Markdown resolve to repository files/directories. Cited implementation commits exist and follow the recorded ancestry; issue43/50/51/44 are closed,53 remains open at retrieval. Independent292-test QA result is linked, not a new engineer runtime claim.
+- Service-free actual OpenAPI drift check PASS; database/admin/SQLite-demo CLI help matches commands; Alembic heads are separate sqlite_0001 and0003_listings. Frontend script names/module/config paths verified against tracked files. No database/SMTP/browser/server is started for these documentation checks.
+- Changed/new project files are public Markdown only. Forty-task backlog/history, published migration bytes, application/tests/manifests/locks, archived evidence contents and source assets are unchanged. Source provenance identifiers are retained; current status wording is corrected without rewriting old results.
+- Public excerpts omit wholesale tool/chat logs, private operations, credentials, personal local paths and database contents. Diff whitespace check PASS. Final cross-mode matrix remains53; inaccessible original interview can be extended only from a later authentic user-provided export.

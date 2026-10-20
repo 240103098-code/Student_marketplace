@@ -1,5 +1,7 @@
 # Admin screen adaptation (#42)
 
+Historical #42 screen/evidence snapshot from 2026-10-20; its counts describe that commit. Current storage/setup and newer tests are indexed in [documentation](index.md) and [iterations](iterations.md).
+
 Uses the user-owned Lovable reference and the shared paper/white/ink/teal foundation from #45/#41. Provenance, source commit and license observations remain in [lovable-integration.md](lovable-integration.md). Source feature placeholders were not copied.
 
 ## Working screen coverage
@@ -22,4 +24,4 @@ The documented `python -m tools.local_demo` command ran fresh PostgreSQL migrati
 
 Viewed evidence at desktop1280×900/mobile390×844: [overview](evidence/admin-screens/overview-desktop.png), [users desktop](evidence/admin-screens/users-desktop.png), [users mobile](evidence/admin-screens/users-mobile.png), [suspension confirmation](evidence/admin-screens/users-confirm-mobile.png), [Pending desktop](evidence/admin-screens/pending-desktop.png), [Pending mobile](evidence/admin-screens/pending-mobile.png), [rejection form](evidence/admin-screens/rejection-mobile.png), [reports desktop](evidence/admin-screens/reports-desktop.png), [reports mobile](evidence/admin-screens/reports-mobile.png). Identities are grey-masked; content is synthetic. No passwords, codes, tokens or private emails are captured.
 
-External SMTP inbox delivery and production deployment remain unverified. #43 owns explicit development mocks/contract completion and final integration; #44 SQLite remains deferred. The forty-task backlog and history are preserved.
+External SMTP inbox delivery and production deployment remain unverified. The later #43 mock/contract integration and #44 durable SQLite are now implemented; the final comprehensive matrix remains #53. The forty-task backlog and history are preserved.

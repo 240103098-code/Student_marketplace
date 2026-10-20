@@ -1,5 +1,7 @@
 # Real-stack local MVP demonstration
 
+This document preserves the original **PostgreSQL #40 demonstration** and its 2026-10-19 verification snapshot. Its scoped command still exercises the PG alternative. For today's default use [durable SQLite setup/restart smoke](sqlite-setup.md); [iterations](iterations.md) links newer292/157 results without rewriting old evidence.
+
 ## Prerequisites and one command
 
 Complete [pinned installation](local-setup.md), including Playwright 1.62.1, PostgreSQL binaries and either its installed Chromium or an explicit compatible browser executable. Python 3.13.15, Node 24.19.0, npm 12.2.0, PostgreSQL 18.6 and Edge 155.0.4283.45 were tested on Windows. PostgreSQL must be allowed to initialize a fresh user-owned cluster and loopback services/browser must be permitted. No global database service is required.
@@ -43,7 +45,7 @@ Sanitized evidence is written only to fixed `_docs/evidence/demo-*.png` and `dem
 
 The principal path is browser UI: register/verify/login → seller contact → create Pending/photo → buyer cannot see Pending → local CLI admin promotion → admin approve → buyer search/filter/details/gallery/contact/report → admin queue/review/remove → buyer hidden/admin private gallery retained. Representative rejection/suspension/Sold/deletion use real HTTP APIs and browser assertions, then seller account deletion uses its actual destructive UI. No API route is mocked. Detailed validation/concurrency/error cases are not redundantly duplicated here; the full suite supplies them.
 
-## Verification record
+## Verification record — #40 snapshot (2026-10-19)
 
 Final commands from the repository root (Windows):
 

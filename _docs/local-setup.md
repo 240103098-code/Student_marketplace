@@ -123,3 +123,6 @@ Source integration is an adaptation with no automatic Lovable synchronization. N
 The explicit mock catalog now includes the six original user-supplied product photos; see [photo provenance](mock-original-photos.md). These local demo assets do not seed the real PostgreSQL marketplace.
 
 Canonical request/response/query/upload/security metadata now appears in the actual application OpenAPI as well as the committed export; see [contract inventory and iteration50](canonical-api-contract.md). Contract tests use pinned development-only jsonschema4.26.0 via requirements-dev.lock; runtime requirements.lock remains unchanged.
+
+
+For current versus snapshot documentation, see the [index](index.md). [Iterations](iterations.md) links independent full292 backend/157 frontend verification at the published storage commit; earlier per-stage evidence remains unchanged. Final comprehensive connected-mode verification is still #53.
