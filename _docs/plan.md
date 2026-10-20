@@ -360,3 +360,8 @@ The requirements above consolidate earlier choices. The following maps the estab
 | Current implementation baseline | Technical defaults above adopted under user authorization on 2026-10-12 |
 
 *Earlier unanswered approval, category-example, token/code/image, and retention statements are superseded by the current baseline. SMTP credentials remain operational setup, not an unresolved product policy.*
+
+
+## Forward storage iteration — issue #51
+
+The historical PostgreSQL architecture above remains the established persistent implementation. An explicit development/test `sqlite+pysqlite:///:memory:` option now runs the same real FastAPI services with portable shared models, full-transaction serialization and per-app temporary images; no records or images survive normal shutdown. It is separate from frontend mock mode, rejects production and retains real SMTP/JWT/operator eligibility checks. See [memory-backend setup](memory-backend.md). Persistent/default SQLite and migration strategy remain the next iteration in issue #44; this addition does not rewrite the earlier decisions or claim PostgreSQL migrations execute on SQLite.

@@ -1,6 +1,8 @@
 """Application creation is explicit and supports isolated injected dependencies."""
 
 from contextlib import asynccontextmanager
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -24,16 +26,27 @@ from backend.images import ImageInputError, ImageStorageError
 def create_app(settings: Settings, database: Database | None = None, *, sender=None, clock=None, limiter=None):
     owns_database = database is None
     database = Database(settings) if database is None else database
+    owned_uploads = None
+    if owns_database and database.is_memory:
+        # Caller UPLOAD_DIR is never touched: volatile records own fresh images.
+        owned_uploads = TemporaryDirectory(prefix="student-marketplace-memory-")
+        settings = settings.model_copy(update={"upload_dir": Path(owned_uploads.name)})
+
+    def close_owned_resources():
+        if owns_database:
+            database.dispose()
+        if owned_uploads is not None:
+            owned_uploads.cleanup()
 
     @asynccontextmanager
     async def lifespan(app):
         try:
             yield
         finally:
-            if owns_database:
-                database.dispose()
+            close_owned_resources()
 
     app = FastAPI(title="Student Marketplace", lifespan=lifespan)
+    app.state.close_owned_resources = close_owned_resources
     app.state.settings = settings
     app.state.database = database
     app.state.email_sender = SmtpSender(settings) if sender is None else sender

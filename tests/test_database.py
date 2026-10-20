@@ -1,4 +1,5 @@
 import contextlib
+import threading
 import io
 import subprocess
 import sys
@@ -40,6 +41,9 @@ class DatabaseInfrastructureTest(unittest.TestCase):
 
     def test_successful_session_commits_and_closes(self):
         database = Database.__new__(Database)
+        database._guard = threading.Lock()
+        database._disposed = False
+        database.is_memory = False
         session = Mock()
         database.session_factory = Mock(return_value=session)
         with database.session() as obtained:
@@ -50,6 +54,9 @@ class DatabaseInfrastructureTest(unittest.TestCase):
 
     def test_failed_work_rolls_back_and_closes(self):
         database = Database.__new__(Database)
+        database._guard = threading.Lock()
+        database._disposed = False
+        database.is_memory = False
         session = Mock()
         database.session_factory = Mock(return_value=session)
         with self.assertRaises(RuntimeError):
@@ -61,6 +68,9 @@ class DatabaseInfrastructureTest(unittest.TestCase):
 
     def test_failed_commit_rolls_back_and_closes(self):
         database = Database.__new__(Database)
+        database._guard = threading.Lock()
+        database._disposed = False
+        database.is_memory = False
         session = Mock()
         session.commit.side_effect = RuntimeError("synthetic failed commit")
         database.session_factory = Mock(return_value=session)
@@ -72,6 +82,9 @@ class DatabaseInfrastructureTest(unittest.TestCase):
 
     def test_engine_disposal(self):
         database = Database.__new__(Database)
+        database._guard = threading.Lock()
+        database._disposed = False
+        database.is_memory = False
         database.engine = Mock()
         database.dispose()
         database.engine.dispose.assert_called_once()

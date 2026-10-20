@@ -27,6 +27,10 @@ Use `.venv/bin/python` on Linux/macOS. Activation is optional. The resolved Pyth
 
 For smoke, either install its pinned Chromium browser (`cd frontend; node node_modules/playwright/cli.js install chromium; cd ..`) or supply an installed compatible Edge/Chrome executable explicitly. Browser downloads/system browser installation are prerequisites, never silently skipped as a passing demo.
 
+## Explicit volatile backend option
+
+[Memory-backend setup](memory-backend.md) runs the same real FastAPI services with SQLite `:memory:`, isolated temporary images and normal provider SMTP/JWT. It needs no PostgreSQL server, loses all state on stop, and rejects production. Use it explicitly; the persistent PostgreSQL setup below and its migration history remain intact. This is distinct from the frontend synthetic mock. File-backed/default SQLite is not implemented yet.
+
 ## Configure a normal development instance
 
 Do not use a production or shared database for tests. Create a dedicated development database through your own PostgreSQL administration, then copy `.env.example` to ignored `.env`. Refuse to overwrite an existing file; generate the JWT secret locally without printing it:
@@ -77,7 +81,7 @@ if ($testExit -ne 0) { throw 'Backend tests failed' }
 
 Choose an unused dedicated loopback port. Local trust applies only to this synthetic isolated test cluster. Keep its path/name and reuse only after verifying ownership and empty application tables; never reset an arbitrary existing cluster. Linux/macOS use the corresponding binaries without `.exe` and their normal non-root PostgreSQL account requirements.
 
-The final complete run passes **267 backend tests with zero skips**, including actual PostgreSQL/filesystem and controlled loopback SMTP. Frontend passes **157 tests** and build. Detailed commands/results are recorded in [demo verification](demo.md); controlled SMTP messages are held only in fixture memory, without any external mail. Windows low-level asyncio needs permission for its local socketpair.
+The final complete run passes **277 backend tests with zero skips**, including actual PostgreSQL/filesystem and controlled loopback SMTP. Frontend passes **157 tests** and build. Detailed commands/results are recorded in [demo verification](demo.md); controlled SMTP messages are held only in fixture memory, without any external mail. Windows low-level asyncio needs permission for its local socketpair.
 
 ## One-command real-stack smoke
 

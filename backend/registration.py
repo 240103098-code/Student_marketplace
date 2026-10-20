@@ -1,5 +1,7 @@
 """Persist an unverified student and send their purpose-scoped verification code."""
 
+import sqlite3
+
 from argon2 import PasswordHasher, Type
 from sqlalchemy.exc import IntegrityError
 
@@ -22,7 +24,10 @@ def register_student(database, email, password, settings, sender, *, clock=utc_n
         return user
     except IntegrityError as error:
         details = getattr(error.orig, "diag", None)
-        if (
+        sqlite_duplicate = (isinstance(error.orig, sqlite3.IntegrityError)
+            and getattr(error.orig, "sqlite_errorname", None) == "SQLITE_CONSTRAINT_UNIQUE"
+            and str(error.orig) == "UNIQUE constraint failed: users.email")
+        if sqlite_duplicate or (
             getattr(error.orig, "sqlstate", None) == "23505"
             and getattr(details, "constraint_name", None) == "users_email_key"
         ):

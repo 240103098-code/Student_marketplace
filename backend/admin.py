@@ -34,15 +34,16 @@ def require_admin_user(request:Request,user=Depends(require_verified_user)):
  except AuthenticationError:raise authentication_required() from None
  except AdminAccessDenied:raise HTTPException(status_code=403,detail='Administrator access required.') from None
 
-def main(argv=None):
+def main(argv=None, *, database=None):
  parser=argparse.ArgumentParser(description='Explicitly promote an existing eligible university account')
- parser.add_argument('--email',required=True);args=parser.parse_args(argv);database=None
+ parser.add_argument('--email',required=True);args=parser.parse_args(argv);owns_database=database is None
  try:
-  settings=load_settings();database=Database(settings);promote_existing_admin(database,args.email)
+  if owns_database:database=Database(load_settings())
+  promote_existing_admin(database,args.email)
  except (AdminProvisioningError,ConfigurationError,SQLAlchemyError):
   print('Admin provisioning could not be completed; verify account eligibility and operator configuration.');return 1
  finally:
-  if database is not None:database.dispose()
+  if owns_database and database is not None:database.dispose()
  print('Admin provisioning completed.');return 0
 
 if __name__=='__main__':raise SystemExit(main())

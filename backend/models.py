@@ -4,10 +4,14 @@ from datetime import datetime
 from decimal import Decimal
 import uuid
 
-from sqlalchemy import BigInteger, Boolean, CheckConstraint, DateTime, ForeignKey, Index, String, Uuid, Numeric, SmallInteger, UniqueConstraint, func, text
+from sqlalchemy import BigInteger, Integer, Boolean, CheckConstraint, DateTime, ForeignKey, Index, String, Uuid, Numeric, SmallInteger, UniqueConstraint, func, text
 from sqlalchemy.orm import Mapped, mapped_column, validates
 
 from backend.database import Base
+from backend.sqlite_types import UTCDateTime, MoneyCents
+
+ID_TYPE = BigInteger().with_variant(Integer(), "sqlite")
+UTC_TYPE = DateTime(timezone=True).with_variant(UTCDateTime(), "sqlite")
 
 
 class User(Base):
@@ -18,13 +22,13 @@ class User(Base):
         CheckConstraint("length(btrim(password_hash)) > 0", name="ck_users_password_hash"),
     )
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    id: Mapped[int] = mapped_column(ID_TYPE, primary_key=True)
     email: Mapped[str] = mapped_column(String(254), unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(512), nullable=False)
     verified: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"), nullable=False)
     suspended: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"), nullable=False)
     role: Mapped[str] = mapped_column(String(16), default="student", server_default="student", nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(UTC_TYPE, server_default=func.now(), nullable=False)
     name: Mapped[str | None] = mapped_column(String(100))
     avatar_path: Mapped[str | None] = mapped_column(String(1024))
     phone: Mapped[str | None] = mapped_column(String(30))
@@ -49,15 +53,15 @@ class EmailCode(Base):
         Index("ix_email_codes_user_purpose", "user_id", "purpose"),
     )
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    id: Mapped[int] = mapped_column(ID_TYPE, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     purpose: Mapped[str] = mapped_column(String(32), nullable=False)
     digest: Mapped[str] = mapped_column(String(128), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(UTC_TYPE, server_default=func.now(), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(UTC_TYPE, nullable=False)
     wrong_attempts: Mapped[int] = mapped_column(default=0, server_default="0", nullable=False)
-    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    invalidated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    consumed_at: Mapped[datetime | None] = mapped_column(UTC_TYPE)
+    invalidated_at: Mapped[datetime | None] = mapped_column(UTC_TYPE)
 
     def __repr__(self):
         return f"EmailCode(id={self.id!r}, purpose={self.purpose!r})"
@@ -77,9 +81,9 @@ class RefreshSession(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     token_digest: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
     family_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False, default=uuid.uuid4, server_default=text("gen_random_uuid()"))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(UTC_TYPE, server_default=func.now(), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(UTC_TYPE, nullable=False)
+    revoked_at: Mapped[datetime | None] = mapped_column(UTC_TYPE)
     predecessor_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("refresh_sessions.id", ondelete="SET NULL"), unique=True)
     successor_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("refresh_sessions.id", ondelete="SET NULL"), unique=True)
 
@@ -116,17 +120,17 @@ class Listing(Base):
         Index('ix_listings_active_publication', 'published_at', postgresql_where=text("status = 'active'")),
     )
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    id: Mapped[int] = mapped_column(ID_TYPE, primary_key=True)
     owner_id: Mapped[int] = mapped_column(ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     category_id: Mapped[int] = mapped_column(ForeignKey('categories.id', ondelete='RESTRICT'), nullable=False)
     title: Mapped[str] = mapped_column(String(120), nullable=False)
     description: Mapped[str] = mapped_column(String(2000), nullable=False)
-    price: Mapped[Decimal] = mapped_column(Numeric(12,2), nullable=False)
+    price: Mapped[Decimal] = mapped_column(Numeric(12,2).with_variant(MoneyCents(), "sqlite"), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), default='KZT', server_default='KZT', nullable=False)
     condition: Mapped[str] = mapped_column(String(4), nullable=False)
     status: Mapped[str] = mapped_column(String(8), default='pending', server_default='pending', nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(UTC_TYPE, server_default=func.now(), nullable=False)
+    published_at: Mapped[datetime | None] = mapped_column(UTC_TYPE)
     rejection_reason: Mapped[str | None] = mapped_column(String(300))
 
     @validates('title')
@@ -142,7 +146,7 @@ class ListingPhoto(Base):
         UniqueConstraint('listing_id', 'position', name='uq_listing_photos_slot'),
     )
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    id: Mapped[int] = mapped_column(ID_TYPE, primary_key=True)
     listing_id: Mapped[int] = mapped_column(ForeignKey('listings.id', ondelete='CASCADE'), nullable=False)
     storage_path: Mapped[str] = mapped_column(String(1024), unique=True, nullable=False)
     position: Mapped[int] = mapped_column(SmallInteger, nullable=False)
@@ -158,9 +162,23 @@ class ListingReport(Base):
         Index('ix_listing_reports_unreviewed', 'created_at', postgresql_where=text('reviewed_at IS NULL')),
     )
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    id: Mapped[int] = mapped_column(ID_TYPE, primary_key=True)
     reporter_id: Mapped[int] = mapped_column(ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     listing_id: Mapped[int] = mapped_column(ForeignKey('listings.id', ondelete='CASCADE'), nullable=False)
     reason: Mapped[str] = mapped_column(String(32), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(UTC_TYPE, server_default=func.now(), nullable=False)
+    reviewed_at: Mapped[datetime | None] = mapped_column(UTC_TYPE)
+
+
+# SQLite VARCHAR/BOOLEAN affinity does not enforce native PostgreSQL bounds.
+# Supplement it with dialect-only DDL checks, including direct SQL writers.
+for _table in Base.metadata.tables.values():
+    for _column in _table.columns:
+        if isinstance(_column.type, String) and _column.type.length:
+            _table.append_constraint(CheckConstraint(
+                f"length({_column.name}) <= {_column.type.length}",
+                name=f"ck_sqlite_{_table.name}_{_column.name}_length").ddl_if(dialect="sqlite"))
+        if isinstance(_column.type, Boolean):
+            _table.append_constraint(CheckConstraint(
+                f"{_column.name} IN (0,1)",
+                name=f"ck_sqlite_{_table.name}_{_column.name}_boolean").ddl_if(dialect="sqlite"))

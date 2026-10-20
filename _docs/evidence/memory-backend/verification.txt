@@ -1,0 +1,32 @@
+Issue #51 real volatile FastAPI memory backend — engineer verification
+Base: fb4a24fcfad08127bf42a4128858f5c4efae2cb2
+Date: 2026-10-20; Python 3.13.15, Node 24.19.0, PostgreSQL 18.6.
+
+PASS full unittest discover -s tests -v: 277 tests, 74.508s, zero skips.
+Includes all 267 pre-existing tests with actual guarded disposable PostgreSQL
+and 10 new actual SQLite-memory lifecycle/integrity/concurrency tests.
+PostgreSQL test database: student_marketplace_test_issue4, loopback 55434;
+owned cluster started for tests and stopped in finally. No user database used.
+
+After that full run, a SQLite-only lower() function was added for non-ASCII
+search and the existing stale-login test was strengthened to queue behind the
+actual HTTP password-change transaction rather than a manually altered hash.
+PASS final focused memory suite: all 10 tests, 6.475s. No PostgreSQL code or
+migration changed after the successful full run. Independent QA runs final SHA.
+
+PASS actual local operator console process: real Uvicorn startup on unused
+127.0.0.1:8000, same-app check, stop, clean exit. No email requested.
+PASS python -m tools.export_openapi --check: actual FastAPI contract unchanged.
+PASS frontend: 157 tests in 23 files; maxWorkers=2, assertions unchanged.
+PASS frontend npm run typecheck.
+PASS node tools/check_frontend_build.mjs: real production build excludes mock
+fixtures/control code/photos; explicit mock production builds refused.
+PASS git diff --check.
+
+Controlled SMTP is loopback-only protocol/MIME with explicit test transport;
+normal runtime retains provider TLS/STARTTLS and configured credentials.
+No live inbox delivery, production deployment, persistent SQLite storage or
+multi-process coordination is claimed. No new dependencies. Published Alembic
+migrations, archived history, frontend/source assets and private #49 checkout
+are untouched. #54 disposal regression fixed here: only memory disposal is
+terminal; PostgreSQL preserves reconnect-after-dispose semantics.

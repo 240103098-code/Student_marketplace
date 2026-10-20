@@ -65,6 +65,8 @@ class Settings(BaseSettings):
     @classmethod
     def validate_database_url(cls, value):
         try:
+            if value.get_secret_value() == "sqlite+pysqlite:///:memory:":
+                return value
             parsed = urlsplit(value.get_secret_value())
             valid = (
                 parsed.scheme in {"postgresql", "postgresql+psycopg"}
@@ -75,7 +77,7 @@ class Settings(BaseSettings):
         except ValueError:
             valid = False
         if not valid:
-            raise ValueError("DATABASE_URL must be a PostgreSQL connection URL")
+            raise ValueError("DATABASE_URL must be PostgreSQL or explicit SQLite memory")
         return value
 
     @field_validator("jwt_secret_key")
@@ -144,6 +146,8 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def production_safety(self):
         if self.app_env == "production":
+            if self.database_url.get_secret_value() == "sqlite+pysqlite:///:memory:":
+                raise ValueError("DATABASE_URL memory mode is forbidden in production")
             if not self.refresh_cookie_secure:
                 raise ValueError("REFRESH_COOKIE_SECURE must be true in production")
             if any(urlsplit(origin).scheme != "https" for origin in self.frontend_origins):
@@ -194,6 +198,8 @@ def load_settings(*, environ: Mapping[str, str] | None = None, env_file=REPOSITO
         for item in error.errors(include_input=False, include_context=False):
             if item["loc"]:
                 names.add(str(item["loc"][0]))
+            elif "DATABASE_URL" in item["msg"]:
+                names.add("DATABASE_URL")
             elif "REFRESH_COOKIE_SECURE" in item["msg"]:
                 names.add("REFRESH_COOKIE_SECURE")
             else:
