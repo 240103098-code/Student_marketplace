@@ -125,4 +125,4 @@ The explicit mock catalog now includes the six original user-supplied product ph
 Canonical request/response/query/upload/security metadata now appears in the actual application OpenAPI as well as the committed export; see [contract inventory and iteration50](canonical-api-contract.md). Contract tests use pinned development-only jsonschema4.26.0 via requirements-dev.lock; runtime requirements.lock remains unchanged.
 
 
-For current versus snapshot documentation, see the [index](index.md). [Iterations](iterations.md) links independent full292 backend/157 frontend verification at the published storage commit; earlier per-stage evidence remains unchanged. Final comprehensive connected-mode verification is still #53.
+For current versus snapshot documentation, see the [index](index.md). [Iterations](iterations.md) links independent full292 backend/157 frontend verification at the published storage commit; earlier per-stage evidence remains unchanged. [Final compliance](compliance.md) records the newly measured four-mode matrix; exact-commit independent QA/publication remains the #53 gate.

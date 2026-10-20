@@ -1,0 +1,68 @@
+{
+  "result": "PASS runtime candidate; independent QA/publication gates remain",
+  "recorded_at": "2026-10-20T08:15:26.063707+00:00",
+  "source_base_commit": "316b26db95c6077da62dc203fea49ae156ea1343",
+  "python": "3.13.15",
+  "sqlite": "3.50.4",
+  "sqlalchemy": "2.1.4",
+  "fastapi": "0.143.0",
+  "node": "24.19.0",
+  "npm": "12.2.0",
+  "playwright": "1.62.1",
+  "browser": "155.0.4283.45",
+  "backend": {
+    "passed": 292,
+    "skipped": 0,
+    "seconds": 98.111,
+    "real_postgresql": true,
+    "memory": true,
+    "persistent_sqlite": true
+  },
+  "frontend": {
+    "passed": 157,
+    "typecheck": "PASS",
+    "production_build_mock_isolation": "PASS",
+    "openapi_drift": "PASS"
+  },
+  "modes": {
+    "mock": {
+      "result": "PASS",
+      "real_api_requests": 0,
+      "external_requests": 0,
+      "local_asset_requests": 32
+    },
+    "memory": {
+      "result": "PASS",
+      "real_api_requests": 138,
+      "external_requests": 0,
+      "local_asset_requests": 0
+    },
+    "sqlite": {
+      "result": "PASS",
+      "real_api_requests": 131,
+      "external_requests": 0,
+      "local_asset_requests": 0
+    },
+    "postgresql": {
+      "result": "PASS",
+      "real_api_requests": 116,
+      "external_requests": 0,
+      "local_asset_requests": 0
+    }
+  },
+  "tested_tool_sha256": {
+    "tools/demo_browser.mjs": "49d751c1bad5c16391c202099b080ce3bf235ce1fa12e913e79e02482a148b36",
+    "tools/local_demo.py": "bf65a4a08dba96c16d34811e882f2943d9baf7978be5a39e9dee782a9dd7fc31",
+    "tools/mock_browser.mjs": "4213249c70e9f788f06c5e524905923be1f6d7a9112a99eb1e376512257cae98",
+    "tools/mock_demo.py": "3675b6561e506e999c68ebafc7bf91f0b90ec5db417b2abacd18a0b33a068c0c",
+    "tools/sqlite_demo.py": "dfae612493c12537bcb55ef5282c2b526b0086a35d86cc53ec1e465df3cc06c4"
+  },
+  "cleanup": "all owned services stopped; disposable test data removed; no user process/data changed",
+  "limits": [
+    "controlled loopback SMTP only; no live inbox test",
+    "local runtime only; no production/distributed claim",
+    "original full interview unavailable; thirteen selected authentic excerpts preserved",
+    "no deadline supplied; no deadline-compliance claim",
+    "exact final commit and zero-open audit follow independent QA/publication"
+  ]
+}

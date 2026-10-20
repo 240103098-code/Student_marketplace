@@ -1,0 +1,8 @@
+{
+  "phase": "candidate before independent QA/publication/closure",
+  "mvp_open": [
+    53
+  ],
+  "user_test_bug_open": [],
+  "final_zero_audit": "Required after exact-commit publication and QA closure; not yet claimed"
+}

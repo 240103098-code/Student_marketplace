@@ -55,9 +55,10 @@ def main(argv=None):
  parser.add_argument('--confirm-disposable-demo',required=True,choices=[CONFIRM])
  parser.add_argument('--node',default=shutil.which('node'))
  parser.add_argument('--browser-executable',type=Path)
+ parser.add_argument('--evidence-dir',type=Path,default=ROOT/'_docs/evidence')
  args=parser.parse_args(argv)
  private=None;pg_started=False;frontend=browser=None;server=None;server_thread=None;database=None
- evidence=ROOT/'_docs'/'evidence';evidence.mkdir(exist_ok=True)
+ evidence=args.evidence_dir.resolve();evidence.mkdir(parents=True,exist_ok=True)
  (evidence/'demo-result.json').write_text(json.dumps({'result':'RUNNING'}))
  stage='prerequisites';result=1;cleanup_ok=True
  try:
@@ -109,7 +110,7 @@ def main(argv=None):
    wait_http(f'http://127.0.0.1:{api_port}/openapi.json')
    stage='React production build';print('SMOKE react-production-build',flush=True)
    vite=ROOT/'frontend/node_modules/vite/bin/vite.js'
-   node_env=os.environ|{'VITE_API_ORIGIN':f'http://127.0.0.1:{api_port}'}
+   node_env=os.environ|{'VITE_API_ORIGIN':f'http://127.0.0.1:{api_port}','VITE_SERVICE_MODE':'real','SMOKE_MEMORY_RESTART':'0','SMOKE_SQLITE_RESTART':'0'}
    run([args.node,vite,'build','--outDir',private/'frontend'],env=node_env,cwd=ROOT/'frontend')
    frontend=subprocess.Popen([args.node,str(vite),'preview','--host','127.0.0.1','--port',str(web_port),'--strictPort','--outDir',str(private/'frontend')],cwd=ROOT/'frontend',env=node_env,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
    wait_http(f'http://127.0.0.1:{web_port}',frontend)

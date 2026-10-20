@@ -1,0 +1,8 @@
+{
+  "expected_exit": 1,
+  "actual_exit": 1,
+  "scenario": "nonexistent explicitly supplied browser executable after owned API/frontend started",
+  "owned_services_stopped": true,
+  "disposable_data_removed": true,
+  "verification": "PASS expected failure cleanup; not a successful browser journey"
+}

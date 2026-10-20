@@ -1,0 +1,80 @@
+{
+  "result": "PASS",
+  "node": "v24.19.0",
+  "playwright": "1.62.1",
+  "browser": "155.0.4283.45",
+  "real_api_responses": 138,
+  "browser_api_responses": 110,
+  "direct_api_requests": 28,
+  "external_requests": 0,
+  "stages": [
+    "register-verify-seller",
+    "register-verify-buyer",
+    "register-verify-admin",
+    "seller-profile-listing-photo",
+    "pending-private",
+    "admin-approve",
+    "buyer-search-filter-detail",
+    "buyer-report-admin-queue",
+    "admin-remove-buyer-hidden",
+    "rejection-owner-feedback",
+    "suspension-session-denial",
+    "sold-delete",
+    "account-cleanup",
+    "memory-live-private-state",
+    "memory-sign-in-existing-buyer",
+    "memory-private-photo-ui",
+    "memory-cookie-bootstrap",
+    "memory-backend-restart-loss"
+  ],
+  "desktop": "demo-desktop.png",
+  "mobile": "demo-mobile.png",
+  "admin": "demo-admin-reports.png",
+  "smtp": "controlled loopback protocol; external inbox unverified",
+  "storage": "real volatile FastAPI memory",
+  "restart_checks": [
+    {
+      "phase": "memory-loss",
+      "before": {
+        "users": 2,
+        "email_codes": 2,
+        "refresh_sessions": 13,
+        "listings": 1,
+        "listing_photos": 1,
+        "listing_reports": 0,
+        "categories": 5,
+        "prices": [
+          "10.00"
+        ],
+        "listing_states": [
+          "pending"
+        ],
+        "reviewed_reports": 0,
+        "image_sha256": [
+          "2b9d11713ff798651eb72558e904b38f5c7f63c49f6d45334f2d584443c10ac8",
+          "2b9d11713ff798651eb72558e904b38f5c7f63c49f6d45334f2d584443c10ac8"
+        ]
+      },
+      "after": {
+        "users": 0,
+        "email_codes": 0,
+        "refresh_sessions": 0,
+        "listings": 0,
+        "listing_photos": 0,
+        "listing_reports": 0,
+        "categories": 5,
+        "prices": [],
+        "listing_states": [],
+        "reviewed_reports": 0,
+        "image_sha256": []
+      },
+      "old_private_root_removed": true
+    }
+  ],
+  "migration": "explicit metadata/categories",
+  "sqlite": "3.50.4",
+  "python": "3.13.15",
+  "recorded_at": "2026-10-20T08:09:46.630740+00:00",
+  "api_instances": 2,
+  "cleanup": "complete"
+}

@@ -1,6 +1,6 @@
 # Requirements, tasks and evidence map
 
-Current mapping **2026-10-20**, at the published SQLite implementation `3b7523f`. The [forty-task backlog](tasks.md) is preserved as written; current follow-up GitHub issues/dated decisions extend it rather than silently renumbering history. [Plan](plan.md) defines scope, [API](api.md) defines behavior and [iterations](iterations.md) distinguishes historical results from current state. “Covered” here links evidence; it does not claim pending #53 is finished.
+Current mapping **2026-10-20**, at the published SQLite implementation `3b7523f`. The [forty-task backlog](tasks.md) is preserved as written; current follow-up GitHub issues/dated decisions extend it rather than silently renumbering history. [Plan](plan.md) defines scope, [API](api.md) defines behavior and [iterations](iterations.md) distinguishes historical results from current state. “Covered” here links evidence; it does not replace the independent #53 QA/publication gate.
 
 | Requirement / original tasks | Current implementation and evidence |
 | --- | --- |
@@ -14,6 +14,6 @@ Current mapping **2026-10-20**, at the published SQLite implementation `3b7523f`
 | Finite abuse/stream limits/security and demonstrable tests (39–40) | [Abuse integrations](../tests/test_abuse_integration.py), [security matrix](security.md), [original PG demo snapshot](demo.md), [current SQLite smoke](sqlite-setup.md); production/distributed/provider limitations remain explicit. |
 | Lovable visuals, typed seam and explicit development mock (45/41/42/43/47/48 follow-ups) | [Source provenance](lovable-integration.md), [design](design-system.md), [transport contracts](integration-contracts.md), [original photos](mock-original-photos.md); original source and archived screenshots preserved. |
 | Canonical API → actual volatile backend → persistent SQLite (50/51/44) | [Immutable commit sequence and commands](iterations.md); separate actual [OpenAPI](../openapi.yml), [memory tests](../tests/test_memory_backend.py), [file/process tests](../tests/test_sqlite_persistence.py). |
-| Authentic history and final compliance (52/53) | [Selected source-checked excerpts](brainstorm.md); broader final connected-mode matrix is still [#53](https://github.com/240103098-code/Student_marketplace/issues/53). |
+| Authentic history and final compliance (52/53) | [Selected source-checked excerpts](brainstorm.md); [Measured final compliance](compliance.md) records the connected-mode matrix; independent QA/publication remains [#53](https://github.com/240103098-code/Student_marketplace/issues/53). |
 
-The current suite contains **292 backend +157 frontend tests**. Independent full292/no-skip and frontend/build/drift results at the published storage SHA are linked in [iterations](iterations.md); earlier257/142,261/155,267/157 and277 snapshots keep their original scopes/counts. No tests are rerun or manufactured for this documentation-only map.
+The current suite contains **292 backend +157 frontend tests**. Independent full292/no-skip and frontend/build/drift results at the published storage SHA are linked in [iterations](iterations.md); earlier257/142,261/155,267/157 and277 snapshots keep their original scopes/counts. This map originated in documentation-only52; actual final53 runs are recorded in [compliance](compliance.md) without changing earlier snapshots.

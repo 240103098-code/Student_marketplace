@@ -1,7 +1,7 @@
 # Student Marketplace — Project Requirements
 
 **Project:** Student Marketplace
-**Status:** Functional MVP implemented; current storage/API iterations published; final connected-mode compliance matrix #53 pending
+**Status:** Functional MVP implemented; current storage/API iterations published; final connected-mode runtime matrix measured; independent #53 QA/publication gate tracked in GitHub
 **Product decision baseline:** 2026-10-12 — university domain and manual approval confirmed; implementation defaults authorized
 **Current storage decision (2026-10-20):** Durable local SQLite is the fresh-development default; explicit PostgreSQL remains compatible and volatile memory remains explicit. This dated choice supersedes the earlier PostgreSQL-only/deferred-SQLite assessment below without rewriting its history.
 **Remaining setup:** Deployment-specific SMTP credentials and local service configuration

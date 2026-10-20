@@ -1,0 +1,1 @@
+[{"name":"mvp","description":"Required work for the current MVP and its verified fixes"},{"name":"post-mvp","description":"Optional future work outside the current MVP"},{"name":"user-test-bug","description":"Bug observed during actual user/browser testing; requires regression QA"}]
