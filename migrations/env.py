@@ -11,6 +11,8 @@ from backend import models  # Register metadata only; no settings or connections
 settings = context.config.attributes.get("settings")
 if settings is None:
     settings = load_settings()
+if not settings.database_url.get_secret_value().startswith(("postgresql://", "postgresql+psycopg://")):
+    raise RuntimeError("PostgreSQL migration stream requires explicit PostgreSQL; use alembic-sqlite.ini for persistent SQLite.")
 database = Database(settings)
 try:
     if context.is_offline_mode():

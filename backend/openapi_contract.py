@@ -200,7 +200,7 @@ def enrich(document):
    if key in MANUAL_RESULTS:
     status,name=MANUAL_RESULTS[key];operation['responses'][status]={'description':'Success','content':json_content(ref(name))}
    if path in BINARIES and method=='get':operation['responses']['200']={'description':'Authorized private decoded image; no raw storage paths or query tokens. Owner/admin/buyer state visibility rechecked.','content':{mime:{'schema':{'type':'string','format':'binary'}} for mime in ['image/jpeg','image/png','image/webp']}}
-   errors=set(ERRORS.get(key,set()))|{500}
+   errors=set(ERRORS.get(key,set()))|{500,503}
    if protected:errors.add(401)
    if path.startswith('/admin/'):errors.add(403)
    if has_validation:errors.add(422)
@@ -208,11 +208,15 @@ def enrich(document):
     errors.add(400)
     errors.add(422 if path.startswith('/listings') else 413)
    if key in RATE:errors.add(429)
-   for status in sorted(errors):operation['responses'][str(status)]={'description':{400:'Invalid code/current password/action/image or interrupted transport.',401:'Missing/invalid/expired/revoked session or ineligible account; safe generic error.',403:'Current admin access denied, or invalid required/supplied Origin/CSRF where applicable.',404:'Missing, unlinked, unauthorized or invisible resource.',409:'Duplicate account or conflicting listing/publication state.',413:'Streamed request/file exceeds its bound.',422:'Strict payload/query/path validation failed; detail-only safe error.',429:'Rate window/capacity exceeded; no action performed by this request.',500:'Handled database/storage failure, sanitized.',503:'Configured email transport unavailable; issuance rolled back.'}[status], 'content':json_content(ref('SafeError'))}
+   busy_description='Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.'
+   if key==('/auth/forgot-password','post'):busy_description+=' Recovery SMTP delivery failures still return generic 202.'
+   if key in {('/auth/register','post'),('/auth/resend-verification','post')}:busy_description='Configured verification email transport unavailable or '+busy_description
+   for status in sorted(errors):operation['responses'][str(status)]={'description':{400:'Invalid code/current password/action/image or interrupted transport.',401:'Missing/invalid/expired/revoked session or ineligible account; safe generic error.',403:'Current admin access denied, or invalid required/supplied Origin/CSRF where applicable.',404:'Missing, unlinked, unauthorized or invisible resource.',409:'Duplicate account or conflicting listing/publication state.',413:'Streamed request/file exceeds its bound.',422:'Strict payload/query/path validation failed; detail-only safe error.',429:'Rate window/capacity exceeded; no action performed by this request.',500:'Handled database/storage failure, sanitized.',503:busy_description}[status], 'content':json_content(ref('SafeError'))}
    for status,response in operation['responses'].items():
     headers=response.setdefault('headers',{})
     headers['Cache-Control']=header('All handled sensitive responses are private, no-store.',{'type':'string','const':'private, no-store'})
     headers['X-Content-Type-Options']=header('Disable MIME sniffing.',{'type':'string','const':'nosniff'})
+    if status=='503':headers['Retry-After']=header('Present for bounded SQLite writer contention; SMTP failure need not supply it.',{'type':'integer','const':1})
     if status=='401':headers['WWW-Authenticate']=header('Bearer challenge.',{'type':'string','const':'Bearer'})
     if status=='429' or status=='202' and path in {'/auth/resend-verification','/auth/forgot-password'}:headers['Retry-After']=header('Seconds before retry; generic mail guidance60.',{'type':'integer','minimum':1,**({'const':60} if status=='202' else {})})
     if key in COOKIE_SET and status.startswith('2'):headers['Set-Cookie']=header('Sets/rotates refresh_token on login/refresh; clears it on logout/password change/reset/account deletion. HttpOnly; host-only; Path=/auth; SameSite=Lax; Secure required in production.')

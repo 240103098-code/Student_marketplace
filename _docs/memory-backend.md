@@ -1,6 +1,6 @@
 # Real volatile FastAPI backend (issue #51)
 
-This development/test mode runs the **existing FastAPI API and business services**, backed by one real SQLite `:memory:` SQLAlchemy connection per `Database` instance. It is separate from `VITE_SERVICE_MODE=mock`: use frontend `real` mode to call it. PostgreSQL remains the established persistent configuration. File-backed/default SQLite and its migration stream remain issue #44; published PostgreSQL Alembic revisions are unchanged.
+This development/test mode runs the **existing FastAPI API and business services**, backed by one real SQLite `:memory:` SQLAlchemy connection per `Database` instance. It is separate from `VITE_SERVICE_MODE=mock`: use frontend `real` mode to call it. [File-backed SQLite](sqlite-setup.md) is now the fresh-development default from issue #44; explicit PostgreSQL remains compatible and its published Alembic revisions are unchanged.
 
 ## Start, check, reset and stop
 

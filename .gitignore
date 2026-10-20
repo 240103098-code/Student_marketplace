@@ -11,3 +11,6 @@ backend/uploads/
 *.pem
 *.key
 credentials*.json
+
+# Default durable local SQLite data (including WAL/SHM), never commit user data.
+backend/data/

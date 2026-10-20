@@ -22,22 +22,41 @@ class Base(DeclarativeBase):
 class Database:
     def __init__(self, settings: Settings):
         url = make_url(settings.database_url.get_secret_value())
-        self.is_memory = url.drivername == "sqlite+pysqlite" and url.database == ":memory:"
+        self.is_sqlite = url.drivername == "sqlite+pysqlite"
+        self.is_memory = self.is_sqlite and url.database == ":memory:"
         self._guard = threading.Lock() if self.is_memory else nullcontext()
         self._disposed = False
-        if self.is_memory:
-            if settings.app_env == "production":
+        if self.is_sqlite:
+            if self.is_memory and settings.app_env == "production":
                 raise ValueError("Memory storage is forbidden in production")
-            self.engine = create_engine(url, poolclass=StaticPool,
-                connect_args={"check_same_thread": False}, echo=False, hide_parameters=True)
+            if not self.is_memory:
+                from pathlib import Path
+                Path(url.database).parent.mkdir(parents=True, exist_ok=True)
+            self.engine = create_engine(url,
+                **({"poolclass": StaticPool} if self.is_memory else {}),
+                connect_args={"check_same_thread": False, "timeout": 1.5},
+                echo=False, hide_parameters=True)
             @event.listens_for(self.engine, "connect")
             def configure(connection, record):
+                if not self.is_memory:
+                    # Disable sqlite3 legacy autocommit: SQLAlchemy begin owns
+                    # the real transaction, including DDL and all guard reads.
+                    connection.isolation_level = None
                 connection.execute("PRAGMA foreign_keys=ON")
+                connection.execute("PRAGMA busy_timeout=1500")
+                if not self.is_memory:
+                    if connection.execute("PRAGMA journal_mode=WAL").fetchone()[0] != "wal":
+                        raise RuntimeError("SQLite WAL initialization failed")
                 connection.create_function("regexp", 2,
                     lambda pattern, value: int(value is not None and re.search(pattern, value) is not None), deterministic=True)
                 connection.create_function("gen_random_uuid", 0, lambda: uuid.uuid4().hex)
                 # SQLAlchemy emulates ILIKE using lower(); SQLite defaults to ASCII.
                 connection.create_function("lower", 1, lambda value: value.lower() if value is not None else None, deterministic=True)
+            if not self.is_memory:
+                @event.listens_for(self.engine, "begin")
+                def begin_immediate(connection):
+                    # Cross-connection/process serialization before ANY reads.
+                    connection.exec_driver_sql("BEGIN IMMEDIATE")
         else:
             # Preserve PostgreSQL driver, bounded connectivity and native row locks.
             url = url.set(drivername="postgresql+psycopg")
@@ -61,6 +80,10 @@ class Database:
                 raise RuntimeError("Database has been disposed")
             session = self.session_factory()
             try:
+                if self.is_sqlite and not self.is_memory:
+                    # Acquire the cross-process write reservation before caller
+                    # code computes time or performs authorization reads.
+                    session.connection()
                 yield session
                 session.commit()
             except BaseException:

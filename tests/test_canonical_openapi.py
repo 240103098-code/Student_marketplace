@@ -37,7 +37,10 @@ class CanonicalOpenApiTest(unittest.TestCase):
     if int(status)>=400:self.assertEqual(response['content']['application/json']['schema'],{'$ref':'#/components/schemas/SafeError'})
    if not path.startswith('/auth/') or path in ['/auth/me','/auth/change-password']:self.assertEqual(operation['security'],[{'HTTPBearer':[]}])
   self.assertNotIn('422',document['paths']['/auth/logout']['post']['responses'])
-  self.assertNotIn('503',document['paths']['/auth/forgot-password']['post']['responses'])
+  # Recovery SMTP failures remain generic202 (real HTTP tests); SQLite writer
+  # exhaustion independently returns the new bounded, sanitized busy503.
+  self.assertIn('Bounded SQLite writer wait exhausted',document['paths']['/auth/forgot-password']['post']['responses']['503']['description'])
+  self.assertIn('Recovery SMTP delivery failures still return generic 202',document['paths']['/auth/forgot-password']['post']['responses']['503']['description'])
  def test_strict_manual_schema_matches_wire_rules_and_partial_null_semantics(self):
   document=schema();components=document['components']['schemas']
   for path in ['/listings','/listings/mine','/admin/users','/admin/listings','/admin/reports']:

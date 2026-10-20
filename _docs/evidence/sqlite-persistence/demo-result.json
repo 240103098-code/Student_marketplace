@@ -1,0 +1,30 @@
+{
+  "result": "PASS",
+  "node": "v24.19.0",
+  "playwright": "1.62.1",
+  "browser": "155.0.4283.45",
+  "real_api_responses": 103,
+  "stages": [
+    "register-verify-seller",
+    "register-verify-buyer",
+    "register-verify-admin",
+    "seller-profile-listing-photo",
+    "pending-private",
+    "admin-approve",
+    "buyer-search-filter-detail",
+    "sqlite-backend-restart",
+    "buyer-report-admin-queue",
+    "admin-remove-buyer-hidden",
+    "rejection-owner-feedback",
+    "suspension-session-denial",
+    "sold-delete",
+    "account-cleanup"
+  ],
+  "desktop": "demo-desktop.png",
+  "mobile": "demo-mobile.png",
+  "admin": "demo-admin-reports.png",
+  "smtp": "controlled loopback protocol; external inbox unverified",
+  "storage": "real persistent SQLite",
+  "restart": "owned Uvicorn server stopped; new app/Database opened same file; existing buyer page reloaded and read image/contact",
+  "migration": "sqlite_0001"
+}

@@ -2,9 +2,9 @@
 
 ## Implemented status and tested prerequisites
 
-The React/FastAPI/PostgreSQL MVP implements student-only verification, session-bound JWT authentication, profile/contact/avatar management, listing/image workflows, search/filter/detail/contact, reports, admin user/listing/report moderation and manual publication decisions, permanent account deletion and finite abuse controls. See [API](api.md) and [security boundaries](security.md) for exact contracts. The [40-task backlog](tasks.md), plan and history retain their original scope.
+The React/FastAPI MVP (fresh local SQLite default, explicit PostgreSQL compatibility) implements student-only verification, session-bound JWT authentication, profile/contact/avatar management, listing/image workflows, search/filter/detail/contact, reports, admin user/listing/report moderation and manual publication decisions, permanent account deletion and finite abuse controls. See [API](api.md) and [security boundaries](security.md) for exact contracts. The [40-task backlog](tasks.md), plan and history retain their original scope.
 
-Tested on Windows with Python **3.13.15**, Node **24.19.0**, npm **12.2.0**, PostgreSQL **18.6**, Playwright **1.62.1** and Edge **155.0.4283.45**. Python 3.11+ and frontend manifest-supported Node versions are supported; use the tested versions for reproduction. Install PostgreSQL binaries including initdb/pg_ctl/createdb, without needing a global service. Browsers are an explicit optional smoke prerequisite below. Loopback sockets and a writable temporary directory are necessary, including for Windows asyncio tests.
+Tested on Windows with Python **3.13.15**, Node **24.19.0**, npm **12.2.0**, PostgreSQL **18.6**, Playwright **1.62.1** and Edge **155.0.4283.45**. Python 3.11+ and frontend manifest-supported Node versions are supported; use the tested versions for reproduction. Only PostgreSQL compatibility/full-suite verification needs PostgreSQL binaries including initdb/pg_ctl/createdb, without a global service; fresh SQLite needs no database server. Browsers are an explicit optional smoke prerequisite below. Loopback sockets and a writable temporary directory are necessary, including for Windows asyncio tests.
 
 ## Install pinned dependencies
 
@@ -27,13 +27,17 @@ Use `.venv/bin/python` on Linux/macOS. Activation is optional. The resolved Pyth
 
 For smoke, either install its pinned Chromium browser (`cd frontend; node node_modules/playwright/cli.js install chromium; cd ..`) or supply an installed compatible Edge/Chrome executable explicitly. Browser downloads/system browser installation are prerequisites, never silently skipped as a passing demo.
 
+## Fresh durable SQLite default
+
+Follow [SQLite setup](sqlite-setup.md) for no-PostgreSQL fresh start, separate `alembic-sqlite.ini` migration stream, startup/check/backup/reset and actual browser restart smoke. Existing explicit PostgreSQL `.env` values continue to select PostgreSQL without conversion/reset. JWT and real SMTP requirements remain.
+
 ## Explicit volatile backend option
 
-[Memory-backend setup](memory-backend.md) runs the same real FastAPI services with SQLite `:memory:`, isolated temporary images and normal provider SMTP/JWT. It needs no PostgreSQL server, loses all state on stop, and rejects production. Use it explicitly; the persistent PostgreSQL setup below and its migration history remain intact. This is distinct from the frontend synthetic mock. File-backed/default SQLite is not implemented yet.
+[Memory-backend setup](memory-backend.md) runs the same real FastAPI services with SQLite `:memory:`, isolated temporary images and normal provider SMTP/JWT. It needs no PostgreSQL server, loses all state on stop, and rejects production. Use it explicitly; the persistent PostgreSQL setup below and its migration history remain intact. This is distinct from the frontend synthetic mock. File-backed SQLite is now the fresh default; this volatile option remains explicit.
 
-## Configure a normal development instance
+## Explicit PostgreSQL alternative
 
-Do not use a production or shared database for tests. Create a dedicated development database through your own PostgreSQL administration, then copy `.env.example` to ignored `.env`. Refuse to overwrite an existing file; generate the JWT secret locally without printing it:
+Do not use a production or shared database for tests. Create a dedicated development database through your own PostgreSQL administration, then copy `.env.example` to ignored `.env` and change DATABASE_URL explicitly to PostgreSQL. Refuse to overwrite an existing file; generate the JWT secret locally without printing it:
 
 ```powershell
 .venv/Scripts/python.exe -c "from pathlib import Path; import secrets; p=Path('.env'); assert not p.exists(), 'Preserve existing .env'; p.write_text(Path('.env.example').read_text().replace('REPLACE_WITH_A_PRIVATE_RANDOM_SECRET_AT_LEAST_32_CHARACTERS',secrets.token_urlsafe(48)))"
@@ -81,7 +85,7 @@ if ($testExit -ne 0) { throw 'Backend tests failed' }
 
 Choose an unused dedicated loopback port. Local trust applies only to this synthetic isolated test cluster. Keep its path/name and reuse only after verifying ownership and empty application tables; never reset an arbitrary existing cluster. Linux/macOS use the corresponding binaries without `.exe` and their normal non-root PostgreSQL account requirements.
 
-The final complete run passes **277 backend tests with zero skips**, including actual PostgreSQL/filesystem and controlled loopback SMTP. Frontend passes **157 tests** and build. Detailed commands/results are recorded in [demo verification](demo.md); controlled SMTP messages are held only in fixture memory, without any external mail. Windows low-level asyncio needs permission for its local socketpair.
+The final complete run passes **292 backend tests with zero skips**, including actual PostgreSQL/filesystem and controlled loopback SMTP. Frontend passes **157 tests** and build. Detailed commands/results are recorded in [demo verification](demo.md); controlled SMTP messages are held only in fixture memory, without any external mail. Windows low-level asyncio needs permission for its local socketpair.
 
 ## One-command real-stack smoke
 

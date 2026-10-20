@@ -2404,6 +2404,39 @@
                 }
               }
             }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            },
+            "description": "Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All handled sensitive responses are private, no-store.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "Disable MIME sniffing.",
+                "schema": {
+                  "const": "nosniff",
+                  "type": "string"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2594,6 +2627,39 @@
                 "schema": {
                   "const": "private, no-store",
                   "type": "string"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "Disable MIME sniffing.",
+                "schema": {
+                  "const": "nosniff",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            },
+            "description": "Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All handled sensitive responses are private, no-store.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
                 }
               },
               "X-Content-Type-Options": {
@@ -2892,6 +2958,39 @@
                 }
               }
             }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            },
+            "description": "Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All handled sensitive responses are private, no-store.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "Disable MIME sniffing.",
+                "schema": {
+                  "const": "nosniff",
+                  "type": "string"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -3115,6 +3214,39 @@
                 "schema": {
                   "const": "private, no-store",
                   "type": "string"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "Disable MIME sniffing.",
+                "schema": {
+                  "const": "nosniff",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            },
+            "description": "Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All handled sensitive responses are private, no-store.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
                 }
               },
               "X-Content-Type-Options": {
@@ -3419,6 +3551,39 @@
                 }
               }
             }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            },
+            "description": "Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All handled sensitive responses are private, no-store.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "Disable MIME sniffing.",
+                "schema": {
+                  "const": "nosniff",
+                  "type": "string"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -3700,6 +3865,39 @@
                 }
               }
             }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            },
+            "description": "Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All handled sensitive responses are private, no-store.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "Disable MIME sniffing.",
+                "schema": {
+                  "const": "nosniff",
+                  "type": "string"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -3835,6 +4033,39 @@
                 "schema": {
                   "const": "private, no-store",
                   "type": "string"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "Disable MIME sniffing.",
+                "schema": {
+                  "const": "nosniff",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            },
+            "description": "Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All handled sensitive responses are private, no-store.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
                 }
               },
               "X-Content-Type-Options": {
@@ -4033,6 +4264,39 @@
                 "schema": {
                   "const": "private, no-store",
                   "type": "string"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "Disable MIME sniffing.",
+                "schema": {
+                  "const": "nosniff",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            },
+            "description": "Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All handled sensitive responses are private, no-store.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
                 }
               },
               "X-Content-Type-Options": {
@@ -4310,6 +4574,39 @@
                 }
               }
             }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            },
+            "description": "Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All handled sensitive responses are private, no-store.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "Disable MIME sniffing.",
+                "schema": {
+                  "const": "nosniff",
+                  "type": "string"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -4492,6 +4789,39 @@
                 "schema": {
                   "const": "private, no-store",
                   "type": "string"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "Disable MIME sniffing.",
+                "schema": {
+                  "const": "nosniff",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            },
+            "description": "Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All handled sensitive responses are private, no-store.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
                 }
               },
               "X-Content-Type-Options": {
@@ -4764,6 +5094,39 @@
                 }
               }
             }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            },
+            "description": "Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All handled sensitive responses are private, no-store.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "Disable MIME sniffing.",
+                "schema": {
+                  "const": "nosniff",
+                  "type": "string"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -4969,6 +5332,39 @@
                 }
               }
             }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            },
+            "description": "Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All handled sensitive responses are private, no-store.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "Disable MIME sniffing.",
+                "schema": {
+                  "const": "nosniff",
+                  "type": "string"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -5103,6 +5499,39 @@
                 "schema": {
                   "const": "private, no-store",
                   "type": "string"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "Disable MIME sniffing.",
+                "schema": {
+                  "const": "nosniff",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            },
+            "description": "Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All handled sensitive responses are private, no-store.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
                 }
               },
               "X-Content-Type-Options": {
@@ -5302,6 +5731,39 @@
                 "schema": {
                   "const": "private, no-store",
                   "type": "string"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "Disable MIME sniffing.",
+                "schema": {
+                  "const": "nosniff",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            },
+            "description": "Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay. Recovery SMTP delivery failures still return generic 202.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All handled sensitive responses are private, no-store.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
                 }
               },
               "X-Content-Type-Options": {
@@ -5574,6 +6036,39 @@
                 }
               }
             }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            },
+            "description": "Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All handled sensitive responses are private, no-store.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "Disable MIME sniffing.",
+                "schema": {
+                  "const": "nosniff",
+                  "type": "string"
+                }
+              }
+            }
           }
         },
         "summary": "Login",
@@ -5746,6 +6241,39 @@
                 }
               }
             }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            },
+            "description": "Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All handled sensitive responses are private, no-store.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "Disable MIME sniffing.",
+                "schema": {
+                  "const": "nosniff",
+                  "type": "string"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -5840,6 +6368,39 @@
                 "schema": {
                   "const": "private, no-store",
                   "type": "string"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "Disable MIME sniffing.",
+                "schema": {
+                  "const": "nosniff",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            },
+            "description": "Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All handled sensitive responses are private, no-store.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
                 }
               },
               "X-Content-Type-Options": {
@@ -6091,6 +6652,39 @@
                 }
               }
             }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            },
+            "description": "Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All handled sensitive responses are private, no-store.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "Disable MIME sniffing.",
+                "schema": {
+                  "const": "nosniff",
+                  "type": "string"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -6319,13 +6913,20 @@
                 }
               }
             },
-            "description": "Configured email transport unavailable; issuance rolled back.",
+            "description": "Configured verification email transport unavailable or Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.",
             "headers": {
               "Cache-Control": {
                 "description": "All handled sensitive responses are private, no-store.",
                 "schema": {
                   "const": "private, no-store",
                   "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
                 }
               },
               "X-Content-Type-Options": {
@@ -6539,13 +7140,20 @@
                 }
               }
             },
-            "description": "Configured email transport unavailable; issuance rolled back.",
+            "description": "Configured verification email transport unavailable or Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.",
             "headers": {
               "Cache-Control": {
                 "description": "All handled sensitive responses are private, no-store.",
                 "schema": {
                   "const": "private, no-store",
                   "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
                 }
               },
               "X-Content-Type-Options": {
@@ -6698,6 +7306,39 @@
                 "schema": {
                   "const": "private, no-store",
                   "type": "string"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "Disable MIME sniffing.",
+                "schema": {
+                  "const": "nosniff",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            },
+            "description": "Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All handled sensitive responses are private, no-store.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
                 }
               },
               "X-Content-Type-Options": {
@@ -6866,6 +7507,39 @@
                 }
               }
             }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            },
+            "description": "Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All handled sensitive responses are private, no-store.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "Disable MIME sniffing.",
+                "schema": {
+                  "const": "nosniff",
+                  "type": "string"
+                }
+              }
+            }
           }
         },
         "summary": "Verify Email",
@@ -6958,6 +7632,39 @@
                 "schema": {
                   "const": "private, no-store",
                   "type": "string"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "Disable MIME sniffing.",
+                "schema": {
+                  "const": "nosniff",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            },
+            "description": "Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All handled sensitive responses are private, no-store.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
                 }
               },
               "X-Content-Type-Options": {
@@ -7184,6 +7891,39 @@
                 }
               }
             }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            },
+            "description": "Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All handled sensitive responses are private, no-store.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "Disable MIME sniffing.",
+                "schema": {
+                  "const": "nosniff",
+                  "type": "string"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -7392,6 +8132,39 @@
                 }
               }
             }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            },
+            "description": "Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All handled sensitive responses are private, no-store.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "Disable MIME sniffing.",
+                "schema": {
+                  "const": "nosniff",
+                  "type": "string"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -7567,6 +8340,39 @@
                 "schema": {
                   "const": "private, no-store",
                   "type": "string"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "Disable MIME sniffing.",
+                "schema": {
+                  "const": "nosniff",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            },
+            "description": "Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All handled sensitive responses are private, no-store.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
                 }
               },
               "X-Content-Type-Options": {
@@ -7803,6 +8609,39 @@
                 }
               }
             }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            },
+            "description": "Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All handled sensitive responses are private, no-store.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "Disable MIME sniffing.",
+                "schema": {
+                  "const": "nosniff",
+                  "type": "string"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -7976,6 +8815,39 @@
                 "schema": {
                   "const": "private, no-store",
                   "type": "string"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "Disable MIME sniffing.",
+                "schema": {
+                  "const": "nosniff",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            },
+            "description": "Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All handled sensitive responses are private, no-store.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
                 }
               },
               "X-Content-Type-Options": {
@@ -8223,6 +9095,39 @@
                 }
               }
             }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            },
+            "description": "Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All handled sensitive responses are private, no-store.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "Disable MIME sniffing.",
+                "schema": {
+                  "const": "nosniff",
+                  "type": "string"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -8401,6 +9306,39 @@
                 "schema": {
                   "const": "private, no-store",
                   "type": "string"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "Disable MIME sniffing.",
+                "schema": {
+                  "const": "nosniff",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            },
+            "description": "Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All handled sensitive responses are private, no-store.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
                 }
               },
               "X-Content-Type-Options": {
@@ -8726,6 +9664,39 @@
                 }
               }
             }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            },
+            "description": "Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All handled sensitive responses are private, no-store.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "Disable MIME sniffing.",
+                "schema": {
+                  "const": "nosniff",
+                  "type": "string"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -8917,6 +9888,39 @@
                 "schema": {
                   "const": "private, no-store",
                   "type": "string"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "Disable MIME sniffing.",
+                "schema": {
+                  "const": "nosniff",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            },
+            "description": "Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All handled sensitive responses are private, no-store.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
                 }
               },
               "X-Content-Type-Options": {
@@ -9165,6 +10169,39 @@
                 "schema": {
                   "const": "private, no-store",
                   "type": "string"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "Disable MIME sniffing.",
+                "schema": {
+                  "const": "nosniff",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            },
+            "description": "Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All handled sensitive responses are private, no-store.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
                 }
               },
               "X-Content-Type-Options": {
@@ -9429,6 +10466,39 @@
                 }
               }
             }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            },
+            "description": "Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All handled sensitive responses are private, no-store.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "Disable MIME sniffing.",
+                "schema": {
+                  "const": "nosniff",
+                  "type": "string"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -9639,6 +10709,39 @@
                 }
               }
             }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            },
+            "description": "Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All handled sensitive responses are private, no-store.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "Disable MIME sniffing.",
+                "schema": {
+                  "const": "nosniff",
+                  "type": "string"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -9740,6 +10843,39 @@
                 "schema": {
                   "const": "private, no-store",
                   "type": "string"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "Disable MIME sniffing.",
+                "schema": {
+                  "const": "nosniff",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            },
+            "description": "Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All handled sensitive responses are private, no-store.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
                 }
               },
               "X-Content-Type-Options": {
@@ -9939,6 +11075,39 @@
                 }
               }
             }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            },
+            "description": "Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All handled sensitive responses are private, no-store.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "Disable MIME sniffing.",
+                "schema": {
+                  "const": "nosniff",
+                  "type": "string"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -10094,6 +11263,39 @@
                 }
               }
             }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            },
+            "description": "Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All handled sensitive responses are private, no-store.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "Disable MIME sniffing.",
+                "schema": {
+                  "const": "nosniff",
+                  "type": "string"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -10224,6 +11426,39 @@
                 "schema": {
                   "const": "private, no-store",
                   "type": "string"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "Disable MIME sniffing.",
+                "schema": {
+                  "const": "nosniff",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            },
+            "description": "Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All handled sensitive responses are private, no-store.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
                 }
               },
               "X-Content-Type-Options": {
@@ -10435,6 +11670,39 @@
                 "schema": {
                   "const": "private, no-store",
                   "type": "string"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "Disable MIME sniffing.",
+                "schema": {
+                  "const": "nosniff",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            },
+            "description": "Bounded SQLite writer wait exhausted; safe failure with no automatic mutation replay.",
+            "headers": {
+              "Cache-Control": {
+                "description": "All handled sensitive responses are private, no-store.",
+                "schema": {
+                  "const": "private, no-store",
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for bounded SQLite writer contention; SMTP failure need not supply it.",
+                "schema": {
+                  "const": 1,
+                  "type": "integer"
                 }
               },
               "X-Content-Type-Options": {

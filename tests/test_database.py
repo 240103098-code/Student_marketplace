@@ -44,6 +44,7 @@ class DatabaseInfrastructureTest(unittest.TestCase):
         database._guard = threading.Lock()
         database._disposed = False
         database.is_memory = False
+        database.is_sqlite = False
         session = Mock()
         database.session_factory = Mock(return_value=session)
         with database.session() as obtained:
@@ -57,6 +58,7 @@ class DatabaseInfrastructureTest(unittest.TestCase):
         database._guard = threading.Lock()
         database._disposed = False
         database.is_memory = False
+        database.is_sqlite = False
         session = Mock()
         database.session_factory = Mock(return_value=session)
         with self.assertRaises(RuntimeError):
@@ -71,6 +73,7 @@ class DatabaseInfrastructureTest(unittest.TestCase):
         database._guard = threading.Lock()
         database._disposed = False
         database.is_memory = False
+        database.is_sqlite = False
         session = Mock()
         session.commit.side_effect = RuntimeError("synthetic failed commit")
         database.session_factory = Mock(return_value=session)
@@ -85,6 +88,7 @@ class DatabaseInfrastructureTest(unittest.TestCase):
         database._guard = threading.Lock()
         database._disposed = False
         database.is_memory = False
+        database.is_sqlite = False
         database.engine = Mock()
         database.dispose()
         database.engine.dispose.assert_called_once()

@@ -9,6 +9,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.exc import SQLAlchemyError
+import sqlite3
 
 from backend.routers.admin import router as admin_router
 from backend.config import Settings
@@ -80,6 +81,10 @@ def create_app(settings: Settings, database: Database | None = None, *, sender=N
 
     @app.exception_handler(SQLAlchemyError)
     async def database_error(request: Request, error: SQLAlchemyError):
+        if (isinstance(getattr(error, "orig", None), sqlite3.OperationalError)
+            and getattr(error.orig, "sqlite_errorcode", 0) & 255 in {sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED}):
+            return JSONResponse(status_code=503, headers={"Retry-After":"1"},
+                content={"detail":"Storage is temporarily busy. Confirm current state before retrying."})
         detail = "Registration is temporarily unavailable." if request.url.path == "/auth/register" else "Verification is temporarily unavailable." if request.url.path in {"/auth/verify-email", "/auth/resend-verification"} else "Profile is temporarily unavailable." if request.url.path == "/users/me" else "Listings are temporarily unavailable." if request.url.path.startswith("/listings") or request.url.path == "/categories" else "Authentication is temporarily unavailable."
         return JSONResponse(status_code=500, content={"detail": detail})
 

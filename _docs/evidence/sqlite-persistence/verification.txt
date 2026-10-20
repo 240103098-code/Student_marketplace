@@ -1,0 +1,52 @@
+Issue #44 persistent SQLite — engineer verification
+Base: cf4e557642382d299812a534237529c99c24b399
+Date: 2026-10-20; Python 3.13.15; stdlib SQLite 3.50.4;
+Node 24.19.0, PostgreSQL 18.6, Playwright 1.62.1, Edge 155.0.4283.45.
+
+Full guarded backend run: 292 tests in 91.804s, zero skips;
+290 passed, 1 stale contract expectation failed, 1 new raw test-connection
+cleanup errored on Windows. All other existing PostgreSQL/memory and new
+SQLite functional/concurrency/HTTP cases passed. Disposable PostgreSQL
+student_marketplace_test_issue4 on 127.0.0.1:55434 was stopped in finally.
+
+Corrections were documentation-only OpenAPI metadata/test expectations plus
+explicit closing of raw sqlite3 test handles. Recovery SMTP failure still
+returns generic202; only bounded database writer exhaustion can return busy503.
+No runtime/business-policy change was made for those two corrections.
+PASS final focused persistent SQLite suite: 15 tests, 13.689s.
+PASS final focused canonical OpenAPI suite: 4 tests, 0.722s.
+This is combined full-run plus focused-correction evidence, NOT a claim that
+one final full292 invocation passed. Independent QA verifies the exact commit.
+
+PASS frontend: 157 interaction tests in 23 files, maxWorkers=2.
+PASS frontend npm run typecheck.
+PASS production isolation/build: real build contains no synthetic mock fixture
+or controls; mock builds refused. No frontend application code/dependencies changed.
+PASS final python -m tools.export_openapi --check; git diff --check.
+
+PASS actual real React/FastAPI/SQLite browser journey: 103 real API responses,
+all 14 stages in demo-result.json. Signup/verification uses controlled loopback
+SMTP and the existing real sender/API; no frontend mock, backend auth bypass,
+external mail or console-code endpoint. Existing verified account promoted via
+separate-process CLI. Owned backend Uvicorn stopped; new app/Database opened the
+same file with retained JWT secret and persistent uploads; the existing buyer
+browser reloaded and displayed persisted detail/image/contact. Desktop/mobile
+and post-restart screenshot evidence is synthetic and secret-free; viewed the
+post-restart screenshot. Later report/review/removal, suspension/session denial,
+sold/delete/account cleanup passed. Owned browser/frontend/backend stopped and
+only the newly owned disposable directory was removed. No user port5173/process
+or private #49 checkout/database/configuration/source repository was changed.
+
+File storage uses separate sqlite_0001 Alembic stream and version table;
+fresh upgrade/current/repeated head/downgrade/re-upgrade and wrong-stream refusal
+are tested. An unrelated existing schema/file is preserved on failed migration.
+Direct constraints, exact cents/UTC/UUID/FK lineage, rollback, persistent images,
+new app and separate-process retained records, concurrent process code attempts/
+one-time consume/refresh replay, connection publication/suspension/credential/
+photo-slot races, 1500ms busy503/no replay and post-wait JWT expiry are covered.
+
+Published PostgreSQL migration0001–0003 bytes, backlog/history archives and
+source/frontend assets are unchanged. No new dependencies. This dated SQLite
+choice supersedes the former local default; explicit PostgreSQL and memory
+remain compatible. No automatic existing-data conversion, live university inbox
+delivery, deployment or distributed production coordination is claimed.

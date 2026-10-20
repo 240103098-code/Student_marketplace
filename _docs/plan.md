@@ -3,6 +3,7 @@
 **Project:** Student Marketplace
 **Status:** MVP decision baseline recorded; implementation in progress
 **Last recorded decision:** 2026-10-12 — university domain and manual approval confirmed; implementation defaults authorized
+**Current storage decision (2026-10-20):** Durable local SQLite is the fresh-development default; explicit PostgreSQL remains compatible and volatile memory remains explicit. This dated choice supersedes the earlier PostgreSQL-only/deferred-SQLite assessment below without rewriting its history.
 **Remaining setup:** Deployment-specific SMTP credentials and local service configuration
 
 ## 1. Project overview
@@ -25,13 +26,13 @@ The platform facilitates discovery and contact rather than transactions: sellers
 | --- | --- |
 | Frontend | **React** |
 | Backend | **Python FastAPI** |
-| Database | **PostgreSQL** |
+| Database | **SQLite locally by default**; explicit PostgreSQL compatibility (new decision, 2026-10-20) |
 | ORM | **SQLAlchemy** |
 | Database migrations | **Alembic** |
 | Architecture | **Modular FastAPI monolith** |
 | Authentication | Email/password with university-email verification; JWT access tokens and opaque refresh sessions |
 | Image storage | Uploaded files in the backend's **`uploads/`** directory; database stores file paths |
-| Development / demo | Run React, FastAPI, and PostgreSQL **locally** |
+| Development / demo | Run React, FastAPI, and SQLite **locally**; PostgreSQL remains an explicit compatibility option |
 
 Backend modules / routers should cover **authentication, listings, users, and administration**, with shared services and database access. Store environment-specific configuration and secrets in environment variables (not source code).
 
@@ -327,7 +328,7 @@ The requirements above consolidate earlier choices. The following maps the estab
 | Sold listings | Hidden from public search; retained in seller's account |
 | Discovery | Keywords, categories, price range, condition |
 | Platform | Web app |
-| Stack | React, FastAPI, PostgreSQL |
+| Stack | React, FastAPI, SQLite default; PostgreSQL compatibility (2026-10-20) |
 | Login | University email + password + verification code |
 | Homepage | Search, categories, recent-listing photo/price grid |
 | Images | Local backend uploads directory, DB paths |
@@ -365,3 +366,8 @@ The requirements above consolidate earlier choices. The following maps the estab
 ## Forward storage iteration — issue #51
 
 The historical PostgreSQL architecture above remains the established persistent implementation. An explicit development/test `sqlite+pysqlite:///:memory:` option now runs the same real FastAPI services with portable shared models, full-transaction serialization and per-app temporary images; no records or images survive normal shutdown. It is separate from frontend mock mode, rejects production and retains real SMTP/JWT/operator eligibility checks. See [memory-backend setup](memory-backend.md). Persistent/default SQLite and migration strategy remain the next iteration in issue #44; this addition does not rewrite the earlier decisions or claim PostgreSQL migrations execute on SQLite.
+
+
+## Forward persistent storage iteration — issue #44 (2026-10-20)
+
+The user selected durable local SQLite as the new fresh-development baseline. Absent development DATABASE_URL selects an ignored repository-relative file; explicit PostgreSQL installations remain unchanged. SQLite uses a separate `sqlite_0001` Alembic stream, FK/WAL/bounded waits and BEGIN IMMEDIATE before guard reads across connections/processes; shared UTC, exact money and security services are retained. Persistent uploads and records survive shutdown, unlike explicit memory mode. See [SQLite setup](sqlite-setup.md) for current commands, backup/reset limits and real frontend restart evidence. The earlier PostgreSQL requirements, completed tasks, historical #51 section and published PostgreSQL revisions remain historical/compatible context; neither automatic data conversion nor production/distributed guarantees are claimed.

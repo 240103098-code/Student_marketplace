@@ -36,11 +36,13 @@ def authentication_required():
 def require_verified_user(request: Request, credentials: HTTPAuthorizationCredentials | None = Depends(bearer)):
     if credentials is None:
         raise authentication_required()
-    try:
-        user_id, family_id = validate_access_token(request.app.state.settings, credentials.credentials, clock=request.app.state.clock)
-    except AccessTokenError:
-        raise authentication_required() from None
     with request.app.state.database.session() as session:
+        # SQLite BEGIN IMMEDIATE/memory mutex is already acquired. Re-evaluate
+        # JWT time after waiting, just like current eligibility/session state.
+        try:
+            user_id, family_id = validate_access_token(request.app.state.settings, credentials.credentials, clock=request.app.state.clock)
+        except AccessTokenError:
+            raise authentication_required() from None
         user = session.get(User, user_id)
         if user is None or not user.verified or user.suspended:
             raise authentication_required()

@@ -10,6 +10,8 @@ from urllib.parse import urlsplit
 
 from dotenv import dotenv_values
 from pydantic import Field, SecretStr, ValidationError, field_validator, model_validator
+from sqlalchemy.engine import make_url
+from sqlalchemy.exc import ArgumentError
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -28,7 +30,7 @@ class Settings(BaseSettings):
     app_env: Literal["development", "test", "production"] = Field(
         default="development", alias="APP_ENV"
     )
-    database_url: SecretStr = Field(alias="DATABASE_URL")
+    database_url: SecretStr = Field(default=SecretStr("sqlite+pysqlite:///backend/data/marketplace.sqlite3"), alias="DATABASE_URL")
     university_email_domain: Literal["sdu.edu.kz"] = Field(
         default="sdu.edu.kz", alias="UNIVERSITY_EMAIL_DOMAIN"
     )
@@ -67,17 +69,31 @@ class Settings(BaseSettings):
         try:
             if value.get_secret_value() == "sqlite+pysqlite:///:memory:":
                 return value
-            parsed = urlsplit(value.get_secret_value())
+            raw = value.get_secret_value()
+            if raw.startswith("sqlite+pysqlite:"):
+                url = make_url(raw)
+                path = Path(url.database or "")
+                if (url.drivername != "sqlite+pysqlite" or not url.database
+                    or url.username or url.password or url.host or url.port
+                    or url.query or "?" in raw or "#" in raw
+                    or ":" in url.database and not path.is_absolute()
+                    or url.database.startswith(("//", "\\\\"))
+                    or path.root and not path.is_absolute()
+                    or any(ord(c) < 32 for c in url.database)):
+                    raise ValueError("Unsupported local SQLite file URL")
+                path = (REPOSITORY_ROOT / path).resolve() if not path.is_absolute() else path.resolve()
+                return SecretStr(url.set(database=str(path)).render_as_string(hide_password=False))
+            parsed = urlsplit(raw)
             valid = (
                 parsed.scheme in {"postgresql", "postgresql+psycopg"}
                 and parsed.hostname
                 and parsed.path.strip("/")
                 and parsed.port != 0
             )
-        except ValueError:
+        except (ValueError, ArgumentError):
             valid = False
         if not valid:
-            raise ValueError("DATABASE_URL must be PostgreSQL or explicit SQLite memory")
+            raise ValueError("DATABASE_URL must be PostgreSQL or supported local SQLite")
         return value
 
     @field_validator("jwt_secret_key")
@@ -146,6 +162,8 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def production_safety(self):
         if self.app_env == "production":
+            if "database_url" not in self.model_fields_set:
+                raise ValueError("DATABASE_URL must be explicit in production")
             if self.database_url.get_secret_value() == "sqlite+pysqlite:///:memory:":
                 raise ValueError("DATABASE_URL memory mode is forbidden in production")
             if not self.refresh_cookie_secure:
