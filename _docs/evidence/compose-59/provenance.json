@@ -1,0 +1,48 @@
+{
+  "tested_commit": "81f8343c309a643eca82b1be7e01f7f225816f82",
+  "run_id": 41532248289,
+  "run_url": "https://github.com/240103098-code/Student_marketplace/actions/runs/41532248289",
+  "job_id": 125575142299,
+  "artifact_id": 13182946281,
+  "artifact_zip_sha256": "8be4d39bca87194a3c64c3fe8e939bdab0afa1ccf998a723eb79ed3ceb01ecc9",
+  "artifact_created_at_utc": "2026-11-02T21:53:38Z",
+  "code_hash_format": "SHA256 of canonical Git blob bytes; CRLF normalized to LF by Git text attributes",
+  "tested_input_sha256": {
+    "Dockerfile": "1f65b708da95e49d56e6523c3184bac5a6ee77a624c302c499891e23b1c62553",
+    ".dockerignore": "11cd321470411bb0e55d6161ee7b5bcd212b4dc4d94cabb79d9cc3d89e022b32",
+    "requirements.lock": "27806829910d4d2aae66b5b3469295fc95a793889bd2ad339f534d38731e8c26",
+    "alembic.ini": "aeeba97f0ffbea19bc1cd91e8d0a5123b904a4ab1e3d54f9bf57b2a8e785f21f",
+    "alembic-sqlite.ini": "139cbb9321c79b8383898d68cc638c527bc6ac888d207410f1461781600b247d",
+    "compose.yaml": "86f4c00150916c69f023042f7addadeca668785b76afdcc13609a58dd74573dc",
+    ".env.compose.example": "fdb293f17920cab30aa1e5756ec593346371db2a741d9746e05bb631a2beaff8",
+    "backend/packaged.py": "bfd840798fddec42099fe8f6edc214074947c985148eb172e41dd14ebde0b8e3",
+    "backend/compose_runtime.py": "4c24236d7e94e8f0fea589c35499325efbaeb629445d64b5821cd5a40522477f",
+    "tools/compose_smoke.py": "18fb8e8aead13f8ce2311a612ea4d33301a0b570eb6e90080bcf06e4267afdd4",
+    "tools/compose_browser.cjs": "b9ee31daf177fb05f93ce697e6e625fd75188a683c3e82ecc38abc5c9d37b35a",
+    ".github/workflows/compose-verification.yml": "5e1ef123625ce9fdac1fa7ab73d2257fa5564c0cf7a4e19c7de72c162e0597f6",
+    "tests/test_compose_runtime.py": "b5b14bd53e0befda9ea67481e2f01a4ce54831a63e6ee77a5826397b1962b3a6",
+    "tests/test_packaged.py": "1b7e549d02439012488cfa3d2f20597b7a1ce599d25689b9d5ed007a28b8b26d"
+  },
+  "application_git_trees": {
+    "backend": "f12cf370b7b212407c8b64dbabfa7ebb7b26eb14",
+    "frontend": "b81a8157a56bbdcae7d37e8d8b4b6df8708f6d03",
+    "migrations": "5e5d3b3753181c2518b2030151e13e52902f6e17",
+    "migrations_sqlite": "b806b3143d3d0a2da7c1dd533c764f0de3cdc684"
+  },
+  "artifact_files_sha256": {
+    "compose-verification.json": "31c05f7452172348b308da869b3e1ecb44f13c5922b34b0ddd2478068532488f",
+    "compose-desktop.png": "459ecd860a8c04bf3ba9ec340c747c12c337ec6d0a6b153ea9b197c06c28cbf8",
+    "compose-mobile.png": "cc1a05ffdbe64c89717735f4cd5c9b110c1e5b4739c9adab78fc6222b172e49a"
+  },
+  "local_backend": {
+    "passed": 312,
+    "skipped": 0,
+    "seconds": 105.547,
+    "real_postgresql": true,
+    "memory": true,
+    "file_sqlite": true,
+    "owned_pg_stopped": true
+  },
+  "openapi_drift": "PASS unchanged standalone contract",
+  "scope": "Local actual Compose only; no provider deployment, paid resources, live mail or full feature E2E completion"
+}
