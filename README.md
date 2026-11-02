@@ -6,6 +6,8 @@ Implemented: JWT access and rotating refresh sessions, password recovery/change,
 
 ## Run and verify
 
+[Persistent local Compose stack](_docs/compose.md) runs the connected image with health-gated PostgreSQL migrations and project-scoped private storage.
+
 [Offline SQLite to PostgreSQL migration](_docs/storage-migration.md) provides read-only planning, backup-first copying and explicit crash reconciliation for an independently prepared empty target.
 
 [Single-image container packaging](_docs/container.md) documents the real React/FastAPI `/api` image, actual hosted Docker PASS evidence and the separate independent-QA/publication gate.

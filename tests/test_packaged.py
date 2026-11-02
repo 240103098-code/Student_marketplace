@@ -74,3 +74,15 @@ class PackagedTest(unittest.TestCase):
         self.assertIn('Path=/api/auth',logged_out.headers['set-cookie'])
         self.assertEqual(self.client.get('/api/auth/me',headers={'Authorization':'Bearer '+refreshed.json()['access_token']}).status_code,401)
 
+    def test_minimal_health_routes_do_not_change_standalone_contract(self):
+        from unittest.mock import AsyncMock,patch
+        self.assertEqual(self.client.get('/health/live').json(),{'status':'ok'})
+        response=self.client.get('/health/ready')
+        self.assertEqual(response.status_code,503)
+        self.assertEqual(response.json(),{'status':'not-ready'})
+        self.assertIn('no-store',response.headers['cache-control'])
+        with patch.object(self.client.app.readiness,'ready',new=AsyncMock(return_value=True)):
+            self.assertEqual(self.client.get('/health/ready').status_code,200)
+        self.assertEqual(self.client.post('/health/live').status_code,404)
+        self.assertNotIn('/health/live',self.client.get('/api/openapi.json').json()['paths'])
+

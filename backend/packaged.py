@@ -9,6 +9,7 @@ from starlette.exceptions import HTTPException
 
 from backend.app import create_app
 from backend.config import load_settings
+from backend.compose_runtime import Readiness
 
 
 class PackagedApp:
@@ -16,11 +17,17 @@ class PackagedApp:
         self.api = api
         self.static_dir = Path(static_dir).resolve(strict=True)
         self.assets = StaticFiles(directory=self.static_dir / "assets", follow_symlink=False)
+        self.readiness = Readiness(api.state.settings)
 
     async def __call__(self, scope, receive, send):
         if scope["type"] == "lifespan":
-            return await self.api(scope, receive, send)
+            try:return await self.api(scope, receive, send)
+            finally:self.readiness.close()
         path = scope["path"]
+        if scope['type']=='http' and path in {'/health/live','/health/ready'} and scope['method'] in {'GET','HEAD'}:
+            ready=path=='/health/live' or await self.readiness.ready()
+            response=JSONResponse({'status':'ok' if ready else 'not-ready'},status_code=200 if ready else 503,headers={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'})
+            return await response(scope,receive,send)
         if path == "/api" or path.startswith("/api/"):
             # Strip before every existing middleware/guard: request-size/rate-limit
             # routing must see the same canonical paths as separate-port mode.
