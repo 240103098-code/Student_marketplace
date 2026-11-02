@@ -1,4 +1,4 @@
-# SQLite в†’ PostgreSQL implementation verification (2026-11-03)
+# SQLite -> PostgreSQL implementation verification (2026-11-03)
 
 **PASS:307 backend tests, zero skips,148.390s**, including13 new actual migration scenarios. [Machine record](verification.json) contains exact versions, scenario names and tested-code SHA256 values (CRLF normalized to LF, matching Git text canonicalization). The final exact implementation/QA SHA is recorded in [issue58](https://github.com/240103098-code/Student_marketplace/issues/58); this is implementation evidence, not self-certified independent QA/publication.
 

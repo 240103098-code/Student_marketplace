@@ -1,4 +1,4 @@
-# Offline SQLite в†’ PostgreSQL migration (#58)
+# Offline SQLite -> PostgreSQL migration (#58)
 
 `python -m backend.migrate_storage` is an explicitly selected, backup-first offline operation. It never chooses your default `.env`, database or uploads automatically. This is tooling verified on disposable data, **not authorization to migrate a user's private installation or perform hosted cutover**. Keep both applications stopped throughout planning, copying, verification and operator cutover. No external email is sent by this tool.
 
@@ -60,6 +60,6 @@ Before target writes are accepted, rollback is simply leaving target offline and
 
 [Observed implementation verification](evidence/storage-migration-58/verification.md):307 actual backend tests passed with zero skips, including13 migration/recovery cases. Independent exact-commit QA/publication is recorded in GitHub58.
 
-Every account/code/refresh/category/listing/photo/report row is retained, including expired/revoked/suspended/unverified history, all five listing states, review/rejection/publication details, Unicode text, contacts, exact KZT Decimal cents and UTC microseconds. Public output omits row/content hashes and personal paths; those sensitive details stay only in the private backup journal. File manifests use only generated owner/listing image namespaces, reject traversal/symlink/junction/escape/duplicate/missing/changed bytes, and never mount private images as static files.
+Every account/code/refresh/category/listing/photo/report row is retained, including expired/revoked/suspended/unverified history, all five listing states, review/rejection/publication details, contacts, exact KZT Decimal cents and UTC microseconds. Public output omits row/content hashes and personal paths; those sensitive details stay only in the private backup journal. File manifests use only generated owner/listing image namespaces, reject traversal/symlink/junction/escape/duplicate/missing/changed bytes, and never mount private images as static files.
 
 Limits are100,000 rows **per table**,128MiB per stored image,1GiB referenced images total. Reads apply the row bound before materialization. Stored canonical image bytes can legitimately exceed the5MiB incoming upload limit, so migration uses a separate stored-file budget and preserves bytes exactly. Larger migrations need a separately reviewed bounded strategy. Quiescence/maintenance time must include backups, full hashing and copying; codes/sessions can naturally expire meanwhile. This is one local migration utility, not cloud/Compose/readiness/fullE2E work. No new dependencies or application/migration-schema behavior changes are required.
