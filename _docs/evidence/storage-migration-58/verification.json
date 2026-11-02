@@ -1,0 +1,67 @@
+{
+  "result": "PASS implementation candidate; independent QA/publication remain",
+  "recorded_at": "2026-11-02T21:20:10.478625+00:00",
+  "source_base_commit": "98dbab2f4ac0243daaa6fef02a18f738e4c59d1d",
+  "versions": {
+    "python": "3.13.15",
+    "sqlite": "3.50.4",
+    "sqlalchemy": "2.1.4",
+    "alembic": "1.20.0",
+    "postgresql": "18.6"
+  },
+  "backend": {
+    "passed": 307,
+    "skipped": 0,
+    "seconds": 148.39,
+    "real_postgresql": true,
+    "memory": true,
+    "persistent_sqlite": true
+  },
+  "migration_cases": [
+    "test_commit_acknowledgment_failure_preserves_published_files_for_reconciliation",
+    "test_destination_write_before_lock_is_not_hidden_by_stale_snapshot",
+    "test_dry_run_writes_nothing_and_refuses_missing_quiescence",
+    "test_known_precommit_failures_clean_only_owned_files_keep_backup_and_source",
+    "test_new_source_sidecar_before_commit_aborts_and_preserves_it",
+    "test_nonempty_target_existing_destination_and_unexpected_schema_refused",
+    "test_partial_file_failure_preserves_source_backup_and_empty_target",
+    "test_populated_all_tables_backup_sequences_and_real_api_security_continuity",
+    "test_real_directory_link_and_large_legitimate_stored_image",
+    "test_real_driver_failure_rolls_back_earlier_inserted_tables",
+    "test_source_schema_sidecars_missing_unsafe_and_changed_images_refused",
+    "test_traversal_symlink_and_overlapping_roots_fail_closed",
+    "test_verify_refuses_changed_sequences_without_deleting_rows_or_files"
+  ],
+  "validated": {
+    "all_seven_application_tables": true,
+    "dialect_version_metadata_not_copied": true,
+    "all_five_listing_states": true,
+    "utc_microseconds_and_exact_decimal_boundaries": true,
+    "password_code_and_refresh_continuity_real_api": true,
+    "private_avatar_listing_bytes_and_denials": true,
+    "source_bytes_unchanged_and_backup_restored_real_api": true,
+    "dry_run_no_persistent_writes": true,
+    "precommit_driver_and_partial_file_rollback": true,
+    "lost_ack_after_actual_commit_preserves_files": true,
+    "readonly_reconciliation_and_sequence_corruption_refusal": true,
+    "pre_lock_concurrent_target_insert_refusal": true,
+    "actual_windows_junction_and_traversal_refusal": true,
+    "legitimate_stored_image_above_incoming_upload_limit": true,
+    "new_source_sidecar_before_commit_refusal_and_preservation": true
+  },
+  "code_sha256": {
+    "backend/migrate_storage.py": "47b15ceaffb7826ebd5b183b35a55efe86eaa2e8709faa1b1dce74932c560353",
+    "backend/migration_pg_schema.json": "bb342d45a863c96429519add986c53cf06ada93f85b23871ddbe96bd8b7a608a",
+    "tests/test_storage_migration.py": "6b4c14d4a0bda8680eb9fd285bf04adf1978db3d183fe4d94df480ea53878919"
+  },
+  "openapi_drift": "PASS unchanged actual app contract",
+  "unchanged": "Published migration streams, models, SQLite adapters, runtime behavior, frontend and Docker packaging",
+  "cleanup": "Owned test PostgreSQL stopped; temporary fixture files removed; no private user checkout/data/SMTP/preview accessed",
+  "limits": [
+    "Offline checkpointed source required; all sidecars refused without modifying source",
+    "No global database/filesystem atomicity; uncertain commit preserves files for readonly reconciliation",
+    "No merge/resume/reverse migration or actual private-data/hosted cutover",
+    "No frontend/Docker rerun because untouched; earlier stage evidence remains historical"
+  ],
+  "code_hash_format": "SHA256 of UTF-8 source with CRLF normalized to LF (Git text canonicalization)"
+}

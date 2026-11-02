@@ -1,0 +1,1019 @@
+{
+  "alembic_version": {
+    "checks": [],
+    "columns": [
+      {
+        "default": null,
+        "name": "version_num",
+        "nullable": false,
+        "type": "VARCHAR(32)"
+      }
+    ],
+    "fk": [],
+    "indexes": [],
+    "pk": {
+      "comment": null,
+      "constrained_columns": [
+        "version_num"
+      ],
+      "dialect_options": {
+        "postgresql_include": []
+      },
+      "name": "alembic_version_pkc"
+    },
+    "unique": []
+  },
+  "categories": {
+    "checks": [
+      {
+        "comment": null,
+        "name": "ck_categories_fixed",
+        "sqltext": "id = 1 AND key::text = 'electronics'::text AND name::text = 'Electronics'::text OR id = 2 AND key::text = 'clothing'::text AND name::text = 'Clothing'::text OR id = 3 AND key::text = 'books'::text AND name::text = 'Books'::text OR id = 4 AND key::text = 'furniture'::text AND name::text = 'Furniture'::text OR id = 5 AND key::text = 'other'::text AND name::text = 'Other'::text"
+      }
+    ],
+    "columns": [
+      {
+        "default": null,
+        "name": "id",
+        "nullable": false,
+        "type": "SMALLINT"
+      },
+      {
+        "default": null,
+        "name": "key",
+        "nullable": false,
+        "type": "VARCHAR(32)"
+      },
+      {
+        "default": null,
+        "name": "name",
+        "nullable": false,
+        "type": "VARCHAR(50)"
+      }
+    ],
+    "fk": [],
+    "indexes": [
+      {
+        "column_names": [
+          "key"
+        ],
+        "dialect_options": {
+          "postgresql_include": []
+        },
+        "duplicates_constraint": "categories_key_key",
+        "name": "categories_key_key",
+        "unique": true
+      },
+      {
+        "column_names": [
+          "name"
+        ],
+        "dialect_options": {
+          "postgresql_include": []
+        },
+        "duplicates_constraint": "categories_name_key",
+        "name": "categories_name_key",
+        "unique": true
+      }
+    ],
+    "pk": {
+      "comment": null,
+      "constrained_columns": [
+        "id"
+      ],
+      "dialect_options": {
+        "postgresql_include": []
+      },
+      "name": "categories_pkey"
+    },
+    "unique": [
+      {
+        "column_names": [
+          "key"
+        ],
+        "comment": null,
+        "dialect_options": {
+          "postgresql_include": [],
+          "postgresql_nulls_not_distinct": false
+        },
+        "name": "categories_key_key"
+      },
+      {
+        "column_names": [
+          "name"
+        ],
+        "comment": null,
+        "dialect_options": {
+          "postgresql_include": [],
+          "postgresql_nulls_not_distinct": false
+        },
+        "name": "categories_name_key"
+      }
+    ]
+  },
+  "email_codes": {
+    "checks": [
+      {
+        "comment": null,
+        "name": "ck_email_codes_attempts",
+        "sqltext": "wrong_attempts >= 0 AND wrong_attempts <= 5"
+      },
+      {
+        "comment": null,
+        "name": "ck_email_codes_digest",
+        "sqltext": "length(btrim(digest::text)) > 0"
+      },
+      {
+        "comment": null,
+        "name": "ck_email_codes_expiry",
+        "sqltext": "expires_at > created_at"
+      },
+      {
+        "comment": null,
+        "name": "ck_email_codes_purpose",
+        "sqltext": "purpose::text = ANY (ARRAY['registration'::character varying, 'password_reset'::character varying]::text[])"
+      }
+    ],
+    "columns": [
+      {
+        "default": "nextval('\"public\".email_codes_id_seq'::regclass)",
+        "name": "id",
+        "nullable": false,
+        "type": "BIGINT"
+      },
+      {
+        "default": null,
+        "name": "user_id",
+        "nullable": false,
+        "type": "BIGINT"
+      },
+      {
+        "default": null,
+        "name": "purpose",
+        "nullable": false,
+        "type": "VARCHAR(32)"
+      },
+      {
+        "default": null,
+        "name": "digest",
+        "nullable": false,
+        "type": "VARCHAR(128)"
+      },
+      {
+        "default": "now()",
+        "name": "created_at",
+        "nullable": false,
+        "type": "TIMESTAMP"
+      },
+      {
+        "default": null,
+        "name": "expires_at",
+        "nullable": false,
+        "type": "TIMESTAMP"
+      },
+      {
+        "default": "0",
+        "name": "wrong_attempts",
+        "nullable": false,
+        "type": "INTEGER"
+      },
+      {
+        "default": null,
+        "name": "consumed_at",
+        "nullable": true,
+        "type": "TIMESTAMP"
+      },
+      {
+        "default": null,
+        "name": "invalidated_at",
+        "nullable": true,
+        "type": "TIMESTAMP"
+      }
+    ],
+    "fk": [
+      {
+        "comment": null,
+        "constrained_columns": [
+          "user_id"
+        ],
+        "name": "email_codes_user_id_fkey",
+        "options": {
+          "ondelete": "CASCADE"
+        },
+        "referred_columns": [
+          "id"
+        ],
+        "referred_schema": "public",
+        "referred_table": "users"
+      }
+    ],
+    "indexes": [
+      {
+        "column_names": [
+          "user_id",
+          "purpose"
+        ],
+        "dialect_options": {
+          "postgresql_include": []
+        },
+        "name": "ix_email_codes_user_purpose",
+        "unique": false
+      }
+    ],
+    "pk": {
+      "comment": null,
+      "constrained_columns": [
+        "id"
+      ],
+      "dialect_options": {
+        "postgresql_include": []
+      },
+      "name": "email_codes_pkey"
+    },
+    "unique": []
+  },
+  "listing_photos": {
+    "checks": [
+      {
+        "comment": null,
+        "name": "ck_listing_photos_path",
+        "sqltext": "storage_path::text ~ (('^listings/'::text || listing_id::text) || '/[0-9a-f]{32}[.](jpg|png|webp)$'::text)"
+      },
+      {
+        "comment": null,
+        "name": "ck_listing_photos_position",
+        "sqltext": "\"position\" >= 1 AND \"position\" <= 5"
+      }
+    ],
+    "columns": [
+      {
+        "default": "nextval('\"public\".listing_photos_id_seq'::regclass)",
+        "name": "id",
+        "nullable": false,
+        "type": "BIGINT"
+      },
+      {
+        "default": null,
+        "name": "listing_id",
+        "nullable": false,
+        "type": "BIGINT"
+      },
+      {
+        "default": null,
+        "name": "storage_path",
+        "nullable": false,
+        "type": "VARCHAR(1024)"
+      },
+      {
+        "default": null,
+        "name": "position",
+        "nullable": false,
+        "type": "SMALLINT"
+      }
+    ],
+    "fk": [
+      {
+        "comment": null,
+        "constrained_columns": [
+          "listing_id"
+        ],
+        "name": "listing_photos_listing_id_fkey",
+        "options": {
+          "ondelete": "CASCADE"
+        },
+        "referred_columns": [
+          "id"
+        ],
+        "referred_schema": "public",
+        "referred_table": "listings"
+      }
+    ],
+    "indexes": [
+      {
+        "column_names": [
+          "storage_path"
+        ],
+        "dialect_options": {
+          "postgresql_include": []
+        },
+        "duplicates_constraint": "listing_photos_storage_path_key",
+        "name": "listing_photos_storage_path_key",
+        "unique": true
+      },
+      {
+        "column_names": [
+          "listing_id",
+          "position"
+        ],
+        "dialect_options": {
+          "postgresql_include": []
+        },
+        "duplicates_constraint": "uq_listing_photos_slot",
+        "name": "uq_listing_photos_slot",
+        "unique": true
+      }
+    ],
+    "pk": {
+      "comment": null,
+      "constrained_columns": [
+        "id"
+      ],
+      "dialect_options": {
+        "postgresql_include": []
+      },
+      "name": "listing_photos_pkey"
+    },
+    "unique": [
+      {
+        "column_names": [
+          "storage_path"
+        ],
+        "comment": null,
+        "dialect_options": {
+          "postgresql_include": [],
+          "postgresql_nulls_not_distinct": false
+        },
+        "name": "listing_photos_storage_path_key"
+      },
+      {
+        "column_names": [
+          "listing_id",
+          "position"
+        ],
+        "comment": null,
+        "dialect_options": {
+          "postgresql_include": [],
+          "postgresql_nulls_not_distinct": false
+        },
+        "name": "uq_listing_photos_slot"
+      }
+    ]
+  },
+  "listing_reports": {
+    "checks": [
+      {
+        "comment": null,
+        "name": "ck_listing_reports_reason",
+        "sqltext": "reason::text = ANY (ARRAY['spam'::character varying, 'prohibited_items'::character varying, 'misleading_information'::character varying]::text[])"
+      },
+      {
+        "comment": null,
+        "name": "ck_listing_reports_review_time",
+        "sqltext": "reviewed_at IS NULL OR reviewed_at >= created_at"
+      }
+    ],
+    "columns": [
+      {
+        "default": "nextval('\"public\".listing_reports_id_seq'::regclass)",
+        "name": "id",
+        "nullable": false,
+        "type": "BIGINT"
+      },
+      {
+        "default": null,
+        "name": "reporter_id",
+        "nullable": false,
+        "type": "BIGINT"
+      },
+      {
+        "default": null,
+        "name": "listing_id",
+        "nullable": false,
+        "type": "BIGINT"
+      },
+      {
+        "default": null,
+        "name": "reason",
+        "nullable": false,
+        "type": "VARCHAR(32)"
+      },
+      {
+        "default": "now()",
+        "name": "created_at",
+        "nullable": false,
+        "type": "TIMESTAMP"
+      },
+      {
+        "default": null,
+        "name": "reviewed_at",
+        "nullable": true,
+        "type": "TIMESTAMP"
+      }
+    ],
+    "fk": [
+      {
+        "comment": null,
+        "constrained_columns": [
+          "listing_id"
+        ],
+        "name": "listing_reports_listing_id_fkey",
+        "options": {
+          "ondelete": "CASCADE"
+        },
+        "referred_columns": [
+          "id"
+        ],
+        "referred_schema": "public",
+        "referred_table": "listings"
+      },
+      {
+        "comment": null,
+        "constrained_columns": [
+          "reporter_id"
+        ],
+        "name": "listing_reports_reporter_id_fkey",
+        "options": {
+          "ondelete": "CASCADE"
+        },
+        "referred_columns": [
+          "id"
+        ],
+        "referred_schema": "public",
+        "referred_table": "users"
+      }
+    ],
+    "indexes": [
+      {
+        "column_names": [
+          "listing_id"
+        ],
+        "dialect_options": {
+          "postgresql_include": []
+        },
+        "name": "ix_listing_reports_listing",
+        "unique": false
+      },
+      {
+        "column_names": [
+          "reporter_id",
+          "listing_id"
+        ],
+        "dialect_options": {
+          "postgresql_include": []
+        },
+        "name": "ix_listing_reports_reporter_listing",
+        "unique": false
+      },
+      {
+        "column_names": [
+          "created_at"
+        ],
+        "dialect_options": {
+          "postgresql_include": [],
+          "postgresql_where": "(reviewed_at IS NULL)"
+        },
+        "name": "ix_listing_reports_unreviewed",
+        "unique": false
+      }
+    ],
+    "pk": {
+      "comment": null,
+      "constrained_columns": [
+        "id"
+      ],
+      "dialect_options": {
+        "postgresql_include": []
+      },
+      "name": "listing_reports_pkey"
+    },
+    "unique": []
+  },
+  "listings": {
+    "checks": [
+      {
+        "comment": null,
+        "name": "ck_listings_condition",
+        "sqltext": "condition::text = ANY (ARRAY['new'::character varying, 'used'::character varying]::text[])"
+      },
+      {
+        "comment": null,
+        "name": "ck_listings_currency",
+        "sqltext": "currency::text = 'KZT'::text"
+      },
+      {
+        "comment": null,
+        "name": "ck_listings_description",
+        "sqltext": "length(description::text) >= 10 AND length(description::text) <= 2000"
+      },
+      {
+        "comment": null,
+        "name": "ck_listings_pending_unpublished",
+        "sqltext": "status::text <> 'pending'::text OR published_at IS NULL"
+      },
+      {
+        "comment": null,
+        "name": "ck_listings_price",
+        "sqltext": "price >= 0::numeric AND price <= 1000000000::numeric"
+      },
+      {
+        "comment": null,
+        "name": "ck_listings_publication",
+        "sqltext": "(status::text <> ALL (ARRAY['active'::character varying, 'sold'::character varying]::text[])) OR published_at IS NOT NULL"
+      },
+      {
+        "comment": null,
+        "name": "ck_listings_rejection",
+        "sqltext": "status::text <> 'rejected'::text OR rejection_reason IS NOT NULL AND length(rejection_reason::text) >= 1 AND length(rejection_reason::text) <= 300 AND rejection_reason::text ~ '[^[:space:]]'::text"
+      },
+      {
+        "comment": null,
+        "name": "ck_listings_status",
+        "sqltext": "status::text = ANY (ARRAY['pending'::character varying, 'active'::character varying, 'sold'::character varying, 'rejected'::character varying, 'removed'::character varying]::text[])"
+      },
+      {
+        "comment": null,
+        "name": "ck_listings_title",
+        "sqltext": "length(title::text) >= 3 AND length(title::text) <= 120 AND title::text !~ '^[[:space:]]|[[:space:]]$'::text"
+      }
+    ],
+    "columns": [
+      {
+        "default": "nextval('\"public\".listings_id_seq'::regclass)",
+        "name": "id",
+        "nullable": false,
+        "type": "BIGINT"
+      },
+      {
+        "default": null,
+        "name": "owner_id",
+        "nullable": false,
+        "type": "BIGINT"
+      },
+      {
+        "default": null,
+        "name": "category_id",
+        "nullable": false,
+        "type": "SMALLINT"
+      },
+      {
+        "default": null,
+        "name": "title",
+        "nullable": false,
+        "type": "VARCHAR(120)"
+      },
+      {
+        "default": null,
+        "name": "description",
+        "nullable": false,
+        "type": "VARCHAR(2000)"
+      },
+      {
+        "default": null,
+        "name": "price",
+        "nullable": false,
+        "type": "NUMERIC(12, 2)"
+      },
+      {
+        "default": "'KZT'::character varying",
+        "name": "currency",
+        "nullable": false,
+        "type": "VARCHAR(3)"
+      },
+      {
+        "default": null,
+        "name": "condition",
+        "nullable": false,
+        "type": "VARCHAR(4)"
+      },
+      {
+        "default": "'pending'::character varying",
+        "name": "status",
+        "nullable": false,
+        "type": "VARCHAR(8)"
+      },
+      {
+        "default": "now()",
+        "name": "created_at",
+        "nullable": false,
+        "type": "TIMESTAMP"
+      },
+      {
+        "default": null,
+        "name": "published_at",
+        "nullable": true,
+        "type": "TIMESTAMP"
+      },
+      {
+        "default": null,
+        "name": "rejection_reason",
+        "nullable": true,
+        "type": "VARCHAR(300)"
+      }
+    ],
+    "fk": [
+      {
+        "comment": null,
+        "constrained_columns": [
+          "category_id"
+        ],
+        "name": "listings_category_id_fkey",
+        "options": {
+          "ondelete": "RESTRICT"
+        },
+        "referred_columns": [
+          "id"
+        ],
+        "referred_schema": "public",
+        "referred_table": "categories"
+      },
+      {
+        "comment": null,
+        "constrained_columns": [
+          "owner_id"
+        ],
+        "name": "listings_owner_id_fkey",
+        "options": {
+          "ondelete": "CASCADE"
+        },
+        "referred_columns": [
+          "id"
+        ],
+        "referred_schema": "public",
+        "referred_table": "users"
+      }
+    ],
+    "indexes": [
+      {
+        "column_names": [
+          "published_at"
+        ],
+        "dialect_options": {
+          "postgresql_include": [],
+          "postgresql_where": "((status)::text = 'active'::text)"
+        },
+        "name": "ix_listings_active_publication",
+        "unique": false
+      },
+      {
+        "column_names": [
+          "owner_id",
+          "status"
+        ],
+        "dialect_options": {
+          "postgresql_include": []
+        },
+        "name": "ix_listings_owner_status",
+        "unique": false
+      }
+    ],
+    "pk": {
+      "comment": null,
+      "constrained_columns": [
+        "id"
+      ],
+      "dialect_options": {
+        "postgresql_include": []
+      },
+      "name": "listings_pkey"
+    },
+    "unique": []
+  },
+  "refresh_sessions": {
+    "checks": [
+      {
+        "comment": null,
+        "name": "ck_refresh_sessions_digest",
+        "sqltext": "length(btrim(token_digest::text)) > 0"
+      },
+      {
+        "comment": null,
+        "name": "ck_refresh_sessions_expiry",
+        "sqltext": "expires_at > created_at"
+      },
+      {
+        "comment": null,
+        "name": "ck_refresh_sessions_predecessor",
+        "sqltext": "predecessor_id IS NULL OR predecessor_id <> id"
+      },
+      {
+        "comment": null,
+        "name": "ck_refresh_sessions_successor",
+        "sqltext": "successor_id IS NULL OR successor_id <> id"
+      }
+    ],
+    "columns": [
+      {
+        "default": "gen_random_uuid()",
+        "name": "id",
+        "nullable": false,
+        "type": "UUID"
+      },
+      {
+        "default": null,
+        "name": "user_id",
+        "nullable": false,
+        "type": "BIGINT"
+      },
+      {
+        "default": null,
+        "name": "token_digest",
+        "nullable": false,
+        "type": "VARCHAR(128)"
+      },
+      {
+        "default": "gen_random_uuid()",
+        "name": "family_id",
+        "nullable": false,
+        "type": "UUID"
+      },
+      {
+        "default": "now()",
+        "name": "created_at",
+        "nullable": false,
+        "type": "TIMESTAMP"
+      },
+      {
+        "default": null,
+        "name": "expires_at",
+        "nullable": false,
+        "type": "TIMESTAMP"
+      },
+      {
+        "default": null,
+        "name": "revoked_at",
+        "nullable": true,
+        "type": "TIMESTAMP"
+      },
+      {
+        "default": null,
+        "name": "predecessor_id",
+        "nullable": true,
+        "type": "UUID"
+      },
+      {
+        "default": null,
+        "name": "successor_id",
+        "nullable": true,
+        "type": "UUID"
+      }
+    ],
+    "fk": [
+      {
+        "comment": null,
+        "constrained_columns": [
+          "predecessor_id"
+        ],
+        "name": "refresh_sessions_predecessor_id_fkey",
+        "options": {
+          "ondelete": "SET NULL"
+        },
+        "referred_columns": [
+          "id"
+        ],
+        "referred_schema": "public",
+        "referred_table": "refresh_sessions"
+      },
+      {
+        "comment": null,
+        "constrained_columns": [
+          "successor_id"
+        ],
+        "name": "refresh_sessions_successor_id_fkey",
+        "options": {
+          "ondelete": "SET NULL"
+        },
+        "referred_columns": [
+          "id"
+        ],
+        "referred_schema": "public",
+        "referred_table": "refresh_sessions"
+      },
+      {
+        "comment": null,
+        "constrained_columns": [
+          "user_id"
+        ],
+        "name": "refresh_sessions_user_id_fkey",
+        "options": {
+          "ondelete": "CASCADE"
+        },
+        "referred_columns": [
+          "id"
+        ],
+        "referred_schema": "public",
+        "referred_table": "users"
+      }
+    ],
+    "indexes": [
+      {
+        "column_names": [
+          "user_id",
+          "family_id"
+        ],
+        "dialect_options": {
+          "postgresql_include": []
+        },
+        "name": "ix_refresh_sessions_user_family",
+        "unique": false
+      },
+      {
+        "column_names": [
+          "predecessor_id"
+        ],
+        "dialect_options": {
+          "postgresql_include": []
+        },
+        "duplicates_constraint": "refresh_sessions_predecessor_id_key",
+        "name": "refresh_sessions_predecessor_id_key",
+        "unique": true
+      },
+      {
+        "column_names": [
+          "successor_id"
+        ],
+        "dialect_options": {
+          "postgresql_include": []
+        },
+        "duplicates_constraint": "refresh_sessions_successor_id_key",
+        "name": "refresh_sessions_successor_id_key",
+        "unique": true
+      },
+      {
+        "column_names": [
+          "token_digest"
+        ],
+        "dialect_options": {
+          "postgresql_include": []
+        },
+        "duplicates_constraint": "refresh_sessions_token_digest_key",
+        "name": "refresh_sessions_token_digest_key",
+        "unique": true
+      }
+    ],
+    "pk": {
+      "comment": null,
+      "constrained_columns": [
+        "id"
+      ],
+      "dialect_options": {
+        "postgresql_include": []
+      },
+      "name": "refresh_sessions_pkey"
+    },
+    "unique": [
+      {
+        "column_names": [
+          "predecessor_id"
+        ],
+        "comment": null,
+        "dialect_options": {
+          "postgresql_include": [],
+          "postgresql_nulls_not_distinct": false
+        },
+        "name": "refresh_sessions_predecessor_id_key"
+      },
+      {
+        "column_names": [
+          "successor_id"
+        ],
+        "comment": null,
+        "dialect_options": {
+          "postgresql_include": [],
+          "postgresql_nulls_not_distinct": false
+        },
+        "name": "refresh_sessions_successor_id_key"
+      },
+      {
+        "column_names": [
+          "token_digest"
+        ],
+        "comment": null,
+        "dialect_options": {
+          "postgresql_include": [],
+          "postgresql_nulls_not_distinct": false
+        },
+        "name": "refresh_sessions_token_digest_key"
+      }
+    ]
+  },
+  "users": {
+    "checks": [
+      {
+        "comment": null,
+        "name": "ck_users_email",
+        "sqltext": "email::text = lower(btrim(email::text)) AND email::text ~ '^[^[:space:]@]+@sdu[.]edu[.]kz$'::text"
+      },
+      {
+        "comment": null,
+        "name": "ck_users_password_hash",
+        "sqltext": "length(btrim(password_hash::text)) > 0"
+      },
+      {
+        "comment": null,
+        "name": "ck_users_role",
+        "sqltext": "role::text = ANY (ARRAY['student'::character varying, 'admin'::character varying]::text[])"
+      }
+    ],
+    "columns": [
+      {
+        "default": "nextval('\"public\".users_id_seq'::regclass)",
+        "name": "id",
+        "nullable": false,
+        "type": "BIGINT"
+      },
+      {
+        "default": null,
+        "name": "email",
+        "nullable": false,
+        "type": "VARCHAR(254)"
+      },
+      {
+        "default": null,
+        "name": "password_hash",
+        "nullable": false,
+        "type": "VARCHAR(512)"
+      },
+      {
+        "default": "false",
+        "name": "verified",
+        "nullable": false,
+        "type": "BOOLEAN"
+      },
+      {
+        "default": "false",
+        "name": "suspended",
+        "nullable": false,
+        "type": "BOOLEAN"
+      },
+      {
+        "default": "'student'::character varying",
+        "name": "role",
+        "nullable": false,
+        "type": "VARCHAR(16)"
+      },
+      {
+        "default": "now()",
+        "name": "created_at",
+        "nullable": false,
+        "type": "TIMESTAMP"
+      },
+      {
+        "default": null,
+        "name": "name",
+        "nullable": true,
+        "type": "VARCHAR(100)"
+      },
+      {
+        "default": null,
+        "name": "avatar_path",
+        "nullable": true,
+        "type": "VARCHAR(1024)"
+      },
+      {
+        "default": null,
+        "name": "phone",
+        "nullable": true,
+        "type": "VARCHAR(30)"
+      },
+      {
+        "default": null,
+        "name": "telegram_username",
+        "nullable": true,
+        "type": "VARCHAR(32)"
+      },
+      {
+        "default": null,
+        "name": "external_contact_url",
+        "nullable": true,
+        "type": "VARCHAR(2048)"
+      }
+    ],
+    "fk": [],
+    "indexes": [
+      {
+        "column_names": [
+          "email"
+        ],
+        "dialect_options": {
+          "postgresql_include": []
+        },
+        "duplicates_constraint": "users_email_key",
+        "name": "users_email_key",
+        "unique": true
+      }
+    ],
+    "pk": {
+      "comment": null,
+      "constrained_columns": [
+        "id"
+      ],
+      "dialect_options": {
+        "postgresql_include": []
+      },
+      "name": "users_pkey"
+    },
+    "unique": [
+      {
+        "column_names": [
+          "email"
+        ],
+        "comment": null,
+        "dialect_options": {
+          "postgresql_include": [],
+          "postgresql_nulls_not_distinct": false
+        },
+        "name": "users_email_key"
+      }
+    ]
+  }
+}

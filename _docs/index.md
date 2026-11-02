@@ -6,6 +6,7 @@ Current as of **2026-10-20**, after canonical contract, memory and durable SQLit
 | --- | --- |
 | Final candidate verification | [Compliance matrix](compliance.md), [measured292/157/four-mode results](evidence/final-compliance/verification.md); exact-commit independent QA/publication/closure stays in GitHub53. |
 | Start here / current requirements | [Repository README](../README.md), [plan](plan.md), [requirements/task/evidence map](requirements-map.md). Current local default is durable SQLite; PG/memory are explicit alternatives. |
+| Explicit offline data migration | [SQLite→empty PostgreSQL migration](storage-migration.md): backup-first copy, private images and read-only crash reconciliation; no automatic private-data cutover. |
 | Current install/start/migrate/stop/check | [Local setup](local-setup.md), [SQLite default, backup/reset and restart smoke](sqlite-setup.md), [real volatile memory](memory-backend.md). PG alternative uses its original migration stream. |
 | Current API/security and transport | [API](api.md), [canonical inventory](canonical-api-contract.md), [generated OpenAPI](../openapi.yml), [security](security.md), [real/mock integration guide](integration-contracts.md). Their historical verification subsections are labelled snapshots. |
 | Current visuals / source attribution | [Design system](design-system.md), [Lovable source provenance](lovable-integration.md), [original mock photos/intentional price overrides](mock-original-photos.md). Source ownership/provenance is retained, no automatic sync or invented license. |

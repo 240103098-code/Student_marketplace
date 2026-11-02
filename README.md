@@ -6,6 +6,8 @@ Implemented: JWT access and rotating refresh sessions, password recovery/change,
 
 ## Run and verify
 
+[Offline SQLite to PostgreSQL migration](_docs/storage-migration.md) provides read-only planning, backup-first copying and explicit crash reconciliation for an independently prepared empty target.
+
 [Single-image container packaging](_docs/container.md) documents the real React/FastAPI `/api` image, actual hosted Docker PASS evidence and the separate independent-QA/publication gate.
 
 [Final compliance matrix](_docs/compliance.md) records all user checklist items, actual mock/memory/SQLite/PostgreSQL browser runs and remaining independent publication/closure gates.
