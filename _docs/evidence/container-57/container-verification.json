@@ -1,0 +1,26 @@
+{
+  "result": "PASS",
+  "commit": "626186f6268036ab57575467ab0ffbf61fcf4e7d",
+  "checks": [
+    "actual multi-stage image build",
+    "non-root identity and mounted SQLite migration/start",
+    "real SPA/assets/API prefix/private denials and API-not-HTML 404",
+    "runtime file/layer and real-bundle secret/mock exclusion",
+    "actual packaged browser sign-in, navigation and reload",
+    "graceful signal exit zero; mounted account/session/private image survive restart"
+  ],
+  "docker": "28.0.4",
+  "image_id": "sha256:9fca3621b534a038a72d37f3101a798151059de9d51ee88dd71307d95b2d781a",
+  "runtime": {
+    "python": "3.13.15",
+    "sqlite": "3.40.1",
+    "uvicorn": "0.54.0"
+  },
+  "browser": {
+    "result": "PASS",
+    "version": "156.0.8078.47",
+    "real_api_responses": 14
+  },
+  "owned_container_absent": true,
+  "owned_volume_absent": true
+}

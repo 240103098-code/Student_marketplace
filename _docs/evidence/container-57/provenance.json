@@ -1,0 +1,16 @@
+{
+  "tested_commit": "626186f6268036ab57575467ab0ffbf61fcf4e7d",
+  "workflow_run": "https://github.com/240103098-code/Student_marketplace/actions/runs/41454848518",
+  "artifact_id": 13147060142,
+  "artifact_sha256": "25439c11832261cbde7b9d543a68d2bb1979588cf2a304b67436e6d5fdea71b4",
+  "tested_file_sha256": {
+    "Dockerfile": "1f65b708da95e49d56e6523c3184bac5a6ee77a624c302c499891e23b1c62553",
+    ".dockerignore": "11cd321470411bb0e55d6161ee7b5bcd212b4dc4d94cabb79d9cc3d89e022b32",
+    ".github/workflows/container-verification.yml": "8bb329d64f326d85f26236ee15d779da18b5a5678bcc06e816e252395d21a7aa",
+    "backend/packaged.py": "ad26e2844d4352bba342900f1db142d8a1f93ac63058049d2e34809947407ebf",
+    "frontend/src/api.js": "2d171e1e03303e7cfd178257103de1783f370f1dc3ba0f9d4d2d7537ba70fab2",
+    "tools/container_smoke.py": "bb758353327ce4a1afb61cbf433c1d994104a04b8bed11b64ada1fa5e33e9152",
+    "tools/container_browser.cjs": "0a3f076fad3da015b10d7525eecab939bb36b1bfbc10e75e5db4975cd6dab63f"
+  },
+  "scope": "Actual hosted Docker run PASS; independent QA/final publication gate remains separate."
+}
