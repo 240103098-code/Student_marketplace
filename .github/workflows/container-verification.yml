@@ -1,0 +1,31 @@
+name: Issue 57 container verification
+on:
+  push:
+    branches: [issue-57-container]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Install isolated browser driver
+        run: npm install --prefix "$RUNNER_TEMP/container-browser" --ignore-scripts --no-audit --no-fund playwright@1.62.1
+      - name: Build and verify actual image
+        env:
+          CONTAINER_PLAYWRIGHT_MODULE: ${{ runner.temp }}/container-browser/node_modules/playwright
+        run: python3 tools/container_smoke.py
+      - name: Upload secret-free verification record
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: container-verification-${{ github.sha }}
+          path: |
+            container-verification.json
+            container-desktop.png
+            container-mobile.png
+          retention-days: 7

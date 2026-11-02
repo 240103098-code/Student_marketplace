@@ -6,6 +6,8 @@ Implemented: JWT access and rotating refresh sessions, password recovery/change,
 
 ## Run and verify
 
+[Single-image container packaging](_docs/container.md) documents the real React/FastAPI `/api` image, isolated verification branch and pending actual Docker/independent-QA gate.
+
 [Final compliance matrix](_docs/compliance.md) records all user checklist items, actual mock/memory/SQLite/PostgreSQL browser runs and remaining independent publication/closure gates.
 
 Read the [fresh-checkout setup guide](_docs/local-setup.md) for pinned installation, configuration, migrations, startup and full checks. The [SQLite setup/restart smoke](_docs/sqlite-setup.md) needs no PostgreSQL server. The [one-command real-stack demo](_docs/demo.md) creates its own disposable PostgreSQL cluster and uses real React/FastAPI plus controlled loopback SMTP; it never resets a supplied database.
