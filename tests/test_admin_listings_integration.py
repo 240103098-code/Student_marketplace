@@ -10,6 +10,7 @@ from backend.admin import promote_existing_admin
 from backend.admin_listings import remove_admin_listing
 from backend.models import Listing,ListingPhoto,User
 from backend.sessions import revoke_user_sessions
+from tests.removal_assertions import assert_removed_response
 
 class AdminListingsPostgreSQLTest(unittest.TestCase):
  setUpClass=classmethod(fixture.SoldPostgreSQLTest.setUpClass.__func__)
@@ -47,7 +48,7 @@ class AdminListingsPostgreSQLTest(unittest.TestCase):
   for state in ['pending','active','sold','rejected','removed']:
    self.state(state);before=self.snapshot();published=self.detail().json()['published_at'];reason=self.detail().json()['rejection_reason']
    for _ in range(2):
-    result=self.remove();self.assertEqual(result.status_code,200);self.assertEqual(result.json(),{'id':self.item.id,'status':'removed','published_at':published})
+    result=self.remove();self.assertEqual(result.status_code,200);assert_removed_response(self,result.json(),self.item.id,published)
    self.assertEqual(self.snapshot(),before)
    with self.database.session() as s:self.assertEqual(s.get(Listing,self.item.id).rejection_reason,reason)
    self.assertEqual(self.client.get('/listings',headers=self.buyer_headers).json()['total'],0);self.assertEqual(self.client.get(f'/listings/{self.item.id}',headers=self.buyer_headers).status_code,404);self.assertEqual(self.client.get(f'/listings/{self.item.id}/photos/{self.photo.id}',headers=self.headers).status_code,404);self.assertEqual(self.detail().json()['status'],'removed');self.assertEqual(next(r for r in self.client.get('/listings/mine',headers=self.headers).json()['items'] if r['id']==self.item.id)['status'],'removed')
