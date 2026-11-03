@@ -31,6 +31,16 @@ def compose(env, private, project, *args, **kwargs):
     if not re.fullmatch(r'marketplace60-[a-f0-9]{20}', project): raise Failure('project-ownership')
     return run(['docker','compose','--env-file',os.devnull,'--project-name',project,'-f',str(REPO/'compose.yaml'),'-f',str(private/'override.yaml'),*args],env,**kwargs)
 
+def borrowed_image(env):
+    """A CI-owned image may be borrowed only by exact tag, ID and ownership label."""
+    keys=('MARKETPLACE_TEST_IMAGE','MARKETPLACE_TEST_IMAGE_ID','MARKETPLACE_TEST_IMAGE_OWNER')
+    if not any(env.get(key) for key in keys): return None
+    tag, identity, owner=(env.get(key,'') for key in keys)
+    if not re.fullmatch(r'marketplace92-[a-f0-9]{20}:local',tag) or not re.fullmatch(r'sha256:[a-f0-9]{64}',identity) or owner!=tag.split(':')[0]: raise Failure('borrowed-image-ownership')
+    actual=run(['docker','image','inspect',tag,'--format','{{.Id}}|{{index .Config.Labels "marketplace.ci.owner"}}'],env).stdout.strip()
+    if actual!=identity+'|'+owner: raise Failure('borrowed-image-identity')
+    return tag
+
 def main():
     parser=argparse.ArgumentParser(); parser.add_argument('--intentional-failure',action='store_true'); parser.add_argument('action',nargs='?'); args=parser.parse_args()
     if args.action == 'admin':
@@ -43,13 +53,16 @@ def main():
     SAFE.mkdir(exist_ok=True)
     # Only fixed allowlisted generated files; refuse stale/symlink directories.
     if SAFE.is_symlink() or any(SAFE.iterdir()): raise Failure('safe-directory-must-be-empty')
-    project='marketplace60-'+uuid.uuid4().hex[:20]
-    private=Path(tempfile.mkdtemp(prefix=project+'-')); private.chmod(0o700)
+    owner=os.environ.get('MARKETPLACE_TEST_IMAGE_OWNER','')
+    project='marketplace60-'+(owner.split('-')[1] if re.fullmatch(r'marketplace92-[a-f0-9]{20}',owner) else uuid.uuid4().hex[:20])
+    private=Path(tempfile.mkdtemp(prefix=project+'-',dir=os.environ.get('MARKETPLACE_TEST_PRIVATE_ROOT'))); private.chmod(0o700)
     record={'result':'FAIL','mode':'actual-compose-playwright','intentional_failure':args.intentional_failure,'stages':[],'cleanup':False}
     env={key:os.environ[key] for key in ('PATH','HOME','SYSTEMROOT','DOCKER_HOST','DOCKER_CONTEXT','DOCKER_CONFIG','XDG_RUNTIME_DIR') if key in os.environ}
     with socket.socket() as sock: sock.bind(('127.0.0.1',0)); port=sock.getsockname()[1]
     origin='http://127.0.0.1:'+str(port)
     env.update(POSTGRES_DB='marketplace',POSTGRES_USER='marketplace',POSTGRES_PASSWORD=secrets.token_hex(32),JWT_SECRET_KEY=secrets.token_hex(48),FRONTEND_ORIGINS=json.dumps([origin]),APP_PORT=str(port),APP_ENV='test',REFRESH_COOKIE_SECURE='false',MARKETPLACE_IMAGE=project+':local',SMTP_HOST='smtp',SMTP_PORT='2525',SMTP_USERNAME='fixture',SMTP_PASSWORD=secrets.token_hex(32),SMTP_FROM_EMAIL='fixture@sdu.edu.kz',SMTP_SECURITY='starttls')
+    for key in ('MARKETPLACE_TEST_IMAGE','MARKETPLACE_TEST_IMAGE_ID','MARKETPLACE_TEST_IMAGE_OWNER'):
+        if key in os.environ:env[key]=os.environ[key]
     env['DATABASE_URL']='postgresql+psycopg://marketplace:'+env['POSTGRES_PASSWORD']+'@db:5432/marketplace'
     (private/'mail').mkdir(); (private/'mail').chmod(0o700)
     (private/'smtp.json').write_text(json.dumps({'username':env['SMTP_USERNAME'],'password':env['SMTP_PASSWORD']}))
@@ -69,9 +82,13 @@ def main():
         run(['openssl','x509','-req','-in',str(private/'server.csr'),'-CA',str(private/'ca.pem'),'-CAkey',str(private/'ca.key'),'-CAcreateserial','-days','1','-out',str(private/'server.pem'),'-extfile',str(REPO/'e2e/server.ext')],env)
         # App receives only the CA certificate; SMTP keys/inbox are never mounted in it.
         (private/'ca.pem').chmod(0o644)
+        shared=borrowed_image(env)
+        if shared: env['MARKETPLACE_IMAGE']=shared
         override={'services':{'smtp':{'image':env['MARKETPLACE_IMAGE'],'pull_policy':'never','user':'0:0','command':['python','/fixture/smtp_sink.py'],'volumes':[str(private)+':/fixture',str(REPO/'e2e/smtp_sink.py')+':/fixture/smtp_sink.py:ro'],'restart':'no','networks':['mail']},'app':{'environment':['SSL_CERT_FILE=/fixture-ca.pem'],'volumes':[str(private/'ca.pem')+':/fixture-ca.pem:ro'],'networks':['default','mail'],'depends_on':{'smtp':{'condition':'service_started'}}}},'networks':{'mail':{'internal':True}}}
         (private/'override.yaml').write_text(json.dumps(override))
-        compose(env,private,project,'config','--quiet'); compose(env,private,project,'build','app',timeout=600)
+        compose(env,private,project,'config','--quiet')
+        if not shared:compose(env,private,project,'build','app',timeout=600)
+        record['image_borrowed']=bool(shared)
         record['image_id']=run(['docker','image','inspect',env['MARKETPLACE_IMAGE'],'--format','{{.Id}}'],env).stdout.strip()
         compose(env,private,project,'up','--detach','--wait','--wait-timeout','150',timeout=180)
         record['stages'].append('owned-stack-started')
@@ -109,9 +126,14 @@ def main():
             absent=[]
             for command in (['docker','ps','-aq'],['docker','volume','ls','-q'],['docker','network','ls','-q']):
                 absent.append(not run(command+['--filter','label=com.docker.compose.project='+project],env).stdout.strip())
-            run(['docker','image','rm',env['MARKETPLACE_IMAGE']],env,okay=True)
-            record['owned_image_absent']=run(['docker','image','inspect',env['MARKETPLACE_IMAGE']],env,okay=True).returncode!=0
-            record['cleanup']=all(absent) and record['owned_image_absent']
+            if env['MARKETPLACE_IMAGE']==project+':local':
+                run(['docker','image','rm',env['MARKETPLACE_IMAGE']],env,okay=True)
+                record['owned_image_absent']=run(['docker','image','inspect',env['MARKETPLACE_IMAGE']],env,okay=True).returncode!=0
+                image_cleanup=record['owned_image_absent']
+            else:
+                record['borrowed_image_preserved']=borrowed_image(env)==env['MARKETPLACE_IMAGE']
+                image_cleanup=record['borrowed_image_preserved']
+            record['cleanup']=all(absent) and image_cleanup
         except Exception: record['cleanup']=False
         try:
             shutil.rmtree(private)

@@ -1,0 +1,54 @@
+name: Implemented tests CI
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  implemented:
+    name: CI / implemented checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: 3.13.15
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.19.0
+      - name: Install exact toolchain and locked isolated dependencies
+        run: |
+          npm install --global npm@12.2.0 --ignore-scripts --no-audit --no-fund
+          python -m venv .venv
+          .venv/bin/python -m pip install -r requirements-dev.lock
+          npm ci --prefix e2e --ignore-scripts --no-audit --no-fund
+          node e2e/node_modules/@playwright/test/cli.js install --with-deps chromium
+      - name: Verify every implemented suite against real disposable services
+        run: .venv/bin/python -m tools.ci_checks
+      - name: Upload allowlisted safe diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: implemented-ci-${{ github.sha }}-${{ github.event_name }}
+          retention-days: 7
+          path: |
+            ci-safe/summary.json
+            ci-safe/compose.json
+            ci-safe/e2e-run.json
+            ci-safe/e2e-tests.json
+            ci-safe/e2e-student-stages.json
+            ci-safe/e2e-admin-stages.json
+            ci-safe/e2e-student-masked.png
+            ci-safe/e2e-admin-masked.png
+  gate:
+    name: CI / required gate
+    if: always()
+    needs: [implemented]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Require every implemented verification job
+        env:
+          REQUIRED_RESULT: ${{ needs.implemented.result }}
+        run: test "$REQUIRED_RESULT" = success

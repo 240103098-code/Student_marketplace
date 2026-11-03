@@ -1,0 +1,30 @@
+# CI for the currently implemented tests (#92)
+
+`.github/workflows/implemented-ci.yml` runs on **every push and pull request**, without branch/path filters. It is a partial infrastructure child of #86. Future feature specs #61–85, full #86 completion and main-only CD #87 remain separate. No deployment or registry publication exists in this workflow.
+
+Stable check names are **CI / implemented checks** and **CI / required gate**. The final gate runs even when its dependency fails and succeeds only for the literal dependency result `success`; failed, cancelled and skipped verification all fail the gate. There is no `continue-on-error`, permissive aggregation, `pull_request_target` or secret-bearing configuration. Jobs use standard public `ubuntu-24.04`, read-only contents permission, bounded timeouts and checkout without persisted credentials. All actions are pinned to exact commit SHAs.
+
+For reproduction, use Python **3.13.15**, Node **24.19.0**, npm **12.2.0**, Docker Engine/Compose v2 and OpenSSL on Linux. The workflow creates `.venv`, installs `requirements-dev.lock`, installs the isolated locked e2e package and matching Playwright Chromium revision. On a clean checkout:
+
+```sh
+npm install --global npm@12.2.0 --ignore-scripts --no-audit --no-fund
+python -m venv .venv
+.venv/bin/python -m pip install -r requirements-dev.lock
+npm ci --prefix e2e --ignore-scripts --no-audit --no-fund
+node e2e/node_modules/@playwright/test/cli.js install --with-deps chromium
+.venv/bin/python -m tools.ci_checks
+```
+
+The controller refuses existing generated output and unexpected toolchain versions. It creates only a random named PostgreSQL container/volume with an exact ownership label, random credentials and an automatically assigned loopback port. The database is fresh, named `student_marketplace_test_<random>` and passed with its exact `TEST_DATABASE_CONFIRM` guard. No user's `.env`, database, SMTP account, checkout or persistent setup is read. The complete `python -m unittest discover -s tests -v` runs against that real database; dynamic counts must show success, a nonzero count and zero skips. The canonical `python -m tools.export_openapi --check` and exact 40-operation map validator run too. Counts are measured from the actual run, never copied from historical documentation.
+
+Frontend verification installs the lock with `npm ci`, runs every Vitest test with two workers and a private JSON reporter, requires all discovered tests passed with zero pending/todo tests, runs typecheck/build and executes `node tools/check_frontend_build.mjs`. That last contract performs the real production build, checks mock-data exclusion and requires both mock build modes to fail. Native test/build output is captured privately; public evidence contains safe stage/count records instead of raw assertion output.
+
+One candidate Dockerfile build is tagged with the generated CI owner and labeled accordingly. Its exact image ID, tag and ownership label are validated by both borrowers: the existing real Compose readiness/migration/persistence controller, then the approved #60 real authenticated-STARTTLS Playwright controller. They do not rebuild or delete that shared image. Their separate project names derive from the CI owner so the parent can attempt exact label-validated cleanup even if a child times out. Child temporary fixture directories live under the parent's private root. The parent removes the shared image only after both checks, verifies absence and records the same image ID across the chain. Production runtime behavior and the default standalone controllers remain unchanged.
+
+The Compose verification retains missing-secret refusal, readiness/migration/database-outage recovery, persisted real rows/private images/auth lineage across replacement/down-up, actual static/browser/API traffic and its deliberate failed-migration startup gate. The Playwright smoke retains two fresh UI signup/mail/verify/login journeys, fresh anonymous denial, explicit admin CLI provisioning and server-confirmed admin access. This smoke does not implement complete future feature assertions. Its expected-failure wrapper is not the deliberately red CI-gate proof.
+
+Safe diagnostics are enumerated individually in the workflow: `summary.json`, the existing sanitized Compose JSON, #60 safe run/test/stage JSON and deliberately masked failure PNGs. No raw service/test/build logs, traces, HAR, video, storage state, error-context, environments/configs, private mail/certificates or expanded credential-bearing commands are uploaded. Artifacts expire after seven days. Cleanup runs in `finally`, validates exact labels before removing resources, attempts child project/container/network/volume cleanup, removes only generated owned PostgreSQL and the shared image, and removes only known generated outputs/private directories. A 40-minute verification job and two-minute gate provide an outer bound; a terminated ephemeral runner is the final boundary for forced process/host interruption.
+
+A deliberately failing real unittest must be demonstrated on a separate reviewed probe branch with the same workflow. That branch must produce a failed implemented check and failed required gate. Do not merge the probe test, use `continue-on-error`, or call #60's successful expected-failure wrapper a red-gate proof. Actual candidate/failure run links, hashes, dynamic counts, versions, one-image identity and cleanup evidence will be recorded after remote verification; no remote success is claimed at initial implementation time.
+
+Branch protection is **unapplied**. A repository administrator can protect main and require **CI / required gate** (and optionally its implemented dependency), require pull requests and select the desired review policy. This package documents those settings but does not claim configured enforcement. CD #87 cannot release until its own separately approved green-main contract exists.

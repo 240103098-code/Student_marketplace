@@ -20,3 +20,5 @@ Current as of **2026-10-20**, after canonical contract, memory and durable SQLit
 Current baseline: 292 backend tests (full verification requires guarded real PostgreSQL **and** the memory/file suites),157 frontend tests, typecheck, real build/mock isolation and actual-app OpenAPI drift checks. See [iteration evidence](iterations.md) for the independent full-run result and [setup](local-setup.md) for reproduction. The [final measured matrix](compliance.md) does not prematurely claim independent publication/closure of [#53](https://github.com/240103098-code/Student_marketplace/issues/53), live inbox delivery or production deployment is complete.
 
 - [Isolated Compose Playwright harness (#60)](e2e.md): pinned installation, trusted SMTP/admin fixtures, ownership, serial mode and safe evidence.
+
+- [CI for all currently implemented tests (#92)](ci.md): strict full-suite gate, one-image Compose chain and safe diagnostics; partial child of #86.

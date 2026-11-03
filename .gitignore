@@ -20,3 +20,7 @@ e2e/node_modules/
 e2e-safe/
 e2e/test-results/
 e2e/playwright-report/
+ci-safe/
+compose-verification.json
+compose-desktop.png
+compose-mobile.png

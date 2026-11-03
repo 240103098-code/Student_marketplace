@@ -3,6 +3,7 @@ import base64
 from http.cookiejar import CookieJar
 import json
 import os
+import re
 from pathlib import Path
 import secrets
 import socket
@@ -14,6 +15,7 @@ import urllib.request
 import uuid
 
 from tools.container_smoke import avatar_payload
+from tools.e2e_stack import borrowed_image
 
 
 def free_port():
@@ -22,7 +24,8 @@ def free_port():
 
 
 def main():
-    suffix=uuid.uuid4().hex[:12]
+    owner=os.environ.get('MARKETPLACE_TEST_IMAGE_OWNER','')
+    suffix=owner.split('-')[1][:12] if re.fullmatch(r'marketplace92-[a-f0-9]{20}',owner) else uuid.uuid4().hex[:12]
     project='marketplace59-'+suffix;failure_project=project+'-failure';image=project+':local'
     record={'result':'FAIL','mode':'real-docker-compose-postgresql','commit':os.environ.get('GITHUB_SHA','local'),'checks':[]}
     port=free_port();origin=f'http://127.0.0.1:{port}'
@@ -64,7 +67,11 @@ def main():
             missing=dict(environment);missing.pop(key)
             assert compose('config','--quiet',env=missing,allow_failure=True).returncode!=0
         checked('missing required database/JWT secrets refuse before resource creation')
-        compose('build','app')
+        shared=borrowed_image(environment)
+        if shared:
+            image=shared;environment['MARKETPLACE_IMAGE']=shared
+        else:compose('build','app')
+        record['image_borrowed']=bool(shared)
         assert set(compose('config','--services').splitlines())=={'app','db','migrate','uploads-init'}
         record['services']=['app','db','migrate','uploads-init']
         record['application_image_id']=command('docker','image','inspect',image,'--format','{{.Id}}')
@@ -132,7 +139,7 @@ def main():
         record['browser']=json.loads(command('node','tools/compose_browser.cjs',input=json.dumps({'origin':origin,'password':password,'listing':listing})))
         checked('actual connected React browser sign-in, reload and private listing with zero external requests')
         failure_env=dict(environment,APP_PORT=str(free_port()))
-        with tempfile.TemporaryDirectory(prefix='owned-compose59-') as temp:
+        with tempfile.TemporaryDirectory(prefix='owned-compose59-',dir=os.environ.get('MARKETPLACE_TEST_PRIVATE_ROOT')) as temp:
             override=Path(temp)/'migration-failure.yaml'
             override.write_text('services:\n  migrate:\n    command: [python, -c, "raise SystemExit(19)"]\n')
             assert compose('up','--detach',selected=failure_project,override=override,env=failure_env,allow_failure=True).returncode!=0
@@ -144,15 +151,25 @@ def main():
     finally:
         cleanup=[]
         for selected in (project,failure_project):
-            compose('down','--volumes','--remove-orphans',selected=selected,allow_failure=True)
+            for kind,args in [('container',['docker','ps','-aq']),('volume',['docker','volume','ls','-q']),('network',['docker','network','ls','-q'])]:
+                for identity in command(*args,'--filter','label=com.docker.compose.project='+selected).split():
+                    template='{{index .Config.Labels "com.docker.compose.project"}}' if kind=='container' else '{{index .Labels "com.docker.compose.project"}}'
+                    prefix=['docker','inspect'] if kind=='container' else ['docker',kind,'inspect']
+                    assert command(*prefix,identity,'--format',template)==selected
+            compose('down','--volumes','--remove-orphans','--timeout','15',selected=selected,allow_failure=True)
             containers=command('docker','ps','--all','--quiet','--filter','label=com.docker.compose.project='+selected)
             volumes=command('docker','volume','ls','--quiet','--filter','label=com.docker.compose.project='+selected)
             networks=command('docker','network','ls','--quiet','--filter','label=com.docker.compose.project='+selected)
             cleanup.append(not containers and not volumes and not networks)
-        command('docker','image','rm',image,allow_failure=True)
-        record['owned_image_absent']=command('docker','image','inspect',image,allow_failure=True).returncode!=0
+        if image==project+':local':
+            command('docker','image','rm',image,allow_failure=True)
+            record['owned_image_absent']=command('docker','image','inspect',image,allow_failure=True).returncode!=0
+            image_cleanup=record['owned_image_absent']
+        else:
+            record['borrowed_image_preserved']=borrowed_image(environment)==image
+            image_cleanup=record['borrowed_image_preserved']
         record['owned_containers_volumes_and_networks_absent']=all(cleanup)
-        complete=all(cleanup) and record['owned_image_absent']
+        complete=all(cleanup) and image_cleanup
         if not complete:record['result']='FAIL'
         Path('compose-verification.json').write_text(json.dumps(record,indent=2)+'\n')
         if not complete:raise RuntimeError('Owned Compose cleanup incomplete')
