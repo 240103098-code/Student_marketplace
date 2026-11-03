@@ -1,0 +1,1 @@
+{"stages":["ui-register","private-smtp","ui-verify","operator-admin","ui-login","admin-role-access"],"completed":["ui-register","private-smtp","ui-verify","operator-admin","ui-login","admin-role-access"],"smtp_tls_authenticated_registration":true,"responses":13,"statuses":{"200":10,"201":1,"401":2},"external":0,"browser":"151.0.7922.34"}

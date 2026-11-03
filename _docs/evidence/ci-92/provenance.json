@@ -1,0 +1,157 @@
+{
+  "tested_head": "4a4e99d539427b89a94855dee2038826139c4874",
+  "runner": "GitHub-hosted ubuntu-24.04",
+  "source_input_count": 217,
+  "push_pr_source_inputs_identical": true,
+  "source_inputs_match_tested_head_git_objects": true,
+  "runtime_changes_after_test": false,
+  "runs": [
+    {
+      "kind": "positive-push",
+      "run_id": 41583537008,
+      "url": "https://github.com/240103098-code/Student_marketplace/actions/runs/41583537008",
+      "head_sha": "4a4e99d539427b89a94855dee2038826139c4874",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-11-03T05:22:26Z",
+      "updated_at": "2026-11-03T05:26:58Z",
+      "artifact_id": 13207161308,
+      "artifact_sha256": "da591eb9420fdae3eabece2ff242b07d1ef94131b555d837d77abe2ef4942e45",
+      "jobs": [
+        {
+          "name": "CI / implemented checks",
+          "conclusion": "success"
+        },
+        {
+          "name": "CI / required gate",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "kind": "positive-pr",
+      "run_id": 41583543790,
+      "url": "https://github.com/240103098-code/Student_marketplace/actions/runs/41583543790",
+      "head_sha": "4a4e99d539427b89a94855dee2038826139c4874",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-11-03T05:22:30Z",
+      "updated_at": "2026-11-03T05:28:26Z",
+      "artifact_id": 13207405760,
+      "artifact_sha256": "32b3bd99f24e986f4c7881818b96bf83d0c94c356b3d577cd8dc42e76274572e",
+      "jobs": [
+        {
+          "name": "CI / implemented checks",
+          "conclusion": "success"
+        },
+        {
+          "name": "CI / required gate",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "kind": "initial-failure",
+      "run_id": 41582289684,
+      "url": "https://github.com/240103098-code/Student_marketplace/actions/runs/41582289684",
+      "head_sha": "29d10b23501ff96ecb8c8dd6661dfb3e1189a79e",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-11-03T05:10:03Z",
+      "updated_at": "2026-11-03T05:13:06Z",
+      "artifact_id": 13206108269,
+      "artifact_sha256": "e8ebc1f0ad6c336616efcd5aa23b66b97bdc409fbd8aa193b919c8a14046c309",
+      "jobs": [
+        {
+          "name": "CI / implemented checks",
+          "conclusion": "failure"
+        },
+        {
+          "name": "CI / required gate",
+          "conclusion": "failure"
+        }
+      ]
+    },
+    {
+      "kind": "initial-probe",
+      "run_id": 41582288777,
+      "url": "https://github.com/240103098-code/Student_marketplace/actions/runs/41582288777",
+      "head_sha": "5e6c4b28c23cafcec41e211c47020ff70c57fa27",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-11-03T05:10:02Z",
+      "updated_at": "2026-11-03T05:13:09Z",
+      "artifact_id": 13205794234,
+      "artifact_sha256": "6e5562dbcfab803f7ff2beb0c728f24e39b6069f2a91ecf5d3d174fb89cbf0d0",
+      "jobs": [
+        {
+          "name": "CI / implemented checks",
+          "conclusion": "failure"
+        },
+        {
+          "name": "CI / required gate",
+          "conclusion": "failure"
+        }
+      ]
+    },
+    {
+      "kind": "clean-probe",
+      "run_id": 41584973320,
+      "url": "https://github.com/240103098-code/Student_marketplace/actions/runs/41584973320",
+      "head_sha": "1de92d93257aa22d4c37706bcd07d354c18a6a8a",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-11-03T05:37:17Z",
+      "updated_at": "2026-11-03T05:39:51Z",
+      "artifact_id": 13207477347,
+      "artifact_sha256": "8e88ab856aaa01df5eef1a5c9ce340066c2eb00151e543c9cb8a36af1ec3d9ab",
+      "jobs": [
+        {
+          "name": "CI / implemented checks",
+          "conclusion": "failure"
+        },
+        {
+          "name": "CI / required gate",
+          "conclusion": "failure"
+        }
+      ]
+    }
+  ],
+  "clean_probe_source_inputs_match_probe_commit": true,
+  "branch_protection": {
+    "main_protected": false,
+    "applied_by_this_package": false,
+    "readback_date": "2026-11-03"
+  },
+  "focused_regressions": {
+    "independent_ci_smtp_compose_tests": 12,
+    "independent_ci_smtp_compose_seconds": 9.12,
+    "independent_semantic_tests": 5,
+    "independent_semantic_seconds": 0.001,
+    "result": "PASS",
+    "skipped": 0,
+    "native_utc_before_after": "native-utc-regression-94.json"
+  },
+  "artifact_member_sha256": {
+    "positive-push/compose.json": "3ffd3ae8b04a610b43c90b255d3758fccd5dc23f27db22225e2359ef47c3cb37",
+    "positive-push/e2e-admin-stages.json": "c3427c2eb06c58d23a78284fdbbd610e0c1a763bb10dd3f169e9ff43a358da95",
+    "positive-push/e2e-run.json": "49437464d691b53186909c03c2cf278bbd14bfc578fc9f0ae0fa2ffca4e94d90",
+    "positive-push/e2e-student-stages.json": "a8b36eba92699f256cbfbce0d663a9bea7e046b258f5768e28518943bbc977f5",
+    "positive-push/e2e-tests.json": "ef7da6dbef878cb67b435ba5e1b041d3ee32d83e52763a783069a7125dff6eda",
+    "positive-push/summary.json": "00225c7a5ee3c3461d57c8d5c78ff77d21e5c9a727c9ddb90cfc9d0879e874a4",
+    "positive-pr/compose.json": "ec609456ff49fbc6dcb1e08d4d6cf00fc9542411288611cf1ddb6a85adbb0f21",
+    "positive-pr/e2e-admin-stages.json": "c3427c2eb06c58d23a78284fdbbd610e0c1a763bb10dd3f169e9ff43a358da95",
+    "positive-pr/e2e-run.json": "a02f8b711b8617e9ac263e512c89167ff3cfc2c317c2591ebcc4badbc2824a17",
+    "positive-pr/e2e-student-stages.json": "8ca81be5ea81d5c013feefbc7b57e6eb8abf6ce83feebdcfc3d3f2853bd16186",
+    "positive-pr/e2e-tests.json": "ef7da6dbef878cb67b435ba5e1b041d3ee32d83e52763a783069a7125dff6eda",
+    "positive-pr/summary.json": "2be701f7c1e4553bd058ff147d862db2172d743226df3ae54888ccf3b3d66acf",
+    "initial-failure/summary.json": "a84b46fcc19856676eecfb5f17ddb02274b137e149c3e4177c10d9a92e53511e",
+    "initial-probe/summary.json": "24c246a4d218240fdc451b219aa59ac099c67505b0dc036f321c8aaa4d54ef96",
+    "clean-probe/summary.json": "3dcb9c5c1360fbed42767597a545c653f3854653913f456b17fdcbb7562a7620"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "issue": 94,
+  "platform": "Windows native PostgreSQL, UTC forced on a newly initialized owned disposable loopback cluster",
+  "python": "3.13.15",
+  "postgresql": "18.6",
+  "timezone": "UTC",
+  "guard": "Fresh student_marketplace_test_* database; TEST_DATABASE_CONFIRM matched exactly; no preexisting database reused",
+  "before": {
+    "candidate": "29d10b23501ff96ecb8c8dd6661dfb3e1189a79e",
+    "command": "PGOPTIONS='-c timezone=UTC' PYTHONPATH=tests python -m unittest test_admin_listings_integration.AdminListingsPostgreSQLTest.test_remove_all_states_idempotence_retains_files_reports_and_buyer_exclusion -v",
+    "tests": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "seconds": 1.051,
+    "actual_timestamp": "2026-10-12T12:00:00+00:00",
+    "expected_timestamp": "2026-10-12T12:00:00Z",
+    "owned_cluster_stopped_and_removed": true
+  },
+  "after": {
+    "candidate_contents": "4a4e99d539427b89a94855dee2038826139c4874",
+    "command": "PGOPTIONS='-c timezone=UTC' PYTHONPATH=tests python -m unittest test_admin_listings_integration.AdminListingsPostgreSQLTest tests.test_removal_timestamp_assertions -v",
+    "tests": 11,
+    "passed": 11,
+    "failed": 0,
+    "skipped": 0,
+    "seconds": 3.198,
+    "owned_cluster_stopped_and_removed": true
+  },
+  "notes": [
+    "Commands above show logical environment/selection; existing venv Python was invoked by absolute path and generated DB URL/confirmation stayed private.",
+    "Initial Windows pg_ctl capture_output startup inherited a child pipe and stalled the helper; a separate bounded owned-server stop resolved that helper and its private cluster was removed. Actual focused test reproduction then completed; the stall is not an application or test PASS.",
+    "Only timestamp test comparison/support changed; production serializer, API, schema and behavior unchanged.",
+    "Five semantic regression methods prove equivalent aware instants, different instants, exact null semantics, invalid/naive value rejection and exact response identity/status/fields."
+  ]
+}
