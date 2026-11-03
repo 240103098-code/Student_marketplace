@@ -13,6 +13,9 @@ compose=/opt/student-marketplace-demo/current/ops/oracle/demo-compose.sh
 test -z "$("$compose" ps --status running -q app)"
 test -z "$("$compose" ps --status running -q proxy)"
 "$compose" exec -T db pg_dump -U marketplace -d marketplace --format=custom > "$destination/database.dump"
+"$compose" exec -T db psql -v ON_ERROR_STOP=1 -U marketplace -d marketplace -Atc \
+  'SELECT version_num FROM alembic_version; SELECT count(*) FROM users; SELECT count(*) FROM listings; SELECT count(*) FROM listing_photos;' > "$destination/database-state.txt"
+test "$(head -1 "$destination/database-state.txt")" = 0003_listings
 image=$("$compose" images -q app)
 test -n "$image"
 volume=student-marketplace-oracle-demo_uploads
@@ -28,5 +31,5 @@ if [ -e /etc/student-marketplace-demo/smtp.env ]; then
 fi
 cp /opt/student-marketplace-demo/current/RELEASE-SHA "$destination/RELEASE-SHA"
 docker image inspect "$image" --format '{{.Id}}' > "$destination/APP-IMAGE"
-sha256sum "$destination/database.dump" "$destination/uploads.tar" > "$destination/SHA256SUMS"
+sha256sum "$destination/database.dump" "$destination/uploads.tar" "$destination/database-state.txt" > "$destination/SHA256SUMS"
 echo 'Owned root-private backup completed. Retain independently; no automatic deletion.'
