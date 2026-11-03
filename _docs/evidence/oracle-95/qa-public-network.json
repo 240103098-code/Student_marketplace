@@ -1,0 +1,27 @@
+{
+  "checks": {
+    "http_redirect": true,
+    "trusted_hostname_tls": true,
+    "/health/live": true,
+    "/health/ready": true,
+    "health_no_store": true,
+    "hsts": true,
+    "/api/auth/me": true,
+    "/uploads/synthetic.png": true,
+    "/api/users/me/avatar": true,
+    "demo_ports_bounded": true
+  },
+  "tls": {
+    "protocol": "TLSv1.3",
+    "issuer": "Let's Encrypt",
+    "not_after": "Feb  1 05:25:12 2027 GMT"
+  },
+  "tcp_ports": {
+    "22": true,
+    "80": true,
+    "443": true,
+    "5432": false,
+    "8000": false
+  },
+  "result": "PASS"
+}

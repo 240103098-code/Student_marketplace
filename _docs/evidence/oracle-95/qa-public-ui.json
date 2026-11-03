@@ -1,0 +1,14 @@
+{
+  "checks": [
+    "trusted-https-react-login",
+    "mobile-no-overflow",
+    "real-registration-ui",
+    "unauthenticated-marketplace-guard",
+    "unauthenticated-api-guard",
+    "public-ready"
+  ],
+  "errors": 0,
+  "external": 0,
+  "browser": "151.0.7922.34",
+  "result": "PASS"
+}

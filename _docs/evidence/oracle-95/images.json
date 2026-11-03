@@ -1,0 +1,6 @@
+[
+ {"image":"node:24.19.0-bookworm-slim@sha256:a9f5f7c91a432850b2a8a7797adf5eadb6c733ceed61167806cee7ea7fbc29df","platform":"linux/arm64","arm_manifests":["sha256:be8929e08ae137e81b5e1edba02259e6c4cb2f5ad655092bb9f56b97e41c4536"]},
+ {"image":"python:3.13.15-slim-bookworm@sha256:2325bb286ec344af3e5898cc224b5844e2707ac6e26b1632516fd3edc84a5e26","platform":"linux/arm64","arm_manifests":["sha256:ad4c34ff79289506e235b40dce75d629e25f226b597a2455804220f037e07531"]},
+ {"image":"postgres:18.6-bookworm@sha256:5c4783a8cc3f0074912164f94dfa1be4e043438f0f707cf968d7af9a0d31a2c8","platform":"linux/arm64","arm_manifests":["sha256:a1ece8fa15f7b526a51ef47a22fb1f373d33de794dc26bf7bff99e61dcb52690"]},
+ {"image":"caddy:2.11.7-alpine@sha256:e70b164da81ef698b3ad19af799ea6086ce6d9e48ed4079eb9fe26f6fbf14ee5","platform":"linux/arm64","arm_manifests":["sha256:cc447f149425221422153c6cdf33a123b3f458839679f950298f68a690a54a5b"]}
+]
