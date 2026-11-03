@@ -1,0 +1,1 @@
+{"stages":["ui-register","private-smtp","ui-verify","ui-login","protected-reload","fresh-context-denied","controlled-failure-check"],"completed":["ui-register","private-smtp","ui-verify","ui-login","protected-reload","fresh-context-denied"],"smtp_tls_authenticated_registration":true,"responses":14,"statuses":{"200":11,"201":1,"401":2},"external":0,"browser":"151.0.7922.34"}

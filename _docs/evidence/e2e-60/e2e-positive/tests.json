@@ -1,0 +1,13 @@
+{
+  "status": "passed",
+  "tests": [
+    {
+      "test": "student",
+      "status": "passed"
+    },
+    {
+      "test": "admin",
+      "status": "passed"
+    }
+  ]
+}

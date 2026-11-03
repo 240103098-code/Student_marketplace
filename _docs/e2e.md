@@ -2,7 +2,7 @@
 
 The root `e2e/` package pins `@playwright/test` 1.62.1 and its matching Chromium/headless-shell revisions through the npm lockfile and Playwright browser manifest. This isolates three development packages from frontend/runtime dependencies. The application image, Dockerfile, base Compose file and migrations are unchanged; `.dockerignore` excludes this harness. The SMTP service reuses that image solely as an available Python interpreter with a test script mounted at runtime.
 
-Prerequisites: Docker Engine with Compose v2, Python 3.11+, OpenSSL, Node 24.19.0/npm 12.2.0 and Linux are the supported complete-stack environment. The narrow `issue-60-e2e` GitHub-hosted Ubuntu workflow is disposable verification, not deployment or general CI. Local Windows has no Docker engine; local contract/TLS tests cannot establish a Compose PASS.
+Prerequisites: Docker Engine with Compose v2, Python 3.11+, OpenSSL, Node 24.19.0/npm 11.17.0 (the verified runner versions) and Linux are the supported complete-stack environment. The narrow `issue-60-e2e` GitHub-hosted Ubuntu workflow is disposable verification, not deployment or general CI. Local Windows has no Docker engine; local contract/TLS tests cannot establish a Compose PASS.
 
 From the repository root:
 
@@ -31,4 +31,4 @@ Public diagnostics are strictly allowlisted: fixed logical stage names/completio
 
 `e2e/operation-map.json` covers exactly the 40 canonical method/path pairs in JSON-compatible `openapi.yml`. Each row names its future issue and planned spec path, with `smoke-only` or `planned` status. #77 owns categories/combined filters; #85 is explicitly cross-cutting across every operation. Planned paths are intentionally not placeholder implementations. `python -m tools.check_e2e_map` rejects missing/extra/duplicate operations, wrong counts, invalid issue coverage or false implemented statuses. #60 alone is active; no feature issue is closed by this map.
 
-Durable evidence must include actual positive and intentional-failure `run.json`, test/stage records, controlled SMTP completion, browser/revision and exact candidate/input hashes. A remote execution has not yet occurred at initial implementation time. Independent QA must verify the exact runtime candidate and publication before closure; main remains unchanged until genuine runtime PASS. A docs-only evidence follow-up preserves those tested input hashes and does not imply a new runtime execution.
+Durable evidence must include actual positive and intentional-failure `run.json`, test/stage records, controlled SMTP completion, browser/revision and exact candidate/input hashes. Actual remote execution passed on 2026-11-03: see [durable evidence](evidence/e2e-60/README.md). Independent QA must verify the exact runtime candidate, this evidence-only follow-up and remote publication before closure. This docs-only follow-up preserves all tested input hashes and does not imply a new runtime execution.

@@ -1,0 +1,60 @@
+{
+  "result": "PASS",
+  "mode": "actual-compose-playwright",
+  "intentional_failure": false,
+  "stages": [
+    "owned-stack-started"
+  ],
+  "cleanup": true,
+  "candidate": "84a76ce6895770f41350c93a11e64fefcd9dbbff",
+  "input_sha256": {
+    "compose.yaml": "86f4c00150916c69f023042f7addadeca668785b76afdcc13609a58dd74573dc",
+    "Dockerfile": "1f65b708da95e49d56e6523c3184bac5a6ee77a624c302c499891e23b1c62553",
+    "e2e/package-lock.json": "b0769a0cdc41e1c16c8d3a361ff456f689ea20db41c6924791ba7e803b01c86e",
+    "e2e/playwright.config.cjs": "e0442d91f1cac78fbdfd4b69f1f3ea8f86ee05e286d9cc09b2466f9bb57b7cf5",
+    "e2e/fixtures.cjs": "91625d637680d14282d9b693c7276c8ecf040815859f5ad2fb4f6ac3bba293f3",
+    "e2e/smoke.spec.cjs": "305d2fc476f6e9f6c92e2853c641cba569b3053dc25c8eb0a414eb2f1062494f",
+    "e2e/safe-reporter.cjs": "4b9d5d6ae06252e7a5b6609142b2adf4c64483d1f7292adcdbf50826a18be35e",
+    "e2e/smtp_sink.py": "577c73491f1f115499fdcc3a2a7fef2b225b20f62af2301b34531d9dcbd6030d",
+    "tools/e2e_stack.py": "d668e93264a23d26b72af4d04f2d7f9df1e0dea42a9adefcd907132eab3f8a22"
+  },
+  "docker": "28.0.4",
+  "compose": "2.38.2",
+  "node": "v24.19.0",
+  "npm": "11.17.0",
+  "image_id": "sha256:8a94d6991c01720ca44ed78adf07bc8341db77d5d1fec3ad820a0a5bd6e9ff85",
+  "postgresql": "18.6 (Debian 18.6-1.pgdg12+2)",
+  "playwright": "1.62.1",
+  "browser_revision": [
+    {
+      "name": "chromium",
+      "revision": "1234",
+      "installByDefault": true,
+      "browserVersion": "151.0.7922.34",
+      "title": "Chrome for Testing"
+    },
+    {
+      "name": "chromium-headless-shell",
+      "revision": "1234",
+      "installByDefault": true,
+      "browserVersion": "151.0.7922.34",
+      "title": "Chrome Headless Shell"
+    }
+  ],
+  "playwright_exit": 0,
+  "tests": {
+    "status": "passed",
+    "tests": [
+      {
+        "test": "student",
+        "status": "passed"
+      },
+      {
+        "test": "admin",
+        "status": "passed"
+      }
+    ]
+  },
+  "owned_image_absent": true,
+  "private_files_removed": true
+}

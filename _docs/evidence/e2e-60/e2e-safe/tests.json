@@ -1,0 +1,9 @@
+{
+  "status": "failed",
+  "tests": [
+    {
+      "test": "student",
+      "status": "failed"
+    }
+  ]
+}

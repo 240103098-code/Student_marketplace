@@ -1,0 +1,37 @@
+{
+  "run_id": 41579933950,
+  "run_url": "https://github.com/240103098-code/Student_marketplace/actions/runs/41579933950",
+  "head_sha": "84a76ce6895770f41350c93a11e64fefcd9dbbff",
+  "status": "completed",
+  "conclusion": "success",
+  "created_at": "2026-11-03T04:45:14Z",
+  "updated_at": "2026-11-03T04:47:15Z",
+  "workflow_path": ".github/workflows/e2e-60.yml",
+  "run_attempt": 1,
+  "event": "push",
+  "runner": "GitHub-hosted ubuntu-24.04",
+  "artifact_id": 13204434678,
+  "artifact_sha256": "75d50c01046c1d4a47119752eb5865dadb4db957da1c30555bd2610e1301ac33",
+  "tested_runtime_input_hashes_match_git_objects": true,
+  "local_regressions": {
+    "command": ".venv/Scripts/python.exe -m unittest tests.test_compose_runtime tests.test_e2e_harness -v",
+    "tests": 10,
+    "result": "PASS",
+    "skipped": 0,
+    "engineer_seconds": 8.833,
+    "independent_qa_seconds": 9.115,
+    "platform": "Windows outside native sandbox; existing OpenSSL TLS and threaded asyncio tests require normal process access",
+    "scope": "targeted Compose and harness contracts; not the complete guarded PostgreSQL suite"
+  },
+  "artifact_files_sha256": {
+    "e2e-positive/admin-stages.json": "c3427c2eb06c58d23a78284fdbbd610e0c1a763bb10dd3f169e9ff43a358da95",
+    "e2e-positive/run.json": "f2986dd5fe72d68e85f40ced82032037ccbed07d0e1e93fc8f9233555e469292",
+    "e2e-positive/student-stages.json": "a8b36eba92699f256cbfbce0d663a9bea7e046b258f5768e28518943bbc977f5",
+    "e2e-positive/tests.json": "ef7da6dbef878cb67b435ba5e1b041d3ee32d83e52763a783069a7125dff6eda",
+    "e2e-safe/run.json": "dea9abb78823b9b0cea74c235d8cebb6705f83dd087e4e36bba931a30f53afc7",
+    "e2e-safe/student-masked.png": "9fe45375bcc165ea6c67ddd531c421ebf499dac36e8694da630e9994d455656d",
+    "e2e-safe/student-stages.json": "e436bb2effaeeebf1a26c7ad9ee69b0c28b81eee9eb0430b3dde901973ed0d52",
+    "e2e-safe/tests.json": "8e18981c86a87c91bef3926efa6fbcaf359b09e68fe517ac4714769840c4ce7e"
+  },
+  "runtime_changes_after_test": false
+}
