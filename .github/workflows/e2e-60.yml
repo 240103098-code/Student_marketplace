@@ -1,0 +1,47 @@
+name: Issue 60 isolated E2E verification
+on:
+  push:
+    branches: [issue-60-e2e]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.19.0
+      - name: Install pinned isolated test runner and matching browser
+        run: |
+          npm ci --prefix e2e --ignore-scripts --no-audit --no-fund
+          node e2e/node_modules/@playwright/test/cli.js install --with-deps chromium
+      - name: Positive real journey
+        run: python3 tools/e2e_stack.py
+      - name: Preserve positive allowlist and demonstrate bounded real failure
+        run: |
+          mv e2e-safe e2e-positive
+          python3 tools/e2e_stack.py --intentional-failure
+      - name: Upload safe allowlisted diagnostics only
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: issue60-evidence-${{ github.sha }}
+          path: |
+            e2e-positive/run.json
+            e2e-positive/tests.json
+            e2e-positive/student-stages.json
+            e2e-positive/admin-stages.json
+            e2e-positive/student-masked.png
+            e2e-positive/admin-masked.png
+            e2e-safe/run.json
+            e2e-safe/tests.json
+            e2e-safe/student-stages.json
+            e2e-safe/admin-stages.json
+            e2e-safe/student-masked.png
+            e2e-safe/admin-masked.png
+          retention-days: 7

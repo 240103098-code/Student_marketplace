@@ -15,3 +15,8 @@ credentials*.json
 
 # Default durable local SQLite data (including WAL/SHM), never commit user data.
 backend/data/
+
+e2e/node_modules/
+e2e-safe/
+e2e/test-results/
+e2e/playwright-report/

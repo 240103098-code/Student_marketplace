@@ -1,0 +1,362 @@
+[
+  {
+    "method": "GET",
+    "path": "/admin/listings",
+    "issue": 82,
+    "planned_spec": "e2e/features/issue-82.spec.cjs",
+    "status": "planned",
+    "harness_spec": null,
+    "cross_cutting_issue": 85
+  },
+  {
+    "method": "GET",
+    "path": "/admin/listings/{listing_id}",
+    "issue": 82,
+    "planned_spec": "e2e/features/issue-82.spec.cjs",
+    "status": "planned",
+    "harness_spec": null,
+    "cross_cutting_issue": 85
+  },
+  {
+    "method": "POST",
+    "path": "/admin/listings/{listing_id}/approve",
+    "issue": 84,
+    "planned_spec": "e2e/features/issue-84.spec.cjs",
+    "status": "planned",
+    "harness_spec": null,
+    "cross_cutting_issue": 85
+  },
+  {
+    "method": "GET",
+    "path": "/admin/listings/{listing_id}/photos/{photo_id}",
+    "issue": 82,
+    "planned_spec": "e2e/features/issue-82.spec.cjs",
+    "status": "planned",
+    "harness_spec": null,
+    "cross_cutting_issue": 85
+  },
+  {
+    "method": "POST",
+    "path": "/admin/listings/{listing_id}/reject",
+    "issue": 84,
+    "planned_spec": "e2e/features/issue-84.spec.cjs",
+    "status": "planned",
+    "harness_spec": null,
+    "cross_cutting_issue": 85
+  },
+  {
+    "method": "POST",
+    "path": "/admin/listings/{listing_id}/remove",
+    "issue": 82,
+    "planned_spec": "e2e/features/issue-82.spec.cjs",
+    "status": "planned",
+    "harness_spec": null,
+    "cross_cutting_issue": 85
+  },
+  {
+    "method": "GET",
+    "path": "/admin/me",
+    "issue": 80,
+    "planned_spec": "e2e/features/issue-80.spec.cjs",
+    "status": "smoke-only",
+    "harness_spec": "e2e/smoke.spec.cjs",
+    "cross_cutting_issue": 85
+  },
+  {
+    "method": "GET",
+    "path": "/admin/reports",
+    "issue": 83,
+    "planned_spec": "e2e/features/issue-83.spec.cjs",
+    "status": "planned",
+    "harness_spec": null,
+    "cross_cutting_issue": 85
+  },
+  {
+    "method": "POST",
+    "path": "/admin/reports/{report_id}/review",
+    "issue": 83,
+    "planned_spec": "e2e/features/issue-83.spec.cjs",
+    "status": "planned",
+    "harness_spec": null,
+    "cross_cutting_issue": 85
+  },
+  {
+    "method": "GET",
+    "path": "/admin/users",
+    "issue": 81,
+    "planned_spec": "e2e/features/issue-81.spec.cjs",
+    "status": "planned",
+    "harness_spec": null,
+    "cross_cutting_issue": 85
+  },
+  {
+    "method": "PATCH",
+    "path": "/admin/users/{target_id}/suspension",
+    "issue": 81,
+    "planned_spec": "e2e/features/issue-81.spec.cjs",
+    "status": "planned",
+    "harness_spec": null,
+    "cross_cutting_issue": 85
+  },
+  {
+    "method": "POST",
+    "path": "/auth/change-password",
+    "issue": 65,
+    "planned_spec": "e2e/features/issue-65.spec.cjs",
+    "status": "planned",
+    "harness_spec": null,
+    "cross_cutting_issue": 85
+  },
+  {
+    "method": "GET",
+    "path": "/auth/csrf",
+    "issue": 64,
+    "planned_spec": "e2e/features/issue-64.spec.cjs",
+    "status": "smoke-only",
+    "harness_spec": "e2e/smoke.spec.cjs",
+    "cross_cutting_issue": 85
+  },
+  {
+    "method": "POST",
+    "path": "/auth/forgot-password",
+    "issue": 66,
+    "planned_spec": "e2e/features/issue-66.spec.cjs",
+    "status": "planned",
+    "harness_spec": null,
+    "cross_cutting_issue": 85
+  },
+  {
+    "method": "POST",
+    "path": "/auth/login",
+    "issue": 63,
+    "planned_spec": "e2e/features/issue-63.spec.cjs",
+    "status": "smoke-only",
+    "harness_spec": "e2e/smoke.spec.cjs",
+    "cross_cutting_issue": 85
+  },
+  {
+    "method": "POST",
+    "path": "/auth/logout",
+    "issue": 64,
+    "planned_spec": "e2e/features/issue-64.spec.cjs",
+    "status": "planned",
+    "harness_spec": null,
+    "cross_cutting_issue": 85
+  },
+  {
+    "method": "GET",
+    "path": "/auth/me",
+    "issue": 63,
+    "planned_spec": "e2e/features/issue-63.spec.cjs",
+    "status": "smoke-only",
+    "harness_spec": "e2e/smoke.spec.cjs",
+    "cross_cutting_issue": 85
+  },
+  {
+    "method": "POST",
+    "path": "/auth/refresh",
+    "issue": 64,
+    "planned_spec": "e2e/features/issue-64.spec.cjs",
+    "status": "smoke-only",
+    "harness_spec": "e2e/smoke.spec.cjs",
+    "cross_cutting_issue": 85
+  },
+  {
+    "method": "POST",
+    "path": "/auth/register",
+    "issue": 61,
+    "planned_spec": "e2e/features/issue-61.spec.cjs",
+    "status": "smoke-only",
+    "harness_spec": "e2e/smoke.spec.cjs",
+    "cross_cutting_issue": 85
+  },
+  {
+    "method": "POST",
+    "path": "/auth/resend-verification",
+    "issue": 62,
+    "planned_spec": "e2e/features/issue-62.spec.cjs",
+    "status": "planned",
+    "harness_spec": null,
+    "cross_cutting_issue": 85
+  },
+  {
+    "method": "POST",
+    "path": "/auth/reset-password",
+    "issue": 66,
+    "planned_spec": "e2e/features/issue-66.spec.cjs",
+    "status": "planned",
+    "harness_spec": null,
+    "cross_cutting_issue": 85
+  },
+  {
+    "method": "POST",
+    "path": "/auth/verify-email",
+    "issue": 62,
+    "planned_spec": "e2e/features/issue-62.spec.cjs",
+    "status": "smoke-only",
+    "harness_spec": "e2e/smoke.spec.cjs",
+    "cross_cutting_issue": 85
+  },
+  {
+    "method": "GET",
+    "path": "/categories",
+    "issue": 77,
+    "planned_spec": "e2e/features/issue-77.spec.cjs",
+    "status": "smoke-only",
+    "harness_spec": "e2e/smoke.spec.cjs",
+    "cross_cutting_issue": 85
+  },
+  {
+    "method": "GET",
+    "path": "/listings",
+    "issue": 76,
+    "planned_spec": "e2e/features/issue-76.spec.cjs",
+    "status": "smoke-only",
+    "harness_spec": "e2e/smoke.spec.cjs",
+    "cross_cutting_issue": 85
+  },
+  {
+    "method": "POST",
+    "path": "/listings",
+    "issue": 70,
+    "planned_spec": "e2e/features/issue-70.spec.cjs",
+    "status": "planned",
+    "harness_spec": null,
+    "cross_cutting_issue": 85
+  },
+  {
+    "method": "GET",
+    "path": "/listings/mine",
+    "issue": 73,
+    "planned_spec": "e2e/features/issue-73.spec.cjs",
+    "status": "planned",
+    "harness_spec": null,
+    "cross_cutting_issue": 85
+  },
+  {
+    "method": "DELETE",
+    "path": "/listings/{listing_id}",
+    "issue": 75,
+    "planned_spec": "e2e/features/issue-75.spec.cjs",
+    "status": "planned",
+    "harness_spec": null,
+    "cross_cutting_issue": 85
+  },
+  {
+    "method": "GET",
+    "path": "/listings/{listing_id}",
+    "issue": 78,
+    "planned_spec": "e2e/features/issue-78.spec.cjs",
+    "status": "planned",
+    "harness_spec": null,
+    "cross_cutting_issue": 85
+  },
+  {
+    "method": "PATCH",
+    "path": "/listings/{listing_id}",
+    "issue": 72,
+    "planned_spec": "e2e/features/issue-72.spec.cjs",
+    "status": "planned",
+    "harness_spec": null,
+    "cross_cutting_issue": 85
+  },
+  {
+    "method": "GET",
+    "path": "/listings/{listing_id}/edit",
+    "issue": 72,
+    "planned_spec": "e2e/features/issue-72.spec.cjs",
+    "status": "planned",
+    "harness_spec": null,
+    "cross_cutting_issue": 85
+  },
+  {
+    "method": "POST",
+    "path": "/listings/{listing_id}/photos",
+    "issue": 71,
+    "planned_spec": "e2e/features/issue-71.spec.cjs",
+    "status": "planned",
+    "harness_spec": null,
+    "cross_cutting_issue": 85
+  },
+  {
+    "method": "GET",
+    "path": "/listings/{listing_id}/photos/{photo_id}",
+    "issue": 78,
+    "planned_spec": "e2e/features/issue-78.spec.cjs",
+    "status": "planned",
+    "harness_spec": null,
+    "cross_cutting_issue": 85
+  },
+  {
+    "method": "POST",
+    "path": "/listings/{listing_id}/reports",
+    "issue": 79,
+    "planned_spec": "e2e/features/issue-79.spec.cjs",
+    "status": "planned",
+    "harness_spec": null,
+    "cross_cutting_issue": 85
+  },
+  {
+    "method": "POST",
+    "path": "/listings/{listing_id}/sold",
+    "issue": 74,
+    "planned_spec": "e2e/features/issue-74.spec.cjs",
+    "status": "planned",
+    "harness_spec": null,
+    "cross_cutting_issue": 85
+  },
+  {
+    "method": "DELETE",
+    "path": "/users/me",
+    "issue": 69,
+    "planned_spec": "e2e/features/issue-69.spec.cjs",
+    "status": "planned",
+    "harness_spec": null,
+    "cross_cutting_issue": 85
+  },
+  {
+    "method": "GET",
+    "path": "/users/me",
+    "issue": 67,
+    "planned_spec": "e2e/features/issue-67.spec.cjs",
+    "status": "planned",
+    "harness_spec": null,
+    "cross_cutting_issue": 85
+  },
+  {
+    "method": "PATCH",
+    "path": "/users/me",
+    "issue": 67,
+    "planned_spec": "e2e/features/issue-67.spec.cjs",
+    "status": "planned",
+    "harness_spec": null,
+    "cross_cutting_issue": 85
+  },
+  {
+    "method": "DELETE",
+    "path": "/users/me/avatar",
+    "issue": 68,
+    "planned_spec": "e2e/features/issue-68.spec.cjs",
+    "status": "planned",
+    "harness_spec": null,
+    "cross_cutting_issue": 85
+  },
+  {
+    "method": "GET",
+    "path": "/users/me/avatar",
+    "issue": 68,
+    "planned_spec": "e2e/features/issue-68.spec.cjs",
+    "status": "planned",
+    "harness_spec": null,
+    "cross_cutting_issue": 85
+  },
+  {
+    "method": "POST",
+    "path": "/users/me/avatar",
+    "issue": 68,
+    "planned_spec": "e2e/features/issue-68.spec.cjs",
+    "status": "planned",
+    "harness_spec": null,
+    "cross_cutting_issue": 85
+  }
+]

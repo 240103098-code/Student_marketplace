@@ -1,0 +1,1 @@
+{"name":"marketplace-isolated-e2e","private":true,"version":"1.0.0","scripts":{"test":"python ../tools/e2e_stack.py","test:failure":"python ../tools/e2e_stack.py --intentional-failure"},"devDependencies":{"@playwright/test":"1.62.1"}}

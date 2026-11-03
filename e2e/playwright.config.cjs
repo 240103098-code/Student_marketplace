@@ -1,0 +1,2 @@
+const {defineConfig}=require('@playwright/test');
+module.exports=defineConfig({testDir:'.',testMatch:'smoke.spec.cjs',fullyParallel:false,workers:1,retries:0,timeout:90000,globalTimeout:180000,maxFailures:1,reporter:[['./safe-reporter.cjs']],outputDir:process.env.E2E_PRIVATE_OUTPUT,use:{baseURL:process.env.E2E_ORIGIN,headless:true,trace:'off',video:'off',screenshot:'off'},projects:[{name:'chromium',use:{browserName:'chromium'}}]});
