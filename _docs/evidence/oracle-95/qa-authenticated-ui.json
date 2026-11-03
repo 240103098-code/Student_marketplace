@@ -1,0 +1,13 @@
+{
+  "checks": [
+    "normal-ui-login-protected-marketplace",
+    "production-secure-httponly-lax-cookie-path",
+    "real-refresh-on-protected-reload",
+    "actual-private-avatar-ui-render-bytehash",
+    "fresh-context-private-avatar-denied"
+  ],
+  "errors": 0,
+  "external": 0,
+  "browser": "151.0.7922.34",
+  "result": "PASS"
+}

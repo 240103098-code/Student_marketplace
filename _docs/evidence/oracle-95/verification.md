@@ -1,10 +1,11 @@
 # Oracle demo #95: measured evidence, 2026-11-03
 
-Current result is **PARTIAL**, not final issue acceptance. Public HTTPS, actual
-application startup and empty-state backup/restore have passed. SMTP AUTH is
-currently blocked; protected normal login, nonempty image persistence and the
-runtime reboot check remain pending. #95 stays open until independent final QA
-and exact publication verification. No AWS/GCP or teacher-acceptance claim is made.
+Current result is **PARTIAL pending final acceptance**. Public HTTPS, real
+mail/user-code verification, normal protected API/UI login, nonempty backup and
+isolated restore, and runtime reboot/session/image retention have passed.
+An executed prior-release rollback is unavailable on this first installation and
+is not claimed. #95 stays open until final acceptance review and exact independent
+publication verification. No AWS/GCP or teacher-acceptance claim is made.
 
 ## Provenance
 
@@ -79,7 +80,7 @@ Only Caddy TCP80/443 are published. Database5432 and app8000 have no host mappin
 Minimal NEW TCP80/443 host rules were added/persisted before Docker, preserving
 SSH and original rules. Docker's FORWARD policy is DROP with DOCKER-USER and
 DOCKER-FORWARD before the retained Oracle reject rule; INPUT alone is not claimed
-to filter published container traffic. The owner separately added cloud ingress.
+to filter published container traffic. The owner reported separately adding cloud ingress.
 Existing unrelated rpcbind was preserved rather than silently changed.
 
 Offline Caddy validation initially failed because the validation command omitted
@@ -96,6 +97,8 @@ Independent QA results:
 - [Public TLS/network verification](qa-public-network.json): trusted hostname TLS1.3, Let's Encrypt certificate expiring2027-02-01, actual HTTP→HTTPS redirect, liveness/readiness200, no-store/HSTS, unauthenticated auth/avatar401 and uploads404.
 - Outside TCP22/80/443 reachable,5432/8000 unavailable. This is a bounded selected-port check, not a full port-scan/security certification.
 - [Desktop](qa-login-desktop.png) and [mobile](qa-login-mobile.png) screenshots show blank public login fields with no identity or browser address bar.
+- [Independent authenticated UI](qa-authenticated-ui.json): five actual postboot Chromium checks passed after explicit user authorization: normal UI login to protected Marketplace, production cookie flags/path, reload through real refresh, private avatar blob rendering with matching bytes, and fresh-context avatar401; zero JS errors or external requests. No authenticated screenshot or identity was exported.
+- [Independent postboot public checks](qa-postboot-public.json): five public health/guard checks passed after automatic service recovery.
 
 Measured app memory was approximately79MiB of768MiB, DB36MiB of1GiB, proxy10MiB
 of256MiB, with approximately40GB disk free after build/deployment. Actual CPU caps
@@ -103,7 +106,7 @@ are0.75/0.50/0.25 respectively, PID caps128/128/64. Actual json-file log rotatio
 is three10MB files per service. These are measured basic safeguards, not load,
 high availability or disaster-recovery certification.
 
-## Mail, data and recovery: honest current limits
+## Normal mail, data and recovery
 
 The user designated one private Gmail SMTP source and one own university
 recipient, authorizing at most three verification messages. Neither identity is
@@ -111,20 +114,54 @@ included here. The private template was validated against six allowed fields and
 provisioned only through encrypted SSH stdin into a root-owned0600 file, with no
 secret CLI argument or output. No inbox access or test SMTP service was used.
 
-One normal HTTPS registration attempt returned503. Its attempt budget was
+The first normal HTTPS registration attempt returned503. Its attempt budget was
 conservatively incremented before network I/O; it was not automatically retried.
 The normal application transaction rolled back: actual counts were users0,
-listings0, listing_photos0. No successful mail delivery, signup or login is claimed.
-No-send diagnostics passed greeting, EHLO and trusted STARTTLS, then failed at
-AUTH with SMTPServerDisconnected. The owner is correcting the private App Password.
+listings0, listing_photos0. No-send diagnostics passed greeting, EHLO and trusted
+STARTTLS, then failed at AUTH with SMTPServerDisconnected. The owner supplied a
+new sender/App Password privately; only FROM was aligned to that explicitly
+provided sender under authorization. The root-owned SMTP file was atomically
+rotated, and only the same pinned app container was recreated, preserving DB,
+uploads and JWT configuration. A no-send verified STARTTLS/AUTH probe then passed.
+
+The second conservative attempt returned201 through normal HTTPS registration;
+the successful response was observed before the clock reading06:41:08UTC. The
+user received that real message and supplied its fresh code in the protected
+file. Normal verification/login returned200 without any DB/code bypass. The
+operator uploaded a generated nonsensitive16×16PNG and verified actual protected
+reads, private/no-store, byte hash, Secure/HttpOnly/Lax cookie with `/api/auth`
+path, anonymous401, public uploads404, bad-origin403 and real CSRF/refresh200.
+The consumed code file was cleared; tokens/passwords/cookies remain private.
+Conservative attempts total2 of maximum3, with one successful verification mail;
+no extra test email or resend was sent. Actual inbox arrival is established by
+the user-supplied valid code, not merely SMTP acceptance.
 
 A maintenance stop with restart trap produced a root-private PG custom dump,
 uploads archive, stable-secret copies and release/image metadata. Isolated
 no-network restoration passed exact `0003_listings` and user/listing/photo count
 comparisons. Restored upload files were0. Owned temporary restore resources were
 removed; public trusted HTTPS readiness200 returned after service restart.
-This proves empty-state restore only. Nonempty private-image retention and
-post-runtime reboot checks remain pending until the real normal flow succeeds.
+This first run proved empty-state restore only. After the real account/image
+flow, a second aligned backup and isolated restore passed: expected migration
+head and account/listing/photo counts matched, actual users1 and avatar owners1,
+and restored upload files1 with byte hashes compared to the archive. Temporary
+owned restore targets were removed. Existing real-session refresh and private
+image hash passed again after stop/start; no new email was needed.
+
+Before the authorized runtime reboot, Docker/netfilter/SSH were active+enabled,
+saved host rules validated and contained no Docker chains, SSH configuration was
+valid, disk had approximately40GB free and there were zero failed units. The
+runtime file hash was saved root-privately. After reboot at06:46:54UTC, pinned SSH
+reconnected, all three persistent services recovered automatically without a
+Compose repair, agents/firewall were healthy and the runtime file hash was
+unchanged. Outside trusted HTTPS readiness returned200. The retained real
+refresh session still authorized `/auth/me` and byte-identical private image
+reads; public denials and origin/CSRF checks still passed. Independent QA then
+passed public checks and normal authenticated browser login/avatar rendering.
+See [sanitized measured operator results](operator-flow.json) for statuses and
+the synthetic-image hash. No second account was authorized, so cross-account
+ownership isolation on this public instance was not exercised; own-route and
+anonymous privacy behavior were exercised.
 
 The first installation has no previous application release to roll back to.
 Stop/retain-data fallback and future image/config rollback commands are documented

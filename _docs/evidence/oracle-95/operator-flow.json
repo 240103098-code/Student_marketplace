@@ -1,0 +1,53 @@
+{
+  "role": "engineer real HTTPS operator flow; independent UI results recorded separately",
+  "smtp": {
+    "verified_starttls_auth_no_send": "PASS",
+    "conservative_registration_attempts": 2,
+    "maximum_authorized_attempts": 3,
+    "first_attempt_status": 503,
+    "successful_registration_status": 201,
+    "successful_message_confirmed_by_user_code": true
+  },
+  "normal_flow": {
+    "verify_email": 200,
+    "login": 200,
+    "own_avatar_upload": 200,
+    "own_avatar_read": 200,
+    "auth_me": 200,
+    "public_upload_path": 404,
+    "anonymous_avatar": 401,
+    "anonymous_auth_me": 401,
+    "bad_origin_csrf": 403,
+    "valid_csrf": 200,
+    "refresh": 200,
+    "cookie_secure": true,
+    "cookie_httponly": true,
+    "cookie_samesite": "lax",
+    "cookie_path": "/api/auth"
+  },
+  "avatar_sha256": "1993db1f3089e1a4670b1646778911426dc790141c0f3873690da1b63d6f55b9",
+  "backup_restore": {
+    "head": "0003_listings",
+    "users": 1,
+    "avatar_owners": 1,
+    "listing_rows": 0,
+    "listing_photo_rows": 0,
+    "restored_upload_files": 1,
+    "head_and_counts_match": true,
+    "restored_file_hashes_match": true,
+    "owned_temporary_targets_removed": true
+  },
+  "post_runtime_reboot": {
+    "observed_utc": "2026-11-03T06:47:23Z",
+    "pinned_ssh_reconnected": true,
+    "stable_runtime_file_hash_unchanged": true,
+    "automatic_services_recovered": true,
+    "trusted_public_ready": 200,
+    "retained_session_refresh": 200,
+    "retained_auth_me": 200,
+    "retained_avatar_sha256_matches": true,
+    "failed_systemd_units": 0
+  },
+  "prior_release_rollback": "NOT EXECUTED: first deployment has no previous application release",
+  "additional_external_messages_after_success": 0
+}

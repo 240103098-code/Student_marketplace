@@ -79,7 +79,13 @@ Do this before pulling/building every Node/Python/PostgreSQL/Caddy base image.
 Never silently substitute an image or enable emulation.
 
 Build the actual application with `--platform linux/arm64`, its exact SHA tag
-and `org.opencontainers.image.revision` label. Run the base `compose.yaml` plus
+and `org.opencontainers.image.revision` label. Inspect the resulting image's
+architecture, revision and RepoDigests. Before first startup, replace only
+`MARKETPLACE_IMAGE` in the root-private runtime file with the resulting local
+`student-marketplace-demo@sha256:<actual-index-digest>` reference, retaining
+mode0600 and all generated secrets. The initial SHA tag is a build locator;
+the running services must use the inspected digest. Do not edit a saved database
+password or JWT key when pinning the image. Run the base `compose.yaml` plus
 `ops/oracle/compose.https.yaml` through the root-only `demo-compose.sh` wrapper.
 Validate configuration with `config --quiet`, never a secret-expanded dump.
 The override retains the original migration/upload initializer gates, nonroot

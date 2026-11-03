@@ -1,0 +1,11 @@
+{
+  "phase": "post-runtime-reboot",
+  "checks": {
+    "/health/live": true,
+    "/health/ready": true,
+    "/api/auth/me": true,
+    "/api/users/me/avatar": true,
+    "/uploads/synthetic.png": true
+  },
+  "result": "PASS"
+}
