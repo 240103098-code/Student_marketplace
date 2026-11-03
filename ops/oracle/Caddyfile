@@ -1,0 +1,11 @@
+{
+    # ACME-managed publicly trusted TLS, persisted under /data.
+    # No request access logs: application tokens and private image paths stay private.
+    admin off
+}
+
+{$DEMO_HOSTNAME} {
+    encode gzip
+    reverse_proxy app:8000
+    header Strict-Transport-Security "max-age=86400"
+}

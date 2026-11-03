@@ -1,0 +1,57 @@
+# Merge after the exact release's compose.yaml. All interpolation is private.
+x-bounded-log: &bounded-log
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  db:
+    cpus: 0.50
+    mem_limit: 1073741824
+    pids_limit: 128
+    logging: *bounded-log
+  uploads-init:
+    cpus: 0.50
+    mem_limit: 268435456
+    pids_limit: 64
+    logging: *bounded-log
+  migrate:
+    cpus: 0.75
+    mem_limit: 805306368
+    pids_limit: 128
+    logging: *bounded-log
+  app:
+    ports: !reset []
+    cpus: 0.75
+    mem_limit: 805306368
+    pids_limit: 128
+    logging: *bounded-log
+  proxy:
+    image: ${CADDY_IMAGE:?Set reviewed digest-pinned ARM Caddy image}
+    environment:
+      DEMO_HOSTNAME: ${DEMO_HOSTNAME:?Set approved public DNS hostname}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./ops/oracle/Caddyfile:/etc/caddy/Caddyfile:ro
+      - proxy_data:/data
+      - proxy_config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: [no-new-privileges:true]
+    read_only: true
+    tmpfs: [/tmp:size=16777216]
+    cpus: 0.25
+    mem_limit: 268435456
+    pids_limit: 64
+    logging: *bounded-log
+    restart: unless-stopped
+
+volumes:
+  proxy_data:
+  proxy_config:
