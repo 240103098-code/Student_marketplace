@@ -1,0 +1,4 @@
+ops/oracle/*.sh text eol=lf
+ops/oracle/*.py text eol=lf
+ops/oracle/Caddyfile text eol=lf
+ops/oracle/*.yaml text eol=lf

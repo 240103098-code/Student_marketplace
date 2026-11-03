@@ -2,6 +2,9 @@
     # ACME-managed publicly trusted TLS, persisted under /data.
     # No request access logs: application tokens and private image paths stay private.
     admin off
+    servers {
+        protocols h1 h2
+    }
 }
 
 {$DEMO_HOSTNAME} {
