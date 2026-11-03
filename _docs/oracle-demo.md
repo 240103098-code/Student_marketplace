@@ -142,6 +142,19 @@ with the same project and volumes and uses `up -d --no-build`; validate schema
 compatibility first. Never run a destructive migration downgrade or remove
 volumes to make rollback pass. A first deployment has no previous application
 release to roll back to; stopping the owned demo is its safe initial fallback.
+For this demonstration, a genuine published historical995 commit was first
+deployed and independently verified **now** as a new drill baseline, followed by
+995→currentc386→actual995 rollback→finalc386. Its application input trees are
+identical to current, so this tests digest/config selection and retention, not
+different binary/schema compatibility or earlier production history. See the
+[measured drill and exact hashes](evidence/oracle-95/verification.md).
+
+The reviewed one-time `rollback-drill.sh` prepares private snapshots, serializes
+phases/recovery with flock, and uses app-only recreation with health deadlines,
+error recovery and a20minute automatic fallback. Independent outside verification
+gates each phase. The successful final-current stage cancels the fallback timer.
+It refuses to overwrite an existing snapshot directory; another drill requires
+separate review. No schema downgrade or volume deletion is part of the drill.
 Unexecuted future rollback scenarios remain unverified.
 
 ## Normal mail and privacy verification

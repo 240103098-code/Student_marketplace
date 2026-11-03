@@ -48,6 +48,26 @@
     "retained_avatar_sha256_matches": true,
     "failed_systemd_units": 0
   },
-  "prior_release_rollback": "NOT EXECUTED: first deployment has no previous application release",
+  "prior_release_rollback": {
+    "result": "PASS: actual bounded image/config rollback and retention drill",
+    "historical_baseline_first_deployed_for_this_drill": true,
+    "historical_source": "99561068b8f38f4d04bb1be7fb44d7320dd20ff7",
+    "historical_archive_sha256": "9ca950727194a89673ecee0c5bf55013bfafff5b0875c16a3bdb4bf1454756f3",
+    "historical_native_image": "sha256:9db7b75a8839a647df4b2404d50717d2cb9e62712df63c58af437a7cba09cc50",
+    "script_operations_commit": "75a82acae95dee1425c60197e6f04334afc92fd5",
+    "sequence": [
+      "verified-995-baseline",
+      "upgrade-c386",
+      "rollback-995",
+      "final-c386"
+    ],
+    "independent_retained_session_image_checks_each_phase": true,
+    "application_input_trees_identical": true,
+    "different_application_binary_or_schema_compatibility_tested": false,
+    "final_current_config_matches_pre_drill_and_pre_reboot": true,
+    "fallback_timer_inactive_after_final": true,
+    "same_four_owned_volumes": true,
+    "original_operator_session_and_avatar_after_final": "PASS"
+  },
   "additional_external_messages_after_success": 0
 }

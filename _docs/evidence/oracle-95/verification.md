@@ -1,20 +1,22 @@
 # Oracle demo #95: measured evidence, 2026-11-03
 
-Current result is **PARTIAL pending final acceptance**. Public HTTPS, real
+**Measured implementation checks passed; final acceptance/publication is separate.** Public HTTPS, real
 mail/user-code verification, normal protected API/UI login, nonempty backup and
 isolated restore, and runtime reboot/session/image retention have passed.
-An executed prior-release rollback is unavailable on this first installation and
-is not claimed. #95 stays open until final acceptance review and exact independent
-publication verification. No AWS/GCP or teacher-acceptance claim is made.
+A genuine historical image/config rollback drill also passed as described below.
+Final exact-candidate acceptance/publication/closure is independently recorded in
+GitHub95 and is not implied by this measurement report. No AWS/GCP or
+teacher-acceptance claim is made.
 
 ## Provenance
 
 | Item | Actual value |
 | --- | --- |
 | Independently verified application main | `c3869077ef70d1c2bfdc14f6aa87daa25108bbbb` |
-| Deployed operations snapshot | `4b2650a1cb8e61eaf12096fb7904c27a0cd678a8` |
+| Final deployed operations snapshot | `75a82acae95dee1425c60197e6f04334afc92fd5` |
 | Clean application git-archive SHA256 | `a600679097ac6eec460f312b62a187ba35364e4dc9d21bf2e42b710fbb82415c` |
-| Operations-only git-archive SHA256 | `f4343feaf4dd08b2d5ff62e03c38f8a1904280cd7fe479e0020dec95b177f1d7` |
+| Initial operations-only git-archive SHA256 (4b2650a) | `f4343feaf4dd08b2d5ff62e03c38f8a1904280cd7fe479e0020dec95b177f1d7` |
+| Final operations-only git-archive SHA256 (75a82ac) | `0a0db0dd5977def390168837c0480bde4e216f2300167d2930aa497ceb39e864` |
 | Locally built native ARM image/index digest | `sha256:d13ce798cd83f4dd37b3631d17e85f5a7de8f431d930f1a5e9b4c13133f05cd2` |
 | Application ARM manifest | `sha256:d297f250c1e69cb9be4382ba07c159c2888e38366308076275942b874d701847` |
 | Application configuration digest | `sha256:c63af0e6de26a7c4dbcd7b906d09c6826546c2ef5119af48e7ebd8080e9dea3b` |
@@ -64,7 +66,7 @@ docker-compose-plugin=5.7.0-1~ubuntu.22.04~jammy
 
 Actual Docker29.9.2 reports arm64; Compose5.7.0 validates the merged configuration,
 including the app `!reset []` host-port removal. No application dependency changed.
-All six new shell scripts pass Bash syntax validation; the three Python utilities
+All seven new shell scripts pass Bash syntax validation; the three Python utilities
 compile. These static checks supplement actual execution, not substitute for it.
 
 ## Actual deployment and independent outside checks
@@ -163,12 +165,53 @@ the synthetic-image hash. No second account was authorized, so cross-account
 ownership isolation on this public instance was not exercised; own-route and
 anonymous privacy behavior were exercised.
 
-The first installation has no previous application release to roll back to.
-Stop/retain-data fallback and future image/config rollback commands are documented
-in [operations](../../oracle-demo.md); a prior-release rollback was not executed
-and is not reported as PASS. Backups on the same host are not independent disaster
-recovery. Automatic certificate renewal is configured and certificate state
-persists; a future time-based renewal has not yet occurred.
+## Actual historical rollback drill and its limits
+
+**The historical baseline was FIRST deployed now for this drill. There was no
+earlier production deployment. The application/build input trees of the two real
+published commits are identical. This proves actual image/digest/config selection
+and retained data/session behavior, not compatibility between different
+application binaries or database schemas.** PM and independent QA accepted this
+bounded genuine drill under criterion9 before execution; no history or tag was
+manufactured and no criterion was waived.
+
+The actual published, previously QA-approved historical commit
+`99561068b8f38f4d04bb1be7fb44d7320dd20ff7` was independently clean-archived and
+byte-verified (13,957,120bytes,
+SHA256`9ca950727194a89673ecee0c5bf55013bfafff5b0875c16a3bdb4bf1454756f3`).
+Its actual native ARM64 build has a truthful full995 OCI revision label and digest
+`sha256:9db7b75a8839a647df4b2404d50717d2cb9e62712df63c58af437a7cba09cc50`.
+The reviewed drill script SHA256 is
+`70096ca0d868430aaa4a2e71e76f3795871aa1b74d7ba64701d1742f7d953615`.
+
+Following the existing successful nonempty backup/isolated restore, the script
+preserved root-private current/historical configuration snapshots differing only
+in their exact image reference. It serialized transitions/recovery with flock,
+retained an error recovery path and armed a bounded20minute automatic fallback.
+Only the app was recreated; no migration, DB reset, volume deletion, mail or
+secret rotation occurred. Each phase held for independent actual-running-image
+and full revision-label inspection plus a separate real browser family's retained
+refresh/private-avatar-byte/cookie/readiness checks:
+
+| Actual phase | Running image | Independent result |
+| --- | --- | --- |
+| Establish historical995 baseline now | `9db7b75a…cc50` | [PASS](qa-drill-historical-baseline.json) |
+| Upgrade to currentc386 | `d13ce798…5cd2` | [PASS](qa-drill-upgraded-current.json) |
+| Actual rollback to verified995/config | `9db7b75a…cc50` | [PASS](qa-drill-rolled-back-historical.json) |
+| Restore final currentc386/config | `d13ce798…5cd2` | [PASS](qa-drill-final-current.json) |
+
+The final runtime configuration is byte-identical to both its pre-drill snapshot
+and pre-reboot hash; the same four owned PG/upload/proxy volumes remain. The
+fallback timer is inactive/dead, there are zero failed units and approximately
+40GB free. The original operator's separate real refresh session/image hash also
+passed after final restoration. The fallback failure path was configured but not
+triggered. The final running application is the exact current verifiedc386 image,
+not the historical drill image.
+
+Stop/retain-data and rollback procedures are in
+[operations](../../oracle-demo.md). Backups on the same host are not independent
+disaster recovery. Automatic certificate renewal is configured and certificate
+state persists; a future time-based renewal has not yet occurred.
 
 Actual hostnames, infrastructure addresses, access details, sender/recipient,
 codes, tokens, cookie values, secret configurations and raw diagnostic logs are

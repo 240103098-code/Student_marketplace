@@ -1,0 +1,11 @@
+{
+  "phase": "rolled-back-historical",
+  "checks": [
+    "retained-qa-session-private-avatar-original-hash",
+    "production-cookie-attributes",
+    "public-ready"
+  ],
+  "errors": 0,
+  "external": 0,
+  "result": "PASS"
+}
