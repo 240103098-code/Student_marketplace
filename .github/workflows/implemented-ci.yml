@@ -60,6 +60,7 @@ jobs:
       github.event_name == 'push' && github.ref == 'refs/heads/main' &&
       needs.implemented.result == 'success' && needs.gate.result == 'success'
     runs-on: ubuntu-24.04
+    environment: oracle-demo
     timeout-minutes: 55
     concurrency:
       group: additional-oracle-demo-main

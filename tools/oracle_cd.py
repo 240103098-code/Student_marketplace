@@ -4,11 +4,14 @@ import hashlib
 import io
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
+import shutil
+import signal
 import stat
 import subprocess
 import sys
+import tempfile
 import tarfile
 import time
 import urllib.request
@@ -22,6 +25,7 @@ ROOT = Path('/opt/student-marketplace-cd')
 PRIVATE = Path('/etc/student-marketplace-demo')
 RUNTIME = PRIVATE / 'runtime.env'
 PROJECT = 'student-marketplace-oracle-demo'
+GENERATION = re.compile(r'[1-9][0-9]{0,14}-[1-9][0-9]{0,5}-[a-f0-9]{40}')
 
 
 class Rejected(Exception):
@@ -48,15 +52,15 @@ def runner_gate(environment):
 
 
 def validate_run(run, jobs, sha, run_id, attempt, workflow_id):
-    if (not isinstance(workflow_id, int) or workflow_id < 1 or
+    if (type(workflow_id) is not int or workflow_id < 1 or
         run.get('id') != run_id or run.get('run_attempt') != attempt or
         run.get('workflow_id') != workflow_id or run.get('event') != 'push' or
         run.get('head_branch') != 'main' or run.get('head_sha') != sha or
         run.get('path') != WORKFLOW or
         run.get('repository', {}).get('full_name') != REPOSITORY or
         run.get('head_repository', {}).get('full_name') != REPOSITORY or
-        run.get('status') not in ('in_progress', 'completed') or
-        run.get('conclusion') not in (None, 'success')):
+        (run.get('status'),run.get('conclusion')) not in
+            (('in_progress',None),('completed','success'))):
         raise Rejected('untrusted-run')
     for name in REQUIRED:
         matches = [job for job in jobs if job.get('name') == name]
@@ -81,14 +85,25 @@ def extract_source(payload, destination):
         members = archive.getmembers()
         if len(members) > 20000 or sum(member.size for member in members) > 100_000_000:
             raise Rejected('archive-limit')
+        seen = set()
         for member in members:
-            path = Path(member.name)
+            path = PurePosixPath(member.name)
             if (path.is_absolute() or '\\' in member.name or ':' in member.name or
                 '..' in path.parts or not path.parts or
                 not (member.isdir() or member.isreg()) or
                 member.mode & (stat.S_ISUID | stat.S_ISGID)):
                 raise Rejected('unsafe-archive')
-        archive.extractall(destination, filter='data')
+            if member.name in seen:raise Rejected('duplicate-archive-path')
+            seen.add(member.name)
+        for member in members:
+            target = destination / member.name
+            if member.isdir():
+                target.mkdir(parents=True, exist_ok=True, mode=0o755)
+            else:
+                target.parent.mkdir(parents=True, exist_ok=True, mode=0o755)
+                with archive.extractfile(member) as source, target.open('xb') as stream:
+                    shutil.copyfileobj(source, stream)
+                target.chmod(0o755 if member.mode & 0o111 else 0o644)
 
 
 def compatible_migrations(candidate, previous):
@@ -110,6 +125,41 @@ def compatible_migrations(candidate, previous):
         raise Rejected('migration-change-needs-manual-review')
 
 
+def prepare_release(payload, release, sha):
+    marker=release/'CD-SOURCE.json'
+    identity={'sha':sha,'archive_sha256':hashlib.sha256(payload).hexdigest()}
+    if not release.exists():
+        release.mkdir(mode=0o700)
+        extract_source(payload,release)
+        if marker.exists():raise Rejected('reserved-source-path')
+        atomic_json(marker,identity)
+        return
+    protected(release,directory=True,private=True);protected(marker,private=True)
+    if json.loads(marker.read_text())!=identity:raise Rejected('release-source-mismatch')
+    expected=set()
+    with tarfile.open(fileobj=io.BytesIO(payload),mode='r:') as archive:
+        for member in archive.getmembers():
+            path=release/member.name
+            expected.add(path)
+            expected.update(parent for parent in path.parents if parent!=release and release in parent.parents)
+            if path.is_symlink():raise Rejected('release-link')
+            if member.isdir():
+                if not path.is_dir():raise Rejected('release-type')
+                protected_source(path,0o755)
+            elif member.isreg():
+                if not path.is_file() or path.read_bytes()!=archive.extractfile(member).read():
+                    raise Rejected('release-content')
+                protected_source(path,0o755 if member.mode & 0o111 else 0o644)
+            else:raise Rejected('release-type')
+    if set(release.rglob('*'))!=expected|{marker}:raise Rejected('release-extra-content')
+
+
+def protected_source(path,mode):
+    info=path.lstat()
+    if info.st_uid!=0 or path.is_symlink() or stat.S_IMODE(info.st_mode)!=mode:
+        raise Rejected('release-mode-or-owner')
+
+
 def public_json(path):
     url = 'https://api.github.com/repos/' + REPOSITORY + '/' + path
     req = urllib.request.Request(url, headers={'Accept': 'application/vnd.github+json',
@@ -122,9 +172,11 @@ def public_json(path):
     return json.loads(data)
 
 
-def github_gate(sha, run_id, attempt):
+def github_gate(sha, run_id, attempt, expected_workflow_id):
     workflow = public_json('actions/workflows/implemented-ci.yml')
-    if workflow.get('path') != WORKFLOW or workflow.get('state') != 'active':
+    if (workflow.get('path') != WORKFLOW or workflow.get('state') != 'active' or
+        type(expected_workflow_id) is not int or expected_workflow_id < 1 or
+        workflow.get('id') != expected_workflow_id):
         raise Rejected('workflow-identity')
     run = public_json(f'actions/runs/{run_id}/attempts/{attempt}')
     jobs = []
@@ -164,23 +216,121 @@ def protected(path, directory=False, private=False):
 
 
 def atomic_json(path, value):
-    temporary = path.with_name(path.name + '.new')
-    with temporary.open('x', encoding='utf-8') as stream:
-        os.chmod(temporary, 0o600)
-        json.dump(value, stream, sort_keys=True)
-        stream.flush()
-        os.fsync(stream.fileno())
-    os.replace(temporary, path)
+    atomic_private(path, json.dumps(value, sort_keys=True))
+
+
+def atomic_private(path, data):
+    descriptor, name = tempfile.mkstemp(dir=path.parent, prefix=path.name + '.new.')
+    temporary = Path(name)
+    try:
+        with os.fdopen(descriptor, 'w', encoding='utf-8') as stream:
+            os.chmod(temporary, 0o600)
+            stream.write(data)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+@contextmanager
+def deployment_lock():
+    import fcntl
+    path = ROOT / 'deploy.lock'
+    if path.exists():protected(path, private=True)
+    with path.open('a') as lock:
+        os.chmod(path, 0o600)
+        deadline = time.monotonic() + 300
+        while True:
+            try:
+                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except BlockingIOError:
+                if time.monotonic() >= deadline:raise Rejected('deployment-busy')
+                time.sleep(1)
+        yield
+
+
+def installed():
+    if os.geteuid() != 0:raise Rejected('root-controller-required')
+    os.umask(0o077)
+    for directory in (Path('/'),Path('/opt'), ROOT, ROOT / 'template', ROOT / 'template/ops',
+                      ROOT / 'template/ops/oracle', ROOT / 'releases',
+                      Path('/etc'), PRIVATE):
+        protected(directory, directory=True)
+    protected(PRIVATE, directory=True, private=True)
+    protected(RUNTIME, private=True)
+    for path in (ROOT / 'config.json', ROOT / 'state.json', ROOT / 'backup.sh', ROOT / 'compose.sh',
+                 ROOT / 'template/compose.yaml', ROOT / 'template/ops/oracle/compose.https.yaml',
+                 ROOT / 'template/ops/oracle/Caddyfile', Path(__file__).resolve()):
+        protected(path)
+
+
+def arm_recovery(host, state, candidate_sha, candidate_image, generation):
+    if not GENERATION.fullmatch(generation):raise Rejected('recovery-generation')
+    if (ROOT / 'pending.json').exists():raise Rejected('pending-recovery')
+    atomic_private(ROOT / 'pending-runtime.env', host.before)
+    atomic_json(ROOT / 'pending.json', {'generation': generation, 'previous': state,
+                                      'candidate': candidate_sha,'candidate_image':candidate_image})
+    execute(['systemd-run', '--unit', 'marketplace-cd-recover-' + generation,
+             '--on-active=10m', '--timer-property=AccuracySec=1s', '/usr/bin/python3',
+             '-I', str(ROOT / 'controller.py'), 'recover', generation], timeout=20)
+
+
+def disarm_recovery(generation):
+    execute(['systemctl', 'stop', 'marketplace-cd-recover-' + generation + '.timer'], timeout=20)
+    # A previous timer can never affect a later generation; recovery rechecks nonce.
+    for name in ('pending.json', 'pending-runtime.env', 'pending-retained.json'):
+        path = ROOT / name
+        if path.exists():
+            protected(path, private=True)
+            path.unlink()
+
+
+def recover_generation(generation):
+    installed()
+    if not GENERATION.fullmatch(generation):raise Rejected('recovery-generation')
+    with deployment_lock():
+        pending_path = ROOT / 'pending.json'
+        if not pending_path.exists():return {'result': 'no-pending-recovery'}
+        protected(pending_path, private=True)
+        pending = json.loads(pending_path.read_text())
+        if pending['generation'] != generation:return {'result': 'obsolete-recovery'}
+        state = json.loads((ROOT / 'state.json').read_text())
+        if state['sha'] == pending['candidate']:
+            # Commit already succeeded; delayed timer must not undo that release.
+            host = Host(state)
+            retained = ROOT / 'pending-retained.json'
+            if retained.exists():
+                protected(retained, private=True);host.snapshot = retained.read_bytes()
+            host.verify()
+            disarm_recovery(generation)
+            return {'result': 'committed-release-preserved'}
+        previous = pending['previous']
+        host = Host(previous)
+        host.allowed_images.add(pending['candidate_image'])
+        protected(ROOT / 'pending-runtime.env', private=True)
+        host.before = (ROOT / 'pending-runtime.env').read_text()
+        retained = ROOT / 'pending-retained.json'
+        if retained.exists():
+            protected(retained, private=True)
+            host.snapshot = retained.read_bytes()
+        host.select(previous['image'])
+        host.start()
+        host.verify()
+        atomic_json(ROOT / 'state.json', previous)
+        disarm_recovery(generation)
+        return {'result': 'previous-release-recovered', 'sha': previous['sha']}
 
 
 def replace_image(data, image):
     if not re.fullmatch(r'sha256:[a-f0-9]{64}', image):
         raise Rejected('invalid-image-id')
-    lines = data.splitlines()
-    if sum(line.startswith('MARKETPLACE_IMAGE=') for line in lines) != 1:
+    matches=list(re.finditer(r'(?m)^MARKETPLACE_IMAGE=[^\r\n]*',data))
+    if len(matches) != 1:
         raise Rejected('image-config')
-    return '\n'.join('MARKETPLACE_IMAGE=' + image if line.startswith('MARKETPLACE_IMAGE=')
-                     else line for line in lines) + '\n'
+    match=matches[0]
+    return data[:match.start()]+'MARKETPLACE_IMAGE='+image+data[match.end():]
 
 
 def activate(adapter, candidate, previous):
@@ -201,9 +351,26 @@ def activate(adapter, candidate, previous):
         raise Rejected('activation-failed-rollback-restored') from failure
 
 
+def commit_release(host, previous, record):
+    try:
+        atomic_json(ROOT / 'state.json', record)
+    except Exception:
+        try:
+            host.select(previous['image'])
+            host.start()
+            host.verify()
+        except Exception:
+            raise Rejected('state-write-failed-rollback-failed') from None
+        raise Rejected('state-write-failed-rollback-restored') from None
+
+
 class Host:
     def __init__(self, state):
         self.state = state
+        self.expected_image = state['image']
+        self.allowed_images = {state['image']}
+        self.generation = None
+        self.candidate_sha = None
         self.before = RUNTIME.read_text()
         self.snapshot = None
 
@@ -230,9 +397,10 @@ class Host:
             'd["db"]={t:hashlib.sha256("\\n".join(sorted(r[0] for r in '
             'c.execute(text("SELECT row_to_json(x)::text FROM "+t+" x")))).encode()).hexdigest() '
             'for t in tables};'
-            'p=pathlib.Path("/data/uploads");'
-            'd["files"]=sorted(hashlib.sha256(f.read_bytes()).hexdigest() '
-            'for f in p.rglob("*") if f.is_file());'
+            'p=pathlib.Path("/data/uploads");files=list(p.rglob("*"));'
+            'assert not any(f.is_symlink() for f in files);'
+            'd["files"]=sorted((str(f.relative_to(p)),hashlib.sha256(f.read_bytes()).hexdigest()) '
+            'for f in files if f.is_file());'
             'print(json.dumps(d,sort_keys=True))'
         )
         return self.compose('exec', '-T', 'app', 'python', '-c', script).stdout
@@ -242,6 +410,7 @@ class Host:
         try:
             self.compose('stop', 'proxy')
             self.snapshot = self.retained()
+            atomic_private(ROOT / 'pending-retained.json', self.snapshot.decode())
             self.compose('stop', 'app')
             execute(['/bin/bash', str(ROOT / 'backup.sh')], timeout=180)
         except Exception:
@@ -250,22 +419,38 @@ class Host:
 
     def select(self, image):
         data = replace_image(self.before, image)
-        temporary = RUNTIME.with_name('runtime.env.cd-new')
-        with temporary.open('x', encoding='utf-8') as stream:
-            os.chmod(temporary, 0o600)
-            stream.write(data)
-            stream.flush()
-            os.fsync(stream.fileno())
-        os.replace(temporary, RUNTIME)
+        atomic_private(RUNTIME, data)
+        self.expected_image = image
+        self.allowed_images.add(image)
 
     def migrate(self):
         self.compose('run', '--rm', '--no-deps', 'migrate', timeout=180)
 
     def start(self):
+        identifier=self.compose('ps','-aq','app').stdout.decode().strip()
+        if identifier:
+            if not re.fullmatch(r'[a-f0-9]{12,64}',identifier):raise Rejected('app-container')
+            actual=json.loads(execute(['docker','inspect',identifier]).stdout)[0]
+            labels=actual.get('Config',{}).get('Labels',{})
+            if labels.get('com.docker.compose.project')!=PROJECT or labels.get('com.docker.compose.service')!='app':
+                raise Rejected('app-ownership')
+            if actual.get('State',{}).get('Paused'):
+                if actual.get('Image') not in self.allowed_images:raise Rejected('paused-image-ownership')
+                execute(['docker','unpause',identifier],timeout=20)
         self.compose('up', '--detach', '--no-build', '--no-deps', '--force-recreate',
                      '--wait', '--wait-timeout', '120', 'app', 'proxy')
+        marker=ROOT/'health-drill.json'
+        if self.generation and self.expected_image!=self.state['image'] and marker.exists():
+            validate_drill_marker(self.candidate_sha,self.generation)
+            consumed=ROOT/('health-drill-consumed-'+self.generation+'.json')
+            if consumed.exists():raise Rejected('drill-already-consumed')
+            marker.rename(consumed)
+            self.confirm_image()
+            identifier=self.compose('ps','-q','app').stdout.decode().strip()
+            execute(['docker','pause',identifier],timeout=20)
 
     def verify(self):
+        self.confirm_image()
         # Hostname is a private installed input, never a request argument.
         config = json.loads((ROOT / 'config.json').read_text())
         hostname = config['hostname']
@@ -280,34 +465,31 @@ class Host:
         if self.snapshot is not None and self.retained() != self.snapshot:
             raise Rejected('retained-state-changed')
 
+    def confirm_image(self):
+        identifier = self.compose('ps', '-q', 'app').stdout.decode().strip()
+        if not re.fullmatch(r'[a-f0-9]{12,64}', identifier):raise Rejected('app-container')
+        actual = json.loads(execute(['docker', 'inspect', identifier]).stdout)[0]
+        if (actual.get('Image') != self.expected_image or
+            actual.get('Config', {}).get('Labels', {}).get('com.docker.compose.project') != PROJECT or
+            actual.get('Config', {}).get('Labels', {}).get('com.docker.compose.service') != 'app'):
+            raise Rejected('previous-image-mismatch')
+
+
+def validate_drill_marker(sha,generation):
+    marker=ROOT/'health-drill.json'
+    if not marker.exists():return
+    protected(marker,private=True)
+    if json.loads(marker.read_text())!={'sha':sha,'generation':generation}:
+        raise Rejected('drill-marker-mismatch')
+
 
 def controller(value):
-    if os.geteuid() != 0:
-        raise Rejected('root-controller-required')
-    os.umask(0o077)
     sha, run_id, attempt = request(value)
-    for directory in (ROOT, ROOT / 'template', ROOT / 'releases', PRIVATE):
-        protected(directory, directory=True)
-    protected(PRIVATE, directory=True, private=True)
-    protected(RUNTIME, private=True)
-    for path in (ROOT / 'config.json', ROOT / 'state.json', ROOT / 'backup.sh',
-                 ROOT / 'template/compose.yaml',
-                 ROOT / 'template/ops/oracle/compose.https.yaml',
-                 ROOT / 'template/ops/oracle/Caddyfile', RUNTIME):
-        protected(path)
-    protected(Path(__file__).resolve())
-    import fcntl
-    with (ROOT / 'deploy.lock').open('a') as lock:
-        deadline = time.monotonic() + 300
-        while True:
-            try:
-                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                break
-            except BlockingIOError:
-                if time.monotonic() >= deadline:
-                    raise Rejected('deployment-busy')
-                time.sleep(1)
-        github_gate(sha, run_id, attempt)
+    installed()
+    with deployment_lock():
+        if (ROOT / 'pending.json').exists():raise Rejected('pending-recovery')
+        config = json.loads((ROOT / 'config.json').read_text())
+        github_gate(sha, run_id, attempt, config['workflow_id'])
         state = json.loads((ROOT / 'state.json').read_text())
         previous = state['sha']
         if (not SHA.fullmatch(previous) or
@@ -315,7 +497,7 @@ def controller(value):
             raise Rejected('previous-source')
         repository = ROOT / 'source.git'
         protected(repository, directory=True)
-        git = ['git', '--git-dir', str(repository)]
+        git = ['git', '-c', 'core.hooksPath=/dev/null', '--git-dir', str(repository)]
         execute(git + ['fetch', '--no-tags', '--no-recurse-submodules',
                        'https://github.com/' + REPOSITORY + '.git',
                        '+refs/heads/main:refs/heads/main'], timeout=120)
@@ -329,48 +511,53 @@ def controller(value):
             return execute(git + ['merge-base', '--is-ancestor', old, new], allow_failure=True).returncode == 0
         check_order(sha, current_main(), previous, ancestor)
         if sha == previous:
-            Host(state).verify()
+            host = Host(state);host.confirm_image();host.verify()
             return {'result': 'already-current', 'sha': sha}
+        if shutil.disk_usage(ROOT).free < 6 * 1024**3:raise Rejected('disk-margin')
         release = ROOT / 'releases' / sha
-        if release.exists():
-            raise Rejected('existing-uncommitted-release')
-        release.mkdir(mode=0o700)
+        if not release.exists() and len(list((ROOT / 'releases').iterdir())) >= 8:raise Rejected('release-retention-limit')
+        images = execute(['docker', 'image', 'ls', '--filter',
+                          'label=marketplace.cd.owner=' + PROJECT, '--quiet']).stdout.splitlines()
+        if len(set(images)) >= 8:raise Rejected('image-retention-limit')
         payload = execute(git + ['archive', '--format=tar', sha], timeout=60).stdout
-        extract_source(payload, release)
+        prepare_release(payload,release,sha)
         compatible_migrations(release, ROOT / 'releases' / previous)
         tag = 'student-marketplace-cd:' + sha
         execute(['docker', 'build', '--platform', 'linux/arm64', '--memory', '2g',
+                 '--label', 'marketplace.cd.owner=' + PROJECT,
                  '--label', 'org.opencontainers.image.revision=' + sha,
                  '--tag', tag, str(release)], timeout=1800)
         image = json.loads(execute(['docker', 'image', 'inspect', tag]).stdout)[0]
-        if (image['Architecture'] != 'arm64' or image['Config']['Labels'].get(
+        if (image['Architecture'] != 'arm64' or image['Config'].get('User') != '10001:10001' or image['Config']['Labels'].get(
             'org.opencontainers.image.revision') != sha):
             raise Rejected('image-provenance')
         check_order(sha, current_main(), previous, ancestor)
-        github_gate(sha, run_id, attempt)
+        github_gate(sha, run_id, attempt, config['workflow_id'])
         host = Host(state)
         host.verify()
-        running = host.compose('images', '-q', 'app').stdout.decode().strip()
-        if execute(['docker', 'image', 'inspect', running, '--format', '{{.Id}}']).stdout.decode().strip() != state['image']:
-            raise Rejected('previous-image-mismatch')
-        activate(host, image['Id'], state['image'])
+        host.confirm_image()
+        generation = f'{run_id}-{attempt}-{sha}'
+        validate_drill_marker(sha,generation)
+        host.generation=generation;host.candidate_sha=sha
+        arm_recovery(host, state, sha, image['Id'], generation)
         try:
-            atomic_json(ROOT / 'state.json', {'sha': sha, 'image': image['Id'],
-                                             'previous_sha': previous, 'run': run_id,
-                                             'attempt': attempt})
-        except Exception:
-            try:
-                host.select(state['image'])
-                host.start()
-                host.verify()
-            except Exception:
-                raise Rejected('state-write-failed-rollback-failed')
-            raise Rejected('state-write-failed-rollback-restored')
+            activate(host, image['Id'], state['image'])
+        except Rejected as failure:
+            if str(failure) == 'activation-failed-rollback-restored':disarm_recovery(generation)
+            raise
+        commit_release(host, state, {'sha': sha, 'image': image['Id'],
+                                     'previous_sha': previous, 'run': run_id,
+                                     'attempt': attempt})
+        disarm_recovery(generation)
         return {'result': 'deployed', 'sha': sha, 'image': image['Id']}
 
 
 def main():
     try:
+        if len(sys.argv) != 1:
+            if len(sys.argv) == 3 and sys.argv[1] == 'recover':
+                result = recover_generation(sys.argv[2]);print(json.dumps(result, sort_keys=True));return 0
+            raise Rejected('unsupported-controller-arguments')
         value = sys.stdin.buffer.read(257)
         if len(value) > 256:
             raise Rejected('request-limit')
@@ -386,4 +573,7 @@ def main():
 
 
 if __name__ == '__main__':
+    def interrupted(_number, _frame):raise Rejected('controller-interrupted')
+    signal.signal(signal.SIGTERM, interrupted)
+    signal.signal(signal.SIGHUP, interrupted)
     raise SystemExit(main())

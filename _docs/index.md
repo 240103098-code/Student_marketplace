@@ -23,3 +23,4 @@ Current baseline: 292 backend tests (full verification requires guarded real Pos
 - [Isolated Compose Playwright harness (#60)](e2e.md): pinned installation, trusted SMTP/admin fixtures, ownership, serial mode and safe evidence.
 
 - [CI for all currently implemented tests (#92)](ci.md): strict full-suite gate, one-image Compose chain and safe diagnostics; partial child of #86.
+- [Additional Oracle automation preparation (#96)](oracle-cd.md): reviewed access plan, restricted controller and local regression checks; owner consent and actual deployment proof remain required.
