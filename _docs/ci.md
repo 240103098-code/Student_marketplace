@@ -28,3 +28,47 @@ Safe diagnostics are enumerated individually in the workflow: `summary.json`, th
 A deliberately failing real unittest must be demonstrated on a separate reviewed probe branch with the same workflow. That branch must produce a failed implemented check and failed required gate. Do not merge the probe test, use `continue-on-error`, or call #60's successful expected-failure wrapper a red-gate proof. Actual positive push and PR runs passed on runtime head `4a4e99d539427b89a94855dee2038826139c4874`: 325 backend tests, 166 frontend tests and two Playwright tests passed with zero skips/pending tests. [Durable verified evidence](evidence/ci-92/README.md) records run links, hashes, versions, one-image identities and cleanup, plus initial genuine failing checks and a clean isolated one-failure probe whose required gate failed. This documentation/evidence follow-up changes no tested executable inputs.
 
 Branch protection is **unapplied**. A repository administrator can protect main and require **CI / required gate** (and optionally its implemented dependency), require pull requests and select the desired review policy. This package documents those settings but does not claim configured enforcement. CD #87 cannot release until its own separately approved green-main contract exists.
+
+## Safe operation diagnostics (#97)
+
+An actual main prerequisite failure exposed a diagnostic gap before backend
+discovery. Run43212254097 attempt1 at `b5dc1ec9643ea1cf2e346f31dd6d2776ecdaa594`
+reported only `prerequisites/subprocess-status`. Attempt2 of that unchanged commit
+passed325 backend tests with zero skips,166 frontend tests and2 Playwright tests,
+all9 checks and owned cleanup. The original command/infrastructure cause remains
+unknown; a retry without a code change is not evidence that it was repaired.
+[Preserved observations and deterministic comparison](evidence/ci-97/README.md).
+
+Every controller subprocess now requires an identifier from the fixed
+`OPERATIONS` vocabulary in `tools/ci_checks.py`. Prerequisites distinguish
+`source-revision`, `source-inventory`, `node-version`, `npm-version`,
+`docker-version`, `compose-version`, `postgres-volume-create`,
+`postgres-container-start` (including Docker's pinned-image acquisition),
+`postgres-readiness`, `postgres-loopback-port` and `postgres-version`. Remaining
+operations identify the existing suites/builds and label-guarded cleanup; labels
+never come from commands, resource names, paths, environment or native output.
+
+Failure summaries include `failure_operation`, `failure_class` and
+`failure_timeout`. Classes distinguish `exit-status`, `timeout`, `process-start`,
+`readiness-deadline`, `invalid-operation` and invalid validated metadata
+(`invalid-result`). `failure_exit_status` is present only for an actually known
+bounded integer, including zero for malformed output of a successful inspection.
+Timeout/start errors do not invent an exit code. Missing/unapproved labels reject
+before execution and report only `unapproved-operation/invalid-operation`.
+Successful native version/revision output is syntax-validated before publication.
+
+The first primary diagnostic is captured before cleanup. `cleanup_failures`
+separately records bounded static operation/class/status entries and cannot
+replace the original cause; failed cleanup still forces overall FAIL. Expected
+nonzero readiness/absence probes retain their existing behavior. No new automatic
+retry, raw logging, dependency, image, test-count bypass or gate exception was
+added. Native stdout/stderr and arbitrary exception text remain private; safe
+summary fields do not include argv, environment, private paths or identities.
+
+Focused verification: `python -m unittest discover -s tests -p test_ci_diagnostics.py -v`
+(12 passed) and `python -m unittest discover -s tests -p test_ci_gates.py -v`
+(2 passed). They include real harmless exit/timeout/missing-process cases,
+hostile output/argument/environment sentinels, unknown labels, readiness deadline
+and primary-failure/cleanup preservation. Windows sandbox execution needs an
+owned writable TMP/TEMP; that environmental setup does not skip any test. Actual
+candidate full CI and final independent acceptance remain pending at this checkpoint.
