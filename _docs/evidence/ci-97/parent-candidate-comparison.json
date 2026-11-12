@@ -1,0 +1,25 @@
+{
+  "parent": "b5dc1ec9643ea1cf2e346f31dd6d2776ecdaa594",
+  "scenario": "isolated intentional prerequisite exit37; Docker operations stubbed, real harmless Python failure",
+  "observations": {
+    "parent": {
+      "result": "FAIL",
+      "checks": [],
+      "cleanup": true,
+      "failure_stage": "prerequisites",
+      "failure_kind": "subprocess-status"
+    },
+    "candidate": {
+      "result": "FAIL",
+      "checks": [],
+      "cleanup": true,
+      "failure_stage": "prerequisites",
+      "failure_kind": "subprocess-operation",
+      "failure_operation": "postgres-container-start",
+      "failure_class": "exit-status",
+      "failure_exit_status": 37,
+      "failure_timeout": false
+    }
+  },
+  "private_sentinels_absent": true
+}
