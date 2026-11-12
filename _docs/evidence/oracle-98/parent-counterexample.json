@@ -1,0 +1,13 @@
+{
+  "parent_source": "634f76b1e33c5013820b443105c097cddbba76de",
+  "utc": "2026-11-12T19:30:59.052695+00:00",
+  "test": "actual emitted retention program with real loader and guarded seven-table PostgreSQL fixture",
+  "tests_run": 1,
+  "errors": 1,
+  "failures": 0,
+  "skips": 0,
+  "observed_validation_error": true,
+  "missing_jwt_field": true,
+  "program_sha256": "487aac5c0fd4709680041ab550f683ee5181cec9ff62375ca28c8f71ac7b84d0",
+  "raw_errors_published": false
+}

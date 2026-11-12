@@ -394,9 +394,9 @@ class Host:
     def retained(self):
         # No identities or contents leave the container: only ordered state hashes.
         script = (
-            'import hashlib,json,pathlib;from backend.config import Settings;'
+            'import hashlib,json,pathlib;from backend.config import load_settings;'
             'from sqlalchemy import create_engine,text;'
-            's=Settings();e=create_engine(s.database_url.get_secret_value());'
+            's=load_settings(env_file=None);e=create_engine(s.database_url.get_secret_value());'
             'c=e.connect();d={};'
             'tables=("users","listings","listing_photos","refresh_sessions",'
             '"email_codes","categories","listing_reports");'

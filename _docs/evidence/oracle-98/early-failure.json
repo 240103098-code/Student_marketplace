@@ -1,0 +1,31 @@
+{
+  "run_id": 43287631035,
+  "attempt": 1,
+  "source_sha": "634f76b1e33c5013820b443105c097cddbba76de",
+  "observer_stopped_by_operator": true,
+  "raw_observation_sha256": "cee666da099618bb4e519810926b2a9f672a5a4fbe712ae6ff1f10dba383a924",
+  "observations": 14,
+  "first_utc": "2026-11-12T19:16:00.013081+00:00",
+  "last_utc": "2026-11-12T19:21:22.781436+00:00",
+  "observed_app_revisions": [
+    "c3869077ef70d1c2bfdc14f6aa87daa25108bbbb"
+  ],
+  "readiness_states": [
+    "http-200",
+    "http-502",
+    "transport-error"
+  ],
+  "any_pending": true,
+  "any_paused_target": false,
+  "any_consumed_marker": false,
+  "expected_health_drill_observed": false,
+  "final_observation": {
+    "utc": "2026-11-12T19:21:22.781436+00:00",
+    "app_revision": "c3869077ef70d1c2bfdc14f6aa87daa25108bbbb",
+    "paused": false,
+    "readiness": "http-200",
+    "pending": false,
+    "consumed": false
+  },
+  "scope": "Ordinary early activation failure and healthy rollback only; no intentional paused-candidate health failure occurred."
+}

@@ -1,17 +1,21 @@
 # Additional Oracle demo automation (#96)
 
-Status: preparation only. No deployment key, GitHub secret, account, sudo rule or
-host controller has been created or installed by this change. Activation requires
-the owner's explicit approval of the access plan below and independent safety
-review. Do not describe this as completed automatic deployment until measured.
+Status: partial activation, not completed automatic deployment. After explicit
+owner consent, the restricted deployment account/controller and encrypted
+`oracle-demo` environment secrets were installed and independently inspected.
+The first real main deployment passed CI but failed in the retained-state helper
+before the intended health-drill pause. The previous application recovered;
+the ordinary stop/recovery outage is not proof of the planned drill. See the
+[observed loader bug and corrective work](evidence/oracle-98/README.md).
 
-Local preparation includes the controller, restricted client/gateway,
-installation/revocation scripts and27 focused policy/transaction regressions.
-Those27 local tests and five Bash syntax checks passed; this does not demonstrate
-an actual automatic deployment. Actual branch CI, independent final review,
-owner consent, restricted access installation and live deployment/rollback
-evidence remain required. Issue97 was independently completed before this work
-resumed. Do not claim #96 completion or publish an activated workflow prematurely.
+Initial preparation included27 focused policy/transaction regressions and five
+Bash syntax checks. Its actual branch CI passed364 backend,166 frontend and two
+Playwright tests, with deployment skipped. Corrective issue98 adds five tests
+that execute the actual emitted retention program with real configuration and
+guarded PostgreSQL; all32 focused tests passed locally. Candidate CI and the
+reviewed installed-controller snapshot proof are still required for that fix.
+Issue96 remains open pending its real pause/rollback and successful release.
+Earlier issue97 completed independently before this work resumed.
 Independent preliminary review found that private umask077 reduced extracted
 source directory modes. Extraction now explicitly normalizes all descendant
 directories to0755 while the release root remains0700; the Linux CI regression

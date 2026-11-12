@@ -1,0 +1,10 @@
+{
+  "direct_constructor": "rejected",
+  "exception_type": "ValidationError",
+  "missing_fields": [
+    "JWT_SECRET_KEY"
+  ],
+  "explicit_loader": "passed",
+  "production_setting": true,
+  "actual_retained": "subprocess-failed"
+}
