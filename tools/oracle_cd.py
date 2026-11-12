@@ -81,6 +81,7 @@ def check_order(sha, main, previous, ancestor):
 
 def extract_source(payload, destination):
     """Git archive only: reject links, traversal, special files and size bombs."""
+    if not destination.is_dir() or any(destination.iterdir()):raise Rejected('archive-target-not-empty')
     with tarfile.open(fileobj=io.BytesIO(payload), mode='r:') as archive:
         members = archive.getmembers()
         if len(members) > 20000 or sum(member.size for member in members) > 100_000_000:
@@ -104,6 +105,11 @@ def extract_source(payload, destination):
                 with archive.extractfile(member) as source, target.open('xb') as stream:
                     shutil.copyfileobj(source, stream)
                 target.chmod(0o755 if member.mode & 0o111 else 0o644)
+        # mkdir's requested mode is reduced by the controller's private umask077.
+        # Normalize all source descendants, including implicit parents, explicitly.
+        # Keep destination itself0700; Docker COPY must retain readable source dirs.
+        for path in destination.rglob('*'):
+            if path.is_dir():path.chmod(0o755)
 
 
 def compatible_migrations(candidate, previous):

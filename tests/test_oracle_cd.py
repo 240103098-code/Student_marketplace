@@ -4,6 +4,7 @@ import contextlib
 import io
 import json
 import os
+import stat
 from pathlib import Path
 import subprocess
 import tarfile
@@ -165,6 +166,26 @@ class Policy(unittest.TestCase):
                 (release/'unreviewed').write_text('not in archive')
                 with self.assertRaises(cd.Rejected):cd.prepare_release(payload,release,SOURCE)
 
+    def test_private_umask_normalizes_all_source_directories_and_allows_verified_retry(self):
+        # Actual POSIX modes are checked on Linux CI; Windows does not emulate
+        # those permission bits. Both platforms still execute extraction/retry.
+        payload=self.archive('backend/nested/code.py')
+        with tempfile.TemporaryDirectory() as directory:
+            release=Path(directory)/SOURCE
+            previous=os.umask(0o077)
+            try:
+                cd.prepare_release(payload,release,SOURCE)
+                def validate_source(path,mode):
+                    if os.name=='posix':self.assertEqual(stat.S_IMODE(path.lstat().st_mode),mode)
+                with patch.object(cd,'protected'),patch.object(cd,'protected_source',side_effect=validate_source):
+                    cd.prepare_release(payload,release,SOURCE)
+            finally:os.umask(previous)
+            self.assertEqual((release/'backend/nested/code.py').read_bytes(),b'safe')
+            if os.name=='posix':
+                self.assertEqual(stat.S_IMODE(release.stat().st_mode),0o700)
+                for path in (release/'backend',release/'backend/nested'):
+                    self.assertEqual(stat.S_IMODE(path.stat().st_mode),0o755)
+                self.assertEqual(stat.S_IMODE((release/'backend/nested/code.py').stat().st_mode),0o644)
     def test_retry_source_mode_or_owner_change_is_rejected(self):
         from unittest.mock import Mock
         path=Mock();path.is_symlink.return_value=False

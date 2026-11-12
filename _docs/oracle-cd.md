@@ -6,12 +6,17 @@ the owner's explicit approval of the access plan below and independent safety
 review. Do not describe this as completed automatic deployment until measured.
 
 Local preparation includes the controller, restricted client/gateway,
-installation/revocation scripts and26 focused policy/transaction regressions.
-Those26 local tests and five Bash syntax checks passed; this does not demonstrate
+installation/revocation scripts and27 focused policy/transaction regressions.
+Those27 local tests and five Bash syntax checks passed; this does not demonstrate
 an actual automatic deployment. Actual branch CI, independent final review,
 owner consent, restricted access installation and live deployment/rollback
 evidence remain required. Issue97 was independently completed before this work
 resumed. Do not claim #96 completion or publish an activated workflow prematurely.
+Independent preliminary review found that private umask077 reduced extracted
+source directory modes. Extraction now explicitly normalizes all descendant
+directories to0755 while the release root remains0700; the Linux CI regression
+checks actual POSIX modes and unchanged-source retry. Windows passing that case
+is not proof of POSIX permissions.
 
 ## Reviewable access plan
 
