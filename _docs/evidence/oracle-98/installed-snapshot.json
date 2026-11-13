@@ -1,0 +1,21 @@
+{
+  "result": "PASS",
+  "utc": "2026-11-13T19:30:48.458940+00:00",
+  "controller_sha256": "3dfd1d0ddb5570453f6431edbd9e8cab27e811886efd595ae21f1727ac2b48aa",
+  "table_count": 7,
+  "account_rows_nonempty": true,
+  "uploaded_file_count": 1,
+  "repeated_complete_snapshots_equal": true,
+  "original_source": "c3869077ef70d1c2bfdc14f6aa87daa25108bbbb",
+  "original_image_unchanged": true,
+  "original_container_unchanged": true,
+  "application_ready": true,
+  "runtime_and_smtp_unchanged": true,
+  "persistent_volumes_unchanged": true,
+  "owned_volume_count": 4,
+  "application_data_writes": false,
+  "authenticated_requests": false,
+  "mail_sent": false,
+  "private_rows_paths_settings_hashes_printed": false,
+  "pre_patch_image_container_volumes_match": true
+}

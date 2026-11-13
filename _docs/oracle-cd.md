@@ -12,9 +12,14 @@ Initial preparation included27 focused policy/transaction regressions and five
 Bash syntax checks. Its actual branch CI passed364 backend,166 frontend and two
 Playwright tests, with deployment skipped. Corrective issue98 adds five tests
 that execute the actual emitted retention program with real configuration and
-guarded PostgreSQL; all32 focused tests passed locally. Candidate CI and the
-reviewed installed-controller snapshot proof are still required for that fix.
-Issue96 remains open pending its real pause/rollback and successful release.
+guarded PostgreSQL; all32 focused tests passed independently with zero skips.
+Actual code-candidate CI passed369 backend,166 frontend and two Playwright tests.
+After the reviewed controller-only replacement, independent read-only measurements
+confirmed equal complete snapshots for all seven real tables and one uploaded
+file, with the original application, four volumes and runtime/SMTP configuration
+unchanged. See the [measured correction/provenance](evidence/oracle-98/README.md).
+Final exact documentation-candidate CI/publication remains tracked in issue98;
+issue96 remains open pending its real pause/rollback and successful release.
 Earlier issue97 completed independently before this work resumed.
 Independent preliminary review found that private umask077 reduced extracted
 source directory modes. Extraction now explicitly normalizes all descendant

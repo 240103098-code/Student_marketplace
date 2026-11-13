@@ -51,8 +51,21 @@ All32 focused tests (27 existing plus five new) passed locally with zero skips:
 ```
 
 This requires the documented explicitly confirmed disposable PostgreSQL setup.
-Actual candidate CI and the installed nonempty snapshot proof remain pending in
-this checkpoint; local tests are not represented as completed live proof.
+Independent QA reran all32 tests against the owned disposable loopback database,
+with zero failures, errors or skips. An interrupted owned local test cluster
+required recovery; only that cluster was restarted and its old log moved outside the data
+directory. The user's separate database was not touched.
+
+Actual [code-candidate CI43491464475](https://github.com/240103098-code/Student_marketplace/actions/runs/43491464475)
+passed for `7320cf4c96b03c67388932ba502d4c34f04a1fbd`:369 backend tests,
+166 frontend tests and two real Compose Playwright tests, with zero skips and
+successful required gate/owned-resource cleanup. All nine implemented checks
+passed; the Compose and Playwright chains shared one built image. Deployment was
+correctly skipped on the non-main branch.
+[The bounded CI record](code-candidate-ci.json) identifies the exact source,
+artifact digest and actual counts. It does not claim CI for a later documentation
+commit; final exact-candidate CI and publication are verified separately in
+[issue98](https://github.com/240103098-code/Student_marketplace/issues/98).
 
 ## Reviewed controller-only replacement boundary
 
@@ -71,6 +84,34 @@ independent quiescent `Host.retained()` calls must agree for the real nonempty
 account/image state while readiness, original source/image and volumes remain
 unchanged. Publish classifications/counts/provenance only, never private hashes,
 identities, paths, values or raw output. Publication/closure follows that proof.
+
+## Actual installed correction and independent snapshot
+
+After the code-candidate CI and independent safety approval, the reviewed
+controller-only update completed under the existing deployment lock. The original
+file was preserved privately and the installed root600 controller now has the
+canonical code-candidate Git-blob SHA256
+`3dfd1d0ddb5570453f6431edbd9e8cab27e811886efd595ae21f1727ac2b48aa`.
+The [update record](controller-update.json) faithfully transcribes the actual
+operator result; it is explicitly not claimed to be a byte copy of an original
+log file. State/runtime configuration stayed unchanged and the original
+application remained healthy. No access installer or credential setup was rerun.
+
+Independent QA then executed the installed `Host.retained()` twice against the
+actual configured, nonempty application at `2026-11-13T19:30:48Z`
+(November14 in the user's timezone). All seven complete table hashes and the
+relative-path/byte hashes of one uploaded file agreed. The account table was
+nonempty; no rows, object paths, settings or private hashes are published.
+The [sanitized independent measurement](installed-snapshot.json) preserves the
+measured fields. It also confirms the original application source
+`c3869077ef70d1c2bfdc14f6aa87daa25108bbbb`, image/container and four persistent
+volumes match the pre-update baseline, readiness remains successful and runtime
+and SMTP configuration are unchanged. These reads used no authenticated
+requests, email or application-data writes.
+
+This is an actual installed snapshot-loader correction, not an automatic release
+of a new application image. The original failed deployment and the forthcoming
+corrected deployment remain distinct observations.
 
 The remaining issue96 drill requires a fresh source/generation marker under the
 existing owner authorization. The failed original attempt must never be relabeled

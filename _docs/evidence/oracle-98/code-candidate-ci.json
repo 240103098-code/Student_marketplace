@@ -1,0 +1,46 @@
+{
+  "result": "PASS",
+  "source": "7320cf4c96b03c67388932ba502d4c34f04a1fbd",
+  "workflow_run": 43491464475,
+  "event": "push",
+  "branch": "issue-98-retention-loader",
+  "artifact_id": 14070320995,
+  "artifact_zip_sha256": "4ec73e0968b998b8efb5c88ef3b4ac0c506b5c08e9e4c6503b1f6ef00821271d",
+  "required_gate": "success",
+  "deployment": "skipped",
+  "backend": {
+    "discovered": 369,
+    "executed": 369,
+    "skipped": 0,
+    "failed": 0,
+    "errors": 0,
+    "passed": 369,
+    "failed_test_ids": []
+  },
+  "frontend": {
+    "numTotalTests": 166,
+    "numPassedTests": 166,
+    "numFailedTests": 0,
+    "numPendingTests": 0,
+    "numTodoTests": 0
+  },
+  "playwright_tests": 2,
+  "checks": [
+    "fresh-guarded-loopback-postgresql",
+    "backend-tests",
+    "canonical-openapi",
+    "frontend-tests",
+    "frontend-typecheck",
+    "frontend-build",
+    "frontend-production-mock-exclusion",
+    "compose-readiness-persistence",
+    "playwright-real-compose"
+  ],
+  "canonical_input_file_count": 222,
+  "shared_image_id": "sha256:1703421d3fe45914eacffff22f7c9cabada0c70ec57d2647a5d196592daca218",
+  "positive_chain_build_count": 1,
+  "cleanup": true,
+  "owned_child_compose_resources_absent": true,
+  "owned_postgres_container_volume_and_shared_image_absent": true,
+  "scope": "Actual code-candidate CI, not a claim about a later documentation commit or live deployment."
+}

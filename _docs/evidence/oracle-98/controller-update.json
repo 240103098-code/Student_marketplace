@@ -1,0 +1,13 @@
+{
+  "recording": "Faithful transcription of the actual root execution transcript; not an original-file byte copy.",
+  "measurement": {
+    "result": "controller-only-update",
+    "controller_sha256": "3dfd1d0ddb5570453f6431edbd9e8cab27e811886efd595ae21f1727ac2b48aa",
+    "original_preserved": true,
+    "runtime_and_state_unchanged": true,
+    "original_application_healthy": true
+  },
+  "old_controller_sha256": "aeb7d911ec861aa4f3108f1a50d37c3dac2aa2785f9aa5db9867d71e25d43948",
+  "replacement_helper_sha256": "b2d866e77331b099cbb34ab8a0c091064b8c3e1b63d6b387301dd500d45c3cbd",
+  "independent_snapshot_probe_sha256": "39b1563de5196ad3cf2abee625b014403c58f7fe0989f1ef493e096fa82fc1e3"
+}
