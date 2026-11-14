@@ -1,0 +1,34 @@
+{
+  "run_id": 43494934230,
+  "attempt": 2,
+  "source": "0f099f724d0e6591202914a1c7a4b4b382b07bfa",
+  "jobs": [
+    {
+      "id": 132552542273,
+      "name": "CI / implemented checks",
+      "attempt": 2,
+      "source": "0f099f724d0e6591202914a1c7a4b4b382b07bfa",
+      "started_at": "2026-11-14T18:57:26Z",
+      "completed_at": "2026-11-14T19:02:10Z",
+      "conclusion": "success"
+    },
+    {
+      "id": 132553858236,
+      "name": "CI / required gate",
+      "attempt": 2,
+      "source": "0f099f724d0e6591202914a1c7a4b4b382b07bfa",
+      "started_at": "2026-11-14T19:02:12Z",
+      "completed_at": "2026-11-14T19:02:15Z",
+      "conclusion": "success"
+    },
+    {
+      "id": 132553884226,
+      "name": "CD / additional Oracle demo",
+      "attempt": 2,
+      "source": "0f099f724d0e6591202914a1c7a4b4b382b07bfa",
+      "started_at": "2026-11-14T19:02:20Z",
+      "completed_at": "2026-11-14T19:03:01Z",
+      "conclusion": "success"
+    }
+  ]
+}

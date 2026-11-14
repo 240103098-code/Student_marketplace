@@ -1,0 +1,44 @@
+{
+  "result": "PASS",
+  "source": "0f099f724d0e6591202914a1c7a4b4b382b07bfa",
+  "run_id": 43494934230,
+  "attempt": 2,
+  "implemented_job_id": 132552542273,
+  "artifact_id": 14128055372,
+  "artifact_created_utc": "2026-11-14T19:02:08Z",
+  "artifact_sha256": "8a33fc7ad54cdfad48283b161a126f20db8bf8f52baa9a92c9ec3e3849aa99e5",
+  "backend": {
+    "discovered": 369,
+    "executed": 369,
+    "skipped": 0,
+    "failed": 0,
+    "errors": 0,
+    "passed": 369,
+    "failed_test_ids": []
+  },
+  "frontend": {
+    "numTotalTests": 166,
+    "numPassedTests": 166,
+    "numFailedTests": 0,
+    "numPendingTests": 0,
+    "numTodoTests": 0
+  },
+  "playwright_tests": 2,
+  "checks": [
+    "fresh-guarded-loopback-postgresql",
+    "backend-tests",
+    "canonical-openapi",
+    "frontend-tests",
+    "frontend-typecheck",
+    "frontend-build",
+    "frontend-production-mock-exclusion",
+    "compose-readiness-persistence",
+    "playwright-real-compose"
+  ],
+  "canonical_input_file_count": 222,
+  "positive_chain_build_count": 1,
+  "shared_ci_image_id": "sha256:d136a7ae97fbdf982ce0445639af903254334ff8b68acca6a5dc85255ca5c7e0",
+  "cleanup": true,
+  "owned_resources_absent": true,
+  "scope": "Actual fresh attempt2 implemented CI, distinct from attempt1 artifact and server ARM image."
+}

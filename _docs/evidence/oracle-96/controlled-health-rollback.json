@@ -1,0 +1,48 @@
+{
+  "result": "PASS",
+  "workflow_run": 43494934230,
+  "attempt": 1,
+  "candidate_source": "0f099f724d0e6591202914a1c7a4b4b382b07bfa",
+  "previous_source": "c3869077ef70d1c2bfdc14f6aa87daa25108bbbb",
+  "observer_sha256": "7ed71888bc479f920986ee1b5845ae12cad41e0a7e24f4b925e52bad0f01070c",
+  "raw_private_observation_sha256": "cfcb1c813daa5e55a564a98bb7639aa9d6ceaf68ad7ad2b34d53484b2ba9f898",
+  "raw_observation_count": 12,
+  "observer_exit": 0,
+  "candidate_ready_before_pause_observed": true,
+  "one_shot_marker_consumed": true,
+  "actual_paused_candidate_failure_observed": true,
+  "paused_failure_events": [
+    {
+      "utc": "2026-11-13T19:50:24.936967+00:00",
+      "app_revision": "0f099f724d0e6591202914a1c7a4b4b382b07bfa",
+      "app_image": "sha256:156697389e8f8bac54f723927a0c65d7e1fa5c6473cca53090ec5ee5b2162ca7",
+      "paused": true,
+      "consumed": true,
+      "pending": true,
+      "readiness": "timeout"
+    },
+    {
+      "utc": "2026-11-13T19:50:42.354138+00:00",
+      "app_revision": "0f099f724d0e6591202914a1c7a4b4b382b07bfa",
+      "app_image": "sha256:156697389e8f8bac54f723927a0c65d7e1fa5c6473cca53090ec5ee5b2162ca7",
+      "paused": true,
+      "consumed": true,
+      "pending": true,
+      "readiness": "http-503"
+    }
+  ],
+  "restored_last_healthy": {
+    "utc": "2026-11-13T19:50:54.430604+00:00",
+    "release": "c3869077ef70d1c2bfdc14f6aa87daa25108bbbb",
+    "app_revision": "c3869077ef70d1c2bfdc14f6aa87daa25108bbbb",
+    "app_image": "sha256:d13ce798cd83f4dd37b3631d17e85f5a7de8f431d930f1a5e9b4c13133f05cd2",
+    "paused": false,
+    "consumed": true,
+    "pending": false,
+    "readiness": "http-200"
+  },
+  "observer_application_data_reads": false,
+  "observer_authenticated_requests": false,
+  "observer_application_writes": false,
+  "scope": "Observed real pause/readiness failure/recovery, not a claim of retained hashes or successful deployment."
+}

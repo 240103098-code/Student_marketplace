@@ -1,0 +1,26 @@
+{
+  "result": "PASS",
+  "workflow_run": 43494934230,
+  "attempt": 2,
+  "source": "0f099f724d0e6591202914a1c7a4b4b382b07bfa",
+  "observer_sha256": "34deff2cb62f156a9ac5c5099af561da3ff7ddfe4bd62c06ba5b1fd932df4f78",
+  "raw_private_observation_sha256": "e48a04dd1beb02dfbfc99e305af286cde0ff700c5de7acb2ec581ea91cd32e4c",
+  "observer_exit": 0,
+  "actual_committed_release": {
+    "utc": "2026-11-14T19:03:00.406139+00:00",
+    "release": "0f099f724d0e6591202914a1c7a4b4b382b07bfa",
+    "app_revision": "0f099f724d0e6591202914a1c7a4b4b382b07bfa",
+    "app_image": "sha256:14c3b612ca6af3b0c8d787b76ed2867bacf0c8a6b000e9c810fc60a25a6f7fa1",
+    "paused": false,
+    "pending": false,
+    "active_marker": false,
+    "new_generation_marker_consumed": false,
+    "state_generation_matches": true,
+    "state_image_matches": true,
+    "readiness": "http-200"
+  },
+  "observer_application_data_reads": false,
+  "observer_authenticated_requests": false,
+  "observer_application_writes": false,
+  "scope": "Actual current-generation source/image/state/readiness observation; retained data and GitHub job results require separate QA."
+}

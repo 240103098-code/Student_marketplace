@@ -1,0 +1,24 @@
+{
+  "result": "PASS",
+  "run_id": 43494934230,
+  "attempt": 1,
+  "candidate_source": "0f099f724d0e6591202914a1c7a4b4b382b07bfa",
+  "observer_sha256": "7ed71888bc479f920986ee1b5845ae12cad41e0a7e24f4b925e52bad0f01070c",
+  "raw_private_observation_sha256": "cfcb1c813daa5e55a564a98bb7639aa9d6ceaf68ad7ad2b34d53484b2ba9f898",
+  "observations": 12,
+  "trailing_result_record_excluded_from_observation_count": true,
+  "exact_paused_candidate_and_consumed_marker_events_verified": true,
+  "restored_previous_healthy_event_verified": true,
+  "external_observations": 78,
+  "external_status_counts": {
+    "http-200": 67,
+    "transport-error": 6,
+    "timeout": 4,
+    "http-503": 1
+  },
+  "external_raw_sha256": "b67b2483e17549d6e65070fefa86ed3c5b0655554802daee76afecd851666f35",
+  "external_first_utc": "2026-11-13T19:48:28.045202+00:00",
+  "external_last_utc": "2026-11-13T19:51:47.154266+00:00",
+  "external_poll_stopped_by_qa": true,
+  "scope": "Historical actual controlled phase observations independently correlated; current recovery and retention checked separately."
+}

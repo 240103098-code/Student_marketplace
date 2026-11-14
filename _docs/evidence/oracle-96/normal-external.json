@@ -1,0 +1,13 @@
+{
+  "result": "PASS",
+  "utc": "2026-11-14T19:11:37.990836+00:00",
+  "run_id": 43494934230,
+  "attempt": 2,
+  "source": "0f099f724d0e6591202914a1c7a4b4b382b07bfa",
+  "outside_vm_trusted_https_readiness": 200,
+  "outside_vm_react_static": 200,
+  "hsts_present": true,
+  "authenticated_requests": false,
+  "mail_sent": false,
+  "hostname_or_private_data_printed": false
+}

@@ -1,0 +1,86 @@
+{
+  "scope": "Independent initial access/environment inspection; controller-only correction subsequently verified under issue #98.",
+  "explicit_owner_activation_and_brief_outage_consent_received": true,
+  "new_ci_key_distinct_from_owner_admin_key": true,
+  "new_ci_private_key_owner_only_local_acl_verified": true,
+  "initial_installed_access": {
+    "checks": {
+      "dedicated_identity_no_admin_or_docker_groups": true,
+      "effective_sshd_restrictions": true,
+      "exact_four_persistent_volumes": true,
+      "exact_narrow_sudo_rule": true,
+      "exact_two_field_config": true,
+      "healthy_original_baseline": true,
+      "installed_fixed_modes": true,
+      "no_pending_recovery_or_drill": true,
+      "root_owned_paths": true,
+      "root_owned_ssh_paths": true,
+      "sole_restricted_forced_ed25519_key": true,
+      "sudo_arbitrary_command_denied": true,
+      "sudo_extra_arguments_denied": true
+    },
+    "image": "sha256:d13ce798cd83f4dd37b3631d17e85f5a7de8f431d930f1a5e9b4c13133f05cd2",
+    "result": "PASS",
+    "source_sha": "c3869077ef70d1c2bfdc14f6aa87daa25108bbbb"
+  },
+  "actual_ssh_denial_probes": {
+    "checks": {
+      "arbitrary_id": true,
+      "arbitrary_shell": true,
+      "direct_tcp_forwarding_denied": true,
+      "file_transfer_subsystem": true,
+      "pty_denied": true,
+      "remote_forwarding_denied": true,
+      "shell_suffix": true
+    },
+    "native_output_published": false,
+    "result": "PASS"
+  },
+  "actual_environment_inspection": {
+    "checks": {
+      "actual_environment_name": true,
+      "canonical_public_repo_id": true,
+      "custom_branch_policy_enabled": true,
+      "exact_three_secret_names": true,
+      "one_main_branch_zero_tags": true
+    },
+    "metadata_only": true,
+    "result": "PASS",
+    "secret_values_requested": false
+  },
+  "encrypted_secret_configuration": {
+    "environment": "oracle-demo",
+    "main_branch_only": true,
+    "tag_rules": 0,
+    "secret_names": [
+      "ORACLE_DEMO_DEPLOY_KEY",
+      "ORACLE_DEMO_HOST",
+      "ORACLE_DEMO_KNOWN_HOSTS"
+    ],
+    "private_values_printed": false,
+    "owner_admin_key_uploaded": false,
+    "mail_database_jwt_uploaded": false,
+    "encryption": "libsodium-sealed-box",
+    "operator_libraries": {
+      "PyNaCl": "1.6.2",
+      "cffi": "2.0.0",
+      "pycparser": "2.23"
+    }
+  },
+  "initial_installed_file_provenance": {
+    "installed_file_matches": {
+      "backup.sh": true,
+      "compose.sh": true,
+      "controller.py": true,
+      "gateway.sh": true,
+      "template/compose.yaml": true,
+      "template/ops/oracle/Caddyfile": true,
+      "template/ops/oracle/compose.https.yaml": true
+    },
+    "operations_source_sha": "634f76b1e33c5013820b443105c097cddbba76de",
+    "result": "PASS"
+  },
+  "current_reviewed_controller_sha256": "3dfd1d0ddb5570453f6431edbd9e8cab27e811886efd595ae21f1727ac2b48aa",
+  "controller_correction_evidence": "../oracle-98/README.md",
+  "scope_note": "Initial seven-file provenance uses source 634f76b; only controller was later replaced with reviewed 3df bytes. Account/key/gateway/fixed templates were not reinstalled."
+}

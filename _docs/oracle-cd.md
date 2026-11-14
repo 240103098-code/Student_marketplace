@@ -1,12 +1,18 @@
 # Additional Oracle demo automation (#96)
 
-Status: partial activation, not completed automatic deployment. After explicit
-owner consent, the restricted deployment account/controller and encrypted
-`oracle-demo` environment secrets were installed and independently inspected.
-The first real main deployment passed CI but failed in the retained-state helper
-before the intended health-drill pause. The previous application recovered;
-the ordinary stop/recovery outage is not proof of the planned drill. See the
-[observed loader bug and corrective work](evidence/oracle-98/README.md).
+Status: activated additional Oracle source automation with measured controlled
+rollback and normal automatic release. After explicit owner consent, the
+restricted deployment account/controller and encrypted `oracle-demo` environment
+secrets were installed and independently inspected. The first source634 main
+deployment exposed a retained-state loader bug before its planned pause; the
+ordinary recovery was not counted as the drill. The
+[loader correction](evidence/oracle-98/README.md) was independently installed and
+verified. The corrected source0f then completed the actual deliberate
+pause/readiness-failure/last-healthy rollback and a fresh successful full retry.
+See the [dated measured results and safe evidence](evidence/oracle-96/README.md).
+Publication of that report receives its own full CI/deployment and independent
+latest-release confirmation in issue96 before closure; earlier measurements do
+not predict a future commit's result.
 
 Initial preparation included27 focused policy/transaction regressions and five
 Bash syntax checks. Its actual branch CI passed364 backend,166 frontend and two
@@ -18,8 +24,12 @@ After the reviewed controller-only replacement, independent read-only measuremen
 confirmed equal complete snapshots for all seven real tables and one uploaded
 file, with the original application, four volumes and runtime/SMTP configuration
 unchanged. See the [measured correction/provenance](evidence/oracle-98/README.md).
-Final exact documentation-candidate CI/publication remains tracked in issue98;
-issue96 remains open pending its real pause/rollback and successful release.
+Issue98 was independently completed and published before the corrected drill.
+The measured normal run passed369 backend,166 frontend and two Playwright tests;
+its native ARM source build is distinct from the image tested on the CI runner.
+Issue96's final report publication/actual deployment confirmation is tracked in
+that issue. Full image promotion, feature coverage and assignment destinations
+retain their separate criteria.
 Earlier issue97 completed independently before this work resumed.
 Independent preliminary review found that private umask077 reduced extracted
 source directory modes. Extraction now explicitly normalizes all descendant
