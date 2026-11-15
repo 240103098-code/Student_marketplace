@@ -78,7 +78,7 @@ def main():
     (private/'controller.json').write_text(json.dumps({'env':env,'project':project,'prefix':prefix}))
     try:
         record['candidate']=run(['git','rev-parse','HEAD']).stdout.strip()
-        inputs=['compose.yaml','Dockerfile','e2e/package-lock.json','e2e/playwright.config.cjs','e2e/fixtures.cjs','e2e/smoke.spec.cjs','e2e/safe-reporter.cjs','e2e/smtp_sink.py','tools/e2e_stack.py','e2e/features/issue-61.spec.cjs','e2e/registration_state.py']
+        inputs=['compose.yaml','Dockerfile','e2e/package-lock.json','e2e/playwright.config.cjs','e2e/fixtures.cjs','e2e/smoke.spec.cjs','e2e/safe-reporter.cjs','e2e/smtp_sink.py','tools/e2e_stack.py','e2e/features/issue-61.spec.cjs','e2e/registration_state.py','e2e/registration-observer.cjs']
         record['input_sha256']={p:hashlib.sha256((REPO/p).read_bytes()).hexdigest() for p in inputs}
         record['docker']=run(['docker','version','--format','{{.Server.Version}}'],env).stdout.strip()
         record['compose']=run(['docker','compose','version','--short'],env).stdout.strip()

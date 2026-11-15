@@ -69,6 +69,32 @@ class HarnessContract(unittest.TestCase):
         self.assertGreaterEqual(rows[0]['completed_ms'],rows[0]['started_ms'])
         self.assertGreaterEqual(rows[1]['started_ms'],rows[0]['completed_ms'])
 
+    def test_passive_observer_reads_actual_unconsumed_error_body_without_replacing_response(self):
+        script="""const http=require('node:http');const {installRegistrationObserver}=require('./e2e/registration-observer.cjs');
+        (async()=>{let requests=0;const payload=JSON.stringify({detail:'PRIVATE RESPONSE BODY'});
+        const server=http.createServer((req,res)=>{requests++;res.writeHead(409,{'content-type':'application/json'});res.end(payload);});
+        await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const origin='http://127.0.0.1:'+server.address().port;
+        const native=globalThis.fetch;let original,seen,receiver;const failed=process.argv[1]==='failed';
+        globalThis.fetch=async function(...args){seen=args;receiver=this;original=await Reflect.apply(native,this,args);if(failed)original.clone=()=>{throw Error('PRIVATE CLONE ERROR');};return original;};
+        installRegistrationObserver(origin);
+        try{
+         const target=origin+'/api/auth/register',options={method:'POST',body:'PRIVATE SUBMITTED PASSWORD'},context={};
+         const response=await globalThis.fetch.call(context,target,options);
+         if(response!==original||receiver!==context||seen[0]!==target||seen[1]!==options||requests!==1)throw Error();
+         // Application deliberately does not consume the 409 body before observation.
+         if(failed){let message;try{await globalThis.__registrationObservation.take(409,1);}catch(error){message=error.message;}if(message!=='Registration body observation unavailable')throw Error();}
+         else if(await globalThis.__registrationObservation.take(409,1)!==payload)throw Error();
+         if(await response.text()!==payload||requests!==1)throw Error();
+         await globalThis.fetch(origin+'/unrelated',{method:'POST'});
+         let rejected=false;try{await globalThis.__registrationObservation.take(409,2);}catch{rejected=true;}
+         if(!rejected||requests!==2)throw Error();
+        }finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
+        })().catch(()=>{process.exitCode=1;});"""
+        for mode in ('normal','failed'):
+            with self.subTest(mode=mode):
+                result=subprocess.run(['node','-e',script,mode],cwd=ROOT,capture_output=True,text=True,timeout=15)
+                self.assertEqual(result.returncode,0);self.assertEqual(result.stdout+result.stderr,'')
+
     def test_state_reader_is_read_only_and_drops_invalid_input(self):
         # Subprocess refuses malformed identity/action before attempting any database connection.
         for request in ({'email':'external@example.com','password':'private','operation':'snapshot'}, {'email':'e2e-'+'a'*32+'-owned@sdu.edu.kz','password':'private','operation':'delete'}):
