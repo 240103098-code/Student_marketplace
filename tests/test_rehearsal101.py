@@ -74,7 +74,7 @@ class RehearsalSafety(unittest.TestCase):
              patch.object(self.controller,'run',return_value=subprocess.CompletedProcess([],0,json.dumps([info]),'')):
             self.controller.proxy_diagnostics(stack,'connection-refused')
         value=self.controller.record['https_fixture_diagnostics']['dev']
-        self.assertEqual(value['containers'],[{'running':False,'exit_code':1,'oom_killed':False}])
+        self.assertEqual(value['containers'],[{'running':False,'exit_code':1,'oom_killed':False,'process_uid_gid':''}])
         self.assertNotIn('PRIVATE',json.dumps(value))
 
     def test_native_errors_and_timeout_never_reveal_output(self):

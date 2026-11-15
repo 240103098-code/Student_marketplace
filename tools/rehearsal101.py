@@ -217,7 +217,9 @@ class Rehearsal:
         while time.monotonic()<end:
             try:
                 status=request(stack['origin'],'/health/ready',context=self.context)[0]
-                if status==200:return
+                if status==200:
+                    self.proxy_diagnostics(stack,'verified-http-200')
+                    return
                 probe='http-status-'+str(status)
             except ssl.SSLCertVerificationError:
                 self.proxy_diagnostics(stack,'certificate-verification')
@@ -241,7 +243,8 @@ class Rehearsal:
             require(labels.get(LABEL)==self.owner and labels.get('com.docker.compose.project')==stack['project'],
                     'proxy-diagnostic-ownership')
             states.append({'running':bool(value['State']['Running']),'exit_code':int(value['State']['ExitCode']),
-                           'oom_killed':bool(value['State'].get('OOMKilled'))})
+                           'oom_killed':bool(value['State'].get('OOMKilled')),
+                           'process_uid_gid':value['Config'].get('User','')})
         key=self.private/'web/server.key'
         info=key.stat()
         self.record.setdefault('https_fixture_diagnostics',{})[stack['name']]={
