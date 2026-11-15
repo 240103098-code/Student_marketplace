@@ -136,5 +136,32 @@ class RehearsalSafety(unittest.TestCase):
         self.assertEqual(result['app_reads']['dev']['completed'],3)
         self.assertEqual(result['app_reads']['prod']['completed'],3)
 
+    def test_slow_otlp_has_one_admitted_future_and_records_skipped_offers(self):
+        controller=self.controller
+        class FastSampler:
+            def sample(self,name,elapsed,obs):
+                controller.record['samples'].append({'phase':name,'services':{},'aggregate_cpu_percent':0,
+                    'aggregate_memory_bytes':0,'runner_cpu_percent':0,'runner_used_memory_bytes':0})
+        calls=[]
+        def slow_otlp(obs):
+            calls.append(time.monotonic())
+            time.sleep(4)
+            return 100
+        with patch('tools.rehearsal101_capacity.normal_login'),\
+             patch('tools.rehearsal101_capacity.load_read',return_value=(200,.001)),\
+             patch('tools.rehearsal101_capacity.otlp',side_effect=slow_otlp),\
+             patch('tools.rehearsal101_capacity.grafana',return_value=1):
+            result=capacity.phase(controller,FastSampler(),({'name':'dev'},{'name':'prod'}),'outage',3.1,None)
+        self.assertEqual(len(calls),1)
+        self.assertEqual(result['otlp_offered_points'],400)
+        self.assertEqual(result['otlp_accepted_points'],100)
+        self.assertEqual(result['otlp_failed_or_unscheduled_points'],300)
+        self.assertGreater(result['otlp_offer_interval_seconds']['min'],.75)
+
+    def test_missed_offer_fails_before_catchup_and_records_unoffered_slots(self):
+        with self.assertRaisesRegex(harness.Failure,'fixed-scheduler-missed-tick'):
+            capacity.tick_delay(self.controller,'load','app',3,1,.5)
+        self.assertEqual(self.controller.record['scheduler_failure']['unoffered_due_slots'],5)
+
 
 if __name__=='__main__':unittest.main()

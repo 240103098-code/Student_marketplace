@@ -250,6 +250,15 @@ def load_read(r,stack,n):
     return status, time.monotonic()-start
 
 
+def tick_delay(r,phase,kind,now,due,period):
+    delay=now-due
+    if delay>.25:
+        r.record['scheduler_failure']={'phase':phase,'kind':kind,'lateness_seconds':delay,
+                                       'unoffered_due_slots':math.floor(delay/period)+1}
+        raise Failure('fixed-scheduler-missed-tick')
+    return delay
+
+
 def phase(r,sampler,stacks,name,seconds,obs):
     r.record['active_stage']='capacity-'+name
     active=name in ('load','outage','recovery')
@@ -258,11 +267,10 @@ def phase(r,sampler,stacks,name,seconds,obs):
     metric_pool=ThreadPoolExecutor(max_workers=1)
     grafana_pool=ThreadPoolExecutor(max_workers=1)
     sampler_pool=ThreadPoolExecutor(max_workers=1)
-    sample_futures=[];read_lateness=[];metric_lateness=[]
+    sample_futures=[];read_lateness=[];metric_lateness=[];read_offsets=[];metric_offsets=[]
+    metric_pending=None
     futures={s['name']:[] for s in stacks};metric_futures=[];grafana_futures=[]
     results={s['name']:{'offered':0,'scheduled':0,'scheduler_rejected':0,'completed':0,'errors':0,'latency_seconds':[]} for s in stacks}
-    started=time.monotonic();next_read=next_metric=next_grafana=next_sample=started
-    start_wall=time.time();max_sample_gap=0;last_sample=started
     start_storage=disk(r,obs,outage=name=='outage') if obs else None
     def counters():
         if not obs:return {}
@@ -278,12 +286,16 @@ def phase(r,sampler,stacks,name,seconds,obs):
             selected['prometheus_tsdb_head_samples_appended_total']=float(found[1])
         return selected
     start_counters=counters()
+    # Setup disk/counter snapshots are outside the fixed offered-rate phase clock.
+    started=time.monotonic();next_read=next_metric=next_grafana=next_sample=started
+    start_wall=time.time();max_sample_gap=0;last_sample=started
     try:
         while time.monotonic()-started<seconds:
             now=time.monotonic()
             require(now<r.deadline,'phase-outer-deadline')
             if active and now>=next_read:
-                read_lateness.append(now-next_read)
+                read_lateness.append(tick_delay(r,name,'app',now,next_read,.5))
+                read_offsets.append(now-started)
                 for stack in stacks:
                     res=results[stack['name']];res['offered']+=1
                     pending=sum(not f.done() for f in futures[stack['name']])
@@ -293,9 +305,12 @@ def phase(r,sampler,stacks,name,seconds,obs):
                     else:res['scheduler_rejected']+=1
                 next_read+=.5
             if active and now>=next_metric:
-                metric_lateness.append(now-next_metric)
+                metric_lateness.append(tick_delay(r,name,'otlp',now,next_metric,1))
+                metric_offsets.append(now-started)
                 # Never substitute an unbounded executor queue for the fixed offered rate.
-                if not any(f is not None and not f.done() for f in metric_futures[-2:]):metric_futures.append(metric_pool.submit(otlp,obs))
+                if metric_pending is None or metric_pending.done():
+                    metric_pending=metric_pool.submit(otlp,obs)
+                    metric_futures.append(metric_pending)
                 else:metric_futures.append(None)
                 next_metric+=1
             if active and now>=next_grafana:
@@ -339,6 +354,11 @@ def phase(r,sampler,stacks,name,seconds,obs):
                 'max_sample_gap_seconds':max_sample_gap,'app_reads':results,
                 'app_tick_lateness_peak_seconds':max(read_lateness,default=0),
                 'otlp_tick_lateness_peak_seconds':max(metric_lateness,default=0),
+                'actual_app_offer_offsets_seconds':read_offsets,'actual_otlp_offer_offsets_seconds':metric_offsets,
+                'app_offer_interval_seconds':{'min':min([b-a for a,b in zip(read_offsets,read_offsets[1:])],default=0),
+                                              'max':max([b-a for a,b in zip(read_offsets,read_offsets[1:])],default=0)},
+                'otlp_offer_interval_seconds':{'min':min([b-a for a,b in zip(metric_offsets,metric_offsets[1:])],default=0),
+                                               'max':max([b-a for a,b in zip(metric_offsets,metric_offsets[1:])],default=0)},
                 'otlp_offered_points':len(metric_futures)*100,'otlp_accepted_points':accepted,'otlp_failed_or_unscheduled_points':errors,
                 'otlp_explicitly_rejected_points':rejected,
                 'grafana_query_success':gpassed,'grafana_query_errors':gerrors,
