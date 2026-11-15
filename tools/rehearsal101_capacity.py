@@ -103,7 +103,9 @@ def grafana(obs):
     require(status==200,'grafana-authenticated-query')
     value=json.loads(body)
     frames=value.get('results',{}).get('A',{}).get('frames',[])
-    require(frames and any(frame.get('data',{}).get('values') for frame in frames),'grafana-query-values')
+    require(frames and any(isinstance(value,(int,float)) and not isinstance(value,bool)
+                           for frame in frames for column in frame.get('data',{}).get('values',[])
+                           for value in column),'grafana-query-values')
     return 1
 
 
@@ -307,10 +309,12 @@ def phase(r,sampler,stacks,name,seconds,obs):
             latencies=res.pop('latency_seconds')
             res.update(achieved_success_per_second=res['completed']/duration,
                        latency_p95_seconds=percentile(latencies),latency_peak_seconds=max(latencies,default=0))
-        accepted=errors=0
+        accepted=errors=rejected=0
         for future in metric_futures:
             if future is None:errors+=100;continue
-            try:accepted+=future.result(timeout=10)
+            try:
+                count=future.result(timeout=10)
+                accepted+=count;rejected+=100-count
             except Exception:errors+=100
         gpassed=gerrors=0
         for f in grafana_futures:
@@ -320,6 +324,7 @@ def phase(r,sampler,stacks,name,seconds,obs):
         output={'duration_seconds':duration,'start_unix':start_wall,'end_unix':time.time(),'sample_count':len(samples),
                 'max_sample_gap_seconds':max_sample_gap,'app_reads':results,
                 'otlp_offered_points':len(metric_futures)*100,'otlp_accepted_points':accepted,'otlp_failed_or_unscheduled_points':errors,
+                'otlp_explicitly_rejected_points':rejected,
                 'grafana_query_success':gpassed,'grafana_query_errors':gerrors,
                 'storage_start':start_storage,'storage_end':disk(r,obs,outage=name=='outage') if obs else None}
         end_counters=counters()
@@ -416,6 +421,14 @@ def capacity(r,dev,prod):
     else:raise Failure('candidate-readiness')
     r.check('grafana-anonymous-denied',request(obs['endpoints']['grafana'],'/api/datasources')[0]==401)
     phase(r,sampler,stacks,'idle',120,obs)
+    # Warm only the metric/query path before the fixed load clock, without hiding its cost.
+    r.record['capacity_warmup_points']=otlp(obs)
+    warm_deadline=time.monotonic()+15
+    while time.monotonic()<warm_deadline:
+        if scalar(obs,'count(rehearsal_capacity_value)')==100:break
+        time.sleep(.25)
+    else:raise Failure('capacity-warmup-storage')
+    r.check('grafana-authenticated-stored-value',grafana(obs)==1)
     phase(r,sampler,stacks,'load',300,obs)
     r.compose(obs,'stop','--timeout','5','prometheus')
     sampler.expected_outage=True
