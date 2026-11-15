@@ -123,7 +123,11 @@ class Rehearsal:
     def run(self,args,**kw):
         require(time.monotonic()<self.deadline,'outer-deadline')
         kw['timeout']=min(kw.get('timeout',30),max(1,self.deadline-time.monotonic()))
-        return bounded(args,env=self.env,**kw)
+        okay=kw.pop('okay',False)
+        result=bounded(args,env=self.env,okay=True,**kw)
+        self.record['last_subprocess_exit_status']=result.returncode
+        require(okay or result.returncode==0,'subprocess-status')
+        return result
 
     def compose(self,stack,*args,**kw):
         require(re.fullmatch(re.escape(self.owner)+r'-(dev|prod|obs)',stack['project']), 'project-ownership')
@@ -256,6 +260,15 @@ class Rehearsal:
         self.check(name,self.fingerprint(prod)==baseline and self.api(prod,'/users/me',token=prod['token'])[0]==200
                    and request(prod['origin'],'/health/ready',context=self.context)[0]==200)
 
+    def failed_gate(self,stack,name,result):
+        ids=self.compose(stack,'ps','-aq').stdout.split()
+        info=json.loads(self.run(['docker','inspect',*ids]).stdout)
+        app=[c for c in info if c['Config']['Labels']['com.docker.compose.service']=='app']
+        migrate=[c for c in info if c['Config']['Labels']['com.docker.compose.service']=='migrate']
+        self.check(name,result.returncode!=0 and bool(migrate) and
+                   all(not c['State']['Running'] and c['State']['ExitCode']!=0 for c in migrate) and
+                   all(not c['State']['Running'] for c in app))
+
     def inspect(self,stack):
         ids=self.compose(stack,'ps','-aq').stdout.split()
         actual=json.loads(self.run(['docker','inspect',*ids]).stdout)
@@ -301,7 +314,7 @@ class Rehearsal:
         self.compose(dev,'stop','proxy','app','migrate')
         self.sql(dev,"UPDATE alembic_version SET version_num='invalid_101'")
         failed=self.compose(dev,'up','-d','--force-recreate','migrate','app',okay=True,timeout=90)
-        self.check('dev-migration-failure-blocks-startup',failed.returncode!=0)
+        self.failed_gate(dev,'dev-migration-failure-blocks-startup',failed)
         self.preserved(prod,baseline,'prod-after-dev-migration-failure')
         self.cleanup_project(dev,volumes=True)
         self.up(dev);self.preserved(prod,baseline,'prod-after-dev-reset')
@@ -309,7 +322,7 @@ class Rehearsal:
         original=dev['environment']['JWT_SECRET_KEY'];dev['environment']['JWT_SECRET_KEY']='invalid'
         self.save(dev)
         failed=self.compose(dev,'up','-d','--force-recreate','migrate','app',okay=True,timeout=90)
-        self.check('dev-invalid-secret-blocks-startup',failed.returncode!=0)
+        self.failed_gate(dev,'dev-invalid-secret-blocks-startup',failed)
         self.preserved(prod,baseline,'prod-after-invalid-dev-secret')
         dev['environment']['JWT_SECRET_KEY']=secrets.token_hex(48)
         self.check('dev-secret-replaced',original!=dev['environment']['JWT_SECRET_KEY'])
@@ -392,12 +405,19 @@ class Rehearsal:
         self.record['application_image_id']=self.run(['docker','image','inspect',self.image,'--format','{{.Id}}']).stdout.strip()
 
     def main(self):
-        self.provenance();self.certificates();self.images()
+        self.record['active_stage']='provenance';self.provenance()
+        self.record['active_stage']='certificates';self.certificates()
+        self.record['active_stage']='images';self.images()
         dev=self.stack('dev');prod=self.stack('prod')
-        self.up(dev);self.up(prod)
-        self.journey(dev);self.journey(prod)
+        self.record['active_stage']='dev-startup';self.up(dev)
+        self.record['active_stage']='prod-startup';self.up(prod)
+        self.record['active_stage']='dev-normal-journey';self.journey(dev)
+        self.record['active_stage']='prod-normal-journey';self.journey(prod)
+        self.record['active_stage']='browser-isolation'
         self.browser(dev,prod)
+        self.record['active_stage']='destructive-dev-isolation'
         self.isolation(dev,prod)
+        self.record['active_stage']='capacity'
         from tools.rehearsal101_capacity import capacity
         capacity(self,dev,prod)
         self.record['result']='PASS'

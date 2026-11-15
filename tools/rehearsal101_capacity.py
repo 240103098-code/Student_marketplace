@@ -129,13 +129,17 @@ def bytes_value(text):
     return float(match[1])*units[match[2]]
 
 
-def disk(r,obs):
+def disk(r,obs,outage=False):
     values={}
     for service,path in [('prometheus','/prometheus'),('grafana','/var/lib/grafana')]:
-        result=r.compose(obs,'exec','-T',service,'du','-sk',path,timeout=8)
+        command=(['run','--rm','--no-deps','--entrypoint','du',service,'-sk',path]
+                 if service=='prometheus' and outage else ['exec','-T',service,'du','-sk',path])
+        result=r.compose(obs,*command,timeout=8)
         values[service+'_bytes']=int(result.stdout.split()[0])*1024
     for name in ('wal','chunks_head'):
-        result=r.compose(obs,'exec','-T','prometheus','du','-sk','/prometheus/'+name,timeout=8,okay=True)
+        command=(['run','--rm','--no-deps','--entrypoint','du','prometheus','-sk','/prometheus/'+name]
+                 if outage else ['exec','-T','prometheus','du','-sk','/prometheus/'+name])
+        result=r.compose(obs,*command,timeout=8,okay=True)
         values[name+'_bytes']=int(result.stdout.split()[0])*1024 if result.returncode==0 else 0
     return values
 
@@ -158,11 +162,26 @@ class Sampler:
     def sample(self,phase,elapsed,obs=None):
         r=self.r
         ids=[]
-        for stack in self.stacks:ids+=r.compose(stack,'ps','-q','--status','running').stdout.split()
-        if obs:ids+=r.compose(obs,'ps','-q','--status','running').stdout.split()
+        for stack in self.stacks:ids+=r.compose(stack,'ps','-aq').stdout.split()
+        if obs:ids+=r.compose(obs,'ps','-aq').stdout.split()
         require(bool(ids),'sampler-no-containers')
-        stats=r.run(['docker','stats','--no-stream','--format','{{json .}}',*ids],timeout=8)
         inspected=json.loads(r.run(['docker','inspect',*ids],timeout=8).stdout)
+        expected={(stack['project'],service) for stack in self.stacks for service in ('app','db','smtp','proxy')}
+        if obs:expected|={(obs['project'],service) for service in ('collector','prometheus','grafana')}
+        seen=set();running=[]
+        for info in inspected:
+            labels=info['Config']['Labels'];service=labels['com.docker.compose.service'];project=labels['com.docker.compose.project']
+            require(labels.get(LABEL)==r.owner,'sampler-owner')
+            require(not info['State'].get('OOMKilled') and info['RestartCount']==0,'service-oom-or-restart')
+            if (project,service) in expected:
+                seen.add((project,service))
+                allowed_stop=phase=='outage' and obs and project==obs['project'] and service=='prometheus'
+                require(info['State']['Running'] or allowed_stop,'unexpected-service-exit')
+            else:
+                require(service in ('migrate','uploads-init') and info['State']['ExitCode']==0,'unexpected-one-shot-exit')
+            if info['State']['Running']:running.append(info['Id'])
+        require(seen==expected,'missing-long-running-service')
+        stats=r.run(['docker','stats','--no-stream','--format','{{json .}}',*running],timeout=8)
         byname={c['Name'].lstrip('/'):c for c in inspected}
         row={'phase':phase,'elapsed_seconds':round(elapsed,3),'timestamp_unix':time.time(),
              'services':{},'aggregate_cpu_percent':0,'aggregate_memory_bytes':0}
@@ -204,7 +223,10 @@ class Sampler:
             cap=sum(v for k,v in row['collector'].items() if k.endswith('queue_capacity'))
             require(cap==10 and 0<=queue<=cap,'collector-queue-bound')
             row['queue_requests']=queue;row['queue_capacity_requests']=cap
-            if phase!='outage':row['storage']=disk(r,obs)
+            row['storage']=disk(r,obs,outage=phase=='outage')
+            if phase=='recovery':
+                try:row['newest_stored_synthetic_timestamp']=scalar(obs,'max(timestamp(rehearsal_capacity_value))')
+                except Exception:row['newest_stored_synthetic_timestamp']=0
         r.record['samples'].append(row)
         return row
 
@@ -223,6 +245,7 @@ def load_read(r,stack,n):
 
 
 def phase(r,sampler,stacks,name,seconds,obs):
+    r.record['active_stage']='capacity-'+name
     active=name in ('load','outage','recovery')
     for stack in stacks:normal_login(r,stack)
     pools={s['name']:ThreadPoolExecutor(max_workers=4) for s in stacks}
@@ -231,7 +254,21 @@ def phase(r,sampler,stacks,name,seconds,obs):
     results={s['name']:{'offered':0,'scheduled':0,'scheduler_rejected':0,'completed':0,'errors':0,'latency_seconds':[]} for s in stacks}
     started=time.monotonic();next_read=next_metric=next_grafana=next_sample=started
     start_wall=time.time();max_sample_gap=0;last_sample=started
-    start_storage=disk(r,obs) if obs and name!='outage' else None
+    start_storage=disk(r,obs,outage=name=='outage') if obs else None
+    def counters():
+        if not obs:return {}
+        status,_,raw=request(obs['endpoints']['self'],'/metrics')
+        require(status==200,'phase-collector-counters')
+        values=metrics(raw.decode())
+        selected={k:v for k,v in values.items() if any(s in k for s in ('metric_points','queue_','prometheusremotewrite_'))}
+        if name!='outage':
+            status,_,raw=request(obs['endpoints']['prometheus'],'/metrics')
+            require(status==200,'phase-tsdb-counter')
+            found=re.search(rb'^prometheus_tsdb_head_samples_appended_total\s+([0-9.eE+\-]+)',raw,re.M)
+            require(found is not None,'tsdb-counter-missing')
+            selected['prometheus_tsdb_head_samples_appended_total']=float(found[1])
+        return selected
+    start_counters=counters()
     try:
         while time.monotonic()-started<seconds:
             now=time.monotonic()
@@ -284,10 +321,25 @@ def phase(r,sampler,stacks,name,seconds,obs):
                 'max_sample_gap_seconds':max_sample_gap,'app_reads':results,
                 'otlp_offered_points':len(metric_futures)*100,'otlp_accepted_points':accepted,'otlp_failed_or_unscheduled_points':errors,
                 'grafana_query_success':gpassed,'grafana_query_errors':gerrors,
-                'storage_start':start_storage,'storage_end':disk(r,obs) if obs and name!='outage' else None}
+                'storage_start':start_storage,'storage_end':disk(r,obs,outage=name=='outage') if obs else None}
+        end_counters=counters()
+        output['counters_start']=start_counters;output['counters_end']=end_counters
+        output['counter_deltas']={k:end_counters.get(k,0)-start_counters.get(k,0) for k in set(start_counters)|set(end_counters)
+                                  if 'queue_' not in k}
         for key in ('aggregate_cpu_percent','aggregate_memory_bytes','runner_cpu_percent','runner_used_memory_bytes'):
             values=[s[key] for s in samples]
             output[key]={'peak':max(values,default=0),'p95':percentile(values),'count':len(values)}
+        output['service_summaries']={}
+        for service in {k for s in samples for k in s['services']}:
+            output['service_summaries'][service]={key:{'count':len(values),'peak':max(values,default=0),'p95':percentile(values)}
+                for key in ('cpu_percent','memory_bytes')
+                for values in [[s['services'][service][key] for s in samples if service in s['services']]]}
+        if obs:
+            output['queue_requests']={'count':len(samples),'peak':max(s['queue_requests'] for s in samples),
+                                      'p95':percentile([s['queue_requests'] for s in samples]),'capacity':10}
+            output['disk_summaries']={key:{'count':len(values),'peak':max(values,default=0),'p95':percentile(values)}
+                for key in ('prometheus_bytes','grafana_bytes','wal_bytes','chunks_head_bytes')
+                for values in [[s['storage'][key] for s in samples]]}
         if obs and name!='outage':
             # Raw samples over exact phase window, not a scrape-count proxy for 100 OTLP points/s.
             expression='sum(count_over_time(rehearsal_capacity_value['+str(int(duration))+'s]))'
@@ -375,7 +427,8 @@ def capacity(r,dev,prod):
     recovery=phase(r,sampler,stacks,'recovery',120,obs)
     r.check('recovery-query-visible-ingestion',recovery['query_visible_synthetic_samples']>0)
     # Time of first sampled recovery proof, not total measurement phase runtime.
-    resumed=[s for s in r.record['samples'] if s['phase']=='recovery' and s['queue_requests']==0]
+    resumed=[s for s in r.record['samples'] if s['phase']=='recovery' and s['queue_requests']==0
+             and s.get('newest_stored_synthetic_timestamp',0)>=recovery['start_unix']]
     r.record['recovery_seconds_upper_bound']=resumed[0]['elapsed_seconds'] if resumed else 121
     r.check('recovery-within-120s',r.record['recovery_seconds_upper_bound']<=120)
     latest=[s for s in r.record['samples'] if s['phase']=='recovery'][-1]
