@@ -165,6 +165,19 @@ def host_cpu():
     return sum(fields),fields[3]+fields[4]
 
 
+def app_disk(r,stack):
+    # Fixed owned PGDATA only; two independent du calls avoid nested-path de-dup.
+    result=r.compose(stack,'exec','-T','db','sh','-ec',
+                     'for path in "$PGDATA" "$PGDATA/pg_wal"; do du -sk "$path"; done',timeout=8)
+    values=[int(line.split()[0])*1024 for line in result.stdout.splitlines()]
+    require(len(values)==2 and values[0]>=values[1]>=0,'app-pg-disk-result')
+    script='from pathlib import Path\nr=Path("/data/uploads");paths=[r,*r.rglob("*")]\nassert not any(p.is_symlink() for p in paths)\nprint(sum(p.stat().st_blocks*512 for p in paths))'
+    uploads=r.compose(stack,'exec','-T','app','python','-c',script,timeout=8).stdout.strip()
+    require(uploads.isdecimal(),'app-upload-disk-result')
+    return {'pgdata_bytes_including_wal':values[0],'pg_wal_bytes_subset':values[1],
+            'uploads_allocated_bytes':int(uploads)}
+
+
 class Sampler:
     def __init__(self,r,stacks):
         self.r=r;self.stacks=stacks;self.previous_cpu=host_cpu();self.bad={};self.expected_outage=False
@@ -223,6 +236,7 @@ class Sampler:
         memory=Path('/proc/meminfo').read_text()
         row['runner_used_memory_bytes']=(int(re.search(r'MemTotal:\s+(\d+)',memory)[1])-int(re.search(r'MemAvailable:\s+(\d+)',memory)[1]))*1024
         row['runner_load1']=os.getloadavg()[0]
+        row['app_storage']={stack['name']:app_disk(r,stack) for stack in self.stacks}
         for stack in self.stacks:
             try:healthy=request(stack['origin'],'/health/ready',context=r.context)[0]==200
             except Exception:healthy=False
@@ -284,6 +298,7 @@ def phase(r,sampler,stacks,name,seconds,obs):
     futures={s['name']:[] for s in stacks};metric_futures=[];grafana_futures=[]
     results={s['name']:{'offered':0,'scheduled':0,'scheduler_rejected':0,'completed':0,'errors':0,'latency_seconds':[]} for s in stacks}
     start_storage=disk(r,obs,outage=name=='outage') if obs else None
+    app_storage_start={stack['name']:app_disk(r,stack) for stack in stacks}
     def counters():
         if not obs:return {}
         status,_,raw=request(obs['endpoints']['self'],'/metrics')
@@ -375,6 +390,15 @@ def phase(r,sampler,stacks,name,seconds,obs):
                 'otlp_explicitly_rejected_points':rejected,
                 'grafana_query_success':gpassed,'grafana_query_errors':gerrors,
                 'storage_start':start_storage,'storage_end':disk(r,obs,outage=name=='outage') if obs else None}
+        app_storage_end={stack['name']:app_disk(r,stack) for stack in stacks}
+        output['app_storage']={stack['name']:{'start':app_storage_start[stack['name']],
+            'end':app_storage_end[stack['name']],
+            'growth':{key:app_storage_end[stack['name']][key]-app_storage_start[stack['name']][key]
+                      for key in app_storage_start[stack['name']]},
+            'summaries':{key:{'count':len(values),'peak':max(values,default=0),'p95':percentile(values)}
+                         for key in app_storage_start[stack['name']]
+                         for values in [[s['app_storage'][stack['name']][key] for s in samples]]}}
+            for stack in stacks}
         end_counters=counters()
         output['counters_start']=start_counters;output['counters_end']=end_counters
         output['counter_deltas']={k:end_counters.get(k,0)-start_counters.get(k,0) for k in set(start_counters)|set(end_counters)
@@ -438,6 +462,11 @@ def projection(r):
     peak_cpu=max(s['aggregate_cpu_percent'] for s in steady)
     r.record['projection']={
         'observed_growth_bytes':growth,'observed_bytes_per_query_visible_sample':sample_bytes,
+        'app_pg_wal_upload_storage':loaded['app_storage'],
+        'app_pg_upload_observed_growth_bytes':sum(value['growth']['pgdata_bytes_including_wal']+
+                                                 value['growth']['uploads_allocated_bytes']
+                                                 for value in loaded['app_storage'].values()),
+        'app_storage_accounting':'PGDATA includes WAL; WAL is a reported subset, never added twice. Actual allocated upload bytes include directories.',
         'growth_bytes_per_hour':hour,'growth_bytes_per_day':day,
         'conservative_24h_bytes':fixed+day*2,'conservative_7d_unretained_bytes':fixed+day*7*2,
         'retained_24h_blocks_cap_bytes':512000000,'retention_excludes_WAL_head':True,

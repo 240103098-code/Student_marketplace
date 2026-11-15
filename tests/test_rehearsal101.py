@@ -159,6 +159,7 @@ class RehearsalSafety(unittest.TestCase):
                     'aggregate_memory_bytes':0,'runner_cpu_percent':0,'runner_used_memory_bytes':0})
         stacks=({'name':'dev'},{'name':'prod'})
         with patch('tools.rehearsal101_capacity.normal_login'),\
+             patch('tools.rehearsal101_capacity.app_disk',return_value={}),\
              patch('tools.rehearsal101_capacity.load_read',return_value=(200,.001)),\
              patch('tools.rehearsal101_capacity.otlp',return_value=100),\
              patch('tools.rehearsal101_capacity.grafana',return_value=1):
@@ -179,6 +180,7 @@ class RehearsalSafety(unittest.TestCase):
             time.sleep(4)
             return 100
         with patch('tools.rehearsal101_capacity.normal_login'),\
+             patch('tools.rehearsal101_capacity.app_disk',return_value={}),\
              patch('tools.rehearsal101_capacity.load_read',return_value=(200,.001)),\
              patch('tools.rehearsal101_capacity.otlp',side_effect=slow_otlp),\
              patch('tools.rehearsal101_capacity.grafana',return_value=1):
@@ -193,6 +195,15 @@ class RehearsalSafety(unittest.TestCase):
         with self.assertRaisesRegex(harness.Failure,'fixed-scheduler-missed-tick'):
             capacity.tick_delay(self.controller,'load','app',3,1,.5)
         self.assertEqual(self.controller.record['scheduler_failure']['unoffered_due_slots'],5)
+
+    def test_app_disk_reports_numeric_pg_wal_subset_without_paths_or_doublecount(self):
+        results=[subprocess.CompletedProcess([],0,'100 /PRIVATE/PGDATA\n20 /PRIVATE/WAL\n',''),
+                 subprocess.CompletedProcess([],0,'4096\n','')]
+        with patch.object(self.controller,'compose',side_effect=results):
+            result=capacity.app_disk(self.controller,{'name':'dev'})
+        self.assertEqual(result,{'pgdata_bytes_including_wal':102400,'pg_wal_bytes_subset':20480,
+                                 'uploads_allocated_bytes':4096})
+        self.assertNotIn('PRIVATE',json.dumps(result))
 
     def test_fixture_relay_cannot_select_upstream_from_request_authority(self):
         calls=[]
