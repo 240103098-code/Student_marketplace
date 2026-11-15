@@ -256,6 +256,9 @@ def phase(r,sampler,stacks,name,seconds,obs):
     for stack in stacks:normal_login(r,stack)
     pools={s['name']:ThreadPoolExecutor(max_workers=4) for s in stacks}
     metric_pool=ThreadPoolExecutor(max_workers=1)
+    grafana_pool=ThreadPoolExecutor(max_workers=1)
+    sampler_pool=ThreadPoolExecutor(max_workers=1)
+    sample_futures=[];read_lateness=[];metric_lateness=[]
     futures={s['name']:[] for s in stacks};metric_futures=[];grafana_futures=[]
     results={s['name']:{'offered':0,'scheduled':0,'scheduler_rejected':0,'completed':0,'errors':0,'latency_seconds':[]} for s in stacks}
     started=time.monotonic();next_read=next_metric=next_grafana=next_sample=started
@@ -280,6 +283,7 @@ def phase(r,sampler,stacks,name,seconds,obs):
             now=time.monotonic()
             require(now<r.deadline,'phase-outer-deadline')
             if active and now>=next_read:
+                read_lateness.append(now-next_read)
                 for stack in stacks:
                     res=results[stack['name']];res['offered']+=1
                     pending=sum(not f.done() for f in futures[stack['name']])
@@ -289,21 +293,27 @@ def phase(r,sampler,stacks,name,seconds,obs):
                     else:res['scheduler_rejected']+=1
                 next_read+=.5
             if active and now>=next_metric:
+                metric_lateness.append(now-next_metric)
                 # Never substitute an unbounded executor queue for the fixed offered rate.
                 if not any(f is not None and not f.done() for f in metric_futures[-2:]):metric_futures.append(metric_pool.submit(otlp,obs))
                 else:metric_futures.append(None)
                 next_metric+=1
             if active and now>=next_grafana:
                 # During the deliberate outage datasource errors are expected and counted.
-                grafana_futures.append(metric_pool.submit(grafana,obs))
+                require(not grafana_futures or grafana_futures[-1].done(),'grafana-query-deadline')
+                grafana_futures.append(grafana_pool.submit(grafana,obs))
                 next_grafana+=10
             if now>=next_sample:
                 gap=now-last_sample;max_sample_gap=max(max_sample_gap,gap)
                 require(gap<=5.5,'sampler-cadence-deadline')
-                sampler.sample(name,now-started,obs)
+                if sample_futures:
+                    require(sample_futures[-1].done(),'sampler-cadence-deadline')
+                    sample_futures[-1].result()
+                sample_futures.append(sampler_pool.submit(sampler.sample,name,now-started,obs))
                 last_sample=now;next_sample+=5
             time.sleep(.02)
         duration=time.monotonic()-started
+        for future in sample_futures:future.result(timeout=10)
         for stack in stacks:
             res=results[stack['name']]
             for f in futures[stack['name']]:
@@ -327,6 +337,8 @@ def phase(r,sampler,stacks,name,seconds,obs):
         samples=[s for s in r.record['samples'] if s['phase']==name]
         output={'duration_seconds':duration,'start_unix':start_wall,'end_unix':time.time(),'sample_count':len(samples),
                 'max_sample_gap_seconds':max_sample_gap,'app_reads':results,
+                'app_tick_lateness_peak_seconds':max(read_lateness,default=0),
+                'otlp_tick_lateness_peak_seconds':max(metric_lateness,default=0),
                 'otlp_offered_points':len(metric_futures)*100,'otlp_accepted_points':accepted,'otlp_failed_or_unscheduled_points':errors,
                 'otlp_explicitly_rejected_points':rejected,
                 'grafana_query_success':gpassed,'grafana_query_errors':gerrors,
@@ -364,6 +376,7 @@ def phase(r,sampler,stacks,name,seconds,obs):
             target=seconds*2
             coverage=all(v['completed']>=target*.98 and v['errors']==0 and v['scheduler_rejected']==0 for v in results.values())
             r.check(name+'-fixed-app-target',coverage)
+            r.check(name+'-fixed-scheduler-cadence',max(read_lateness+metric_lateness,default=0)<=.25)
             # During storage outage receiver rejection/drop is a measured controlled outcome.
             if name!='outage':r.check(name+'-otlp-offered-target',len(metric_futures)>=seconds*.98 and accepted>=seconds*100*.98)
             if name=='load':
@@ -374,6 +387,8 @@ def phase(r,sampler,stacks,name,seconds,obs):
     finally:
         for pool in pools.values():pool.shutdown(wait=True,cancel_futures=True)
         metric_pool.shutdown(wait=True,cancel_futures=True)
+        grafana_pool.shutdown(wait=True,cancel_futures=True)
+        sampler_pool.shutdown(wait=True,cancel_futures=True)
 
 
 def projection(r):
