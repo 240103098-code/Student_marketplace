@@ -41,6 +41,8 @@ jobs:
             ci-safe/e2e-admin-stages.json
             ci-safe/e2e-student-masked.png
             ci-safe/e2e-admin-masked.png
+            ci-safe/e2e-registration-stages.json
+            ci-safe/e2e-registration-masked.png
   gate:
     name: CI / required gate
     if: always()

@@ -179,9 +179,9 @@ def main():
         else:raise Failure('compose-record-missing')
         if compose.returncode or value['result']!='PASS' or value['application_image_id']!=image_id or value.get('borrowed_image_preserved') is not True:raise Failure('compose-verification')
         checked(stage)
-        stage='playwright-real-compose';result=execute('playwright-suite',[sys.executable,'-m','tools.e2e_stack'],okay=True,timeout=600)
+        stage='playwright-real-compose';result=execute('playwright-suite',[sys.executable,'-m','tools.e2e_stack','--selection','full'],okay=True,timeout=600)
         e2e=ROOT/'e2e-safe'
-        for name in ('run.json','tests.json','student-stages.json','admin-stages.json','student-masked.png','admin-masked.png'):
+        for name in ('run.json','tests.json','student-stages.json','admin-stages.json','student-masked.png','admin-masked.png','registration-stages.json','registration-masked.png'):
             if (e2e/name).is_file():shutil.copyfile(e2e/name,safe/('e2e-'+name))
         value=json.loads((e2e/'run.json').read_text())
         if result.returncode or value['result']!='PASS' or value['image_id']!=image_id or value.get('borrowed_image_preserved') is not True:raise Failure('playwright-verification')
@@ -194,7 +194,7 @@ def main():
             if source.is_file():
                 value=json.loads(source.read_text())
                 (safe/'compose.json').write_text(json.dumps(value,indent=2)+'\n')
-            for name in ('run.json','tests.json','student-stages.json','admin-stages.json','student-masked.png','admin-masked.png'):
+            for name in ('run.json','tests.json','student-stages.json','admin-stages.json','student-masked.png','admin-masked.png','registration-stages.json','registration-masked.png'):
                 source=ROOT/'e2e-safe'/name
                 if source.is_file():shutil.copyfile(source,safe/('e2e-'+name))
         except Exception:record['diagnostic_copy_failed']=True

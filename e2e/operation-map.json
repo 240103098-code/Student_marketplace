@@ -166,8 +166,8 @@
     "path": "/auth/register",
     "issue": 61,
     "planned_spec": "e2e/features/issue-61.spec.cjs",
-    "status": "smoke-only",
-    "harness_spec": "e2e/smoke.spec.cjs",
+    "status": "implemented",
+    "harness_spec": "e2e/features/issue-61.spec.cjs",
     "cross_cutting_issue": 85
   },
   {

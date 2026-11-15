@@ -12,6 +12,9 @@ import sys
 import tempfile
 import time
 import unittest
+import io
+from contextlib import redirect_stdout
+from unittest.mock import MagicMock
 from unittest.mock import patch
 from tools import e2e_stack
 from tools.check_e2e_map import validate
@@ -31,16 +34,53 @@ class HarnessContract(unittest.TestCase):
     def test_reporter_drops_native_errors_and_attachment_paths(self):
         with tempfile.TemporaryDirectory(prefix='owned-reporter-',dir=ROOT) as directory:
             destination=Path(directory)/'safe.json'
-            script="const R=require('./e2e/safe-reporter.cjs');const r=new R();r.onBegin({workers:1,projects:[{}]},{allTests:()=>[{},{}]});r.onTestEnd({title:'verified student smoke',errors:['SECRET']},{status:'failed',error:{message:'SECRET password code token'},attachments:[{path:'SECRET'}]});r.onEnd({status:'failed',error:'SECRET'});"
+            script="const R=require('./e2e/safe-reporter.cjs');const r=new R();r.onBegin({workers:1,projects:[{}]},{allTests:()=>[{title:'verified student smoke'},{title:'verified operator admin smoke'}]});r.onTestEnd({title:'verified student smoke',errors:['SECRET']},{status:'failed',error:{message:'SECRET password code token'},attachments:[{path:'SECRET'}]});r.onEnd({status:'failed',error:'SECRET'});"
             result=subprocess.run(['node','-e',script],cwd=ROOT,capture_output=True,text=True,timeout=10,env=dict(os.environ,E2E_SAFE_REPORT=str(destination)))
             self.assertEqual(result.returncode,0)
             self.assertEqual(result.stdout+result.stderr,'')
             self.assertEqual(json.loads(destination.read_text()),{'status':'failed','tests':[{'test':'student','status':'failed'}]})
 
+    def test_reporter_rejects_unknown_duplicate_or_wrong_selection(self):
+        script="const R=require('./e2e/safe-reporter.cjs');let count=0;for(const titles of [['unknown'],['registration contract','registration contract'],['verified student smoke']]){try{new R().onBegin({workers:1,projects:[{}]},{allTests:()=>titles.map(title=>({title}))});}catch{count++;}}if(count!==3)process.exit(1);"
+        result=subprocess.run(['node','-e',script],cwd=ROOT,capture_output=True,text=True,timeout=10,env=dict(os.environ,E2E_SELECTION='registration'))
+        self.assertEqual(result.returncode,0)
+        self.assertEqual(result.stdout+result.stderr,'')
+
+    def test_failure_selection_refused_before_resources(self):
+        with patch('sys.argv',['controller','--selection','full','--intentional-failure']),patch('tools.e2e_stack.tempfile.mkdtemp') as create:
+            with self.assertRaisesRegex(e2e_stack.Failure,'failure-selection'):e2e_stack.main()
+            create.assert_not_called()
+
+    def test_state_reader_is_read_only_and_drops_invalid_input(self):
+        # Subprocess refuses malformed identity/action before attempting any database connection.
+        for request in ({'email':'external@example.com','password':'private','operation':'snapshot'}, {'email':'e2e-'+'a'*32+'-owned@sdu.edu.kz','password':'private','operation':'delete'}):
+            result=subprocess.run([sys.executable,str(ROOT/'e2e/registration_state.py')],input=json.dumps(request),capture_output=True,text=True,timeout=10,env=dict(os.environ,E2E_ID_PREFIX='e2e-'+'a'*32+'-'))
+            self.assertNotEqual(result.returncode,0)
+            self.assertEqual(result.stdout+result.stderr,'')
+
     def test_project_ownership_rejects_arbitrary_target_before_command(self):
         with patch('tools.e2e_stack.run') as run:
             with self.assertRaisesRegex(e2e_stack.Failure,'ownership'):e2e_stack.compose({},Path('/tmp'),'student-marketplace','down','--volumes')
             run.assert_not_called()
+
+    def test_state_reader_uses_bound_selects_and_read_only_transaction(self):
+        spec=importlib.util.spec_from_file_location('registration_state',ROOT/'e2e/registration_state.py')
+        reader=importlib.util.module_from_spec(spec);spec.loader.exec_module(reader)
+        connection=MagicMock();cursor=connection.__enter__.return_value.cursor.return_value.__enter__.return_value
+        cursor.fetchall.side_effect=[[],[]];cursor.fetchone.return_value=(0,)
+        email='e2e-'+'a'*32+'-owned@sdu.edu.kz'
+        output=io.StringIO()
+        with tempfile.TemporaryDirectory(dir=ROOT) as directory,patch.object(reader,'Path',return_value=Path(directory)),patch.object(reader.psycopg,'connect',return_value=connection) as connect,patch.dict(os.environ,{'E2E_ID_PREFIX':'e2e-'+'a'*32+'-','DATABASE_URL':'postgresql://fixture/owned'}),patch('sys.stdin',io.StringIO(json.dumps({'email':email,'password':'private','operation':'snapshot'}))),redirect_stdout(output):
+            reader.main()
+            marker=next(Path(directory).iterdir())
+            self.assertRegex(marker.read_text(),r'^[a-f0-9]{64}$')
+        self.assertIn('default_transaction_read_only=on',connect.call_args.kwargs['options'])
+        self.assertIn('statement_timeout=5000',connect.call_args.kwargs['options'])
+        self.assertEqual(len(cursor.execute.call_args_list),3)
+        for call in cursor.execute.call_args_list:
+            self.assertTrue(call.args[0].startswith('SELECT '))
+            self.assertEqual(call.args[1],(email,))
+        self.assertEqual(json.loads(output.getvalue()),{'users':0,'codes':0,'sessions':0,'unverified_student':False,'registration_code':False,'one_way_password':False,'unchanged':False})
 
     def test_parallel_environment_refused_before_creation(self):
         with patch.dict(os.environ,{'PW_TEST_WORKERS':'2'}),patch('sys.argv',['controller']),patch('tools.e2e_stack.tempfile.mkdtemp') as create:

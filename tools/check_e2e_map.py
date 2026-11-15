@@ -10,7 +10,7 @@ def validate():
     assert len(expected)==len(actual)==len(rows)==40
     assert actual==expected
     assert {row['issue'] for row in rows}|{85}==set(range(61,86))
-    assert all(row['status'] in {'smoke-only','planned'} and row['planned_spec']==f"e2e/features/issue-{row['issue']}.spec.cjs" and row['cross_cutting_issue']==85 for row in rows)
+    assert all(row['status'] in ({'implemented'} if (row['method'],row['path'])==('POST','/auth/register') else {'smoke-only','planned'}) and row['planned_spec']==f"e2e/features/issue-{row['issue']}.spec.cjs" and row['cross_cutting_issue']==85 for row in rows)
     return rows
 if __name__=='__main__':
-    validate();print('PASS exact 40 canonical operations map to 25 future issues; no feature completion claimed.')
+    validate();print('PASS exact 40 canonical operations map to 25 issues; only registration implemented.')

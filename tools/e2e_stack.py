@@ -42,12 +42,20 @@ def borrowed_image(env):
     return tag
 
 def main():
-    parser=argparse.ArgumentParser(); parser.add_argument('--intentional-failure',action='store_true'); parser.add_argument('action',nargs='?'); args=parser.parse_args()
+    parser=argparse.ArgumentParser(); parser.add_argument('--intentional-failure',action='store_true'); parser.add_argument('--selection',choices=('smoke','registration','full'),default='smoke'); parser.add_argument('action',nargs='?'); args=parser.parse_args()
+    if args.action == 'state':
+        private=Path(os.environ['E2E_PRIVATE']); config=json.loads((private/'controller.json').read_text()); request=json.loads(sys.stdin.read())
+        if set(request)!={'email','password','operation'} or request['operation'] not in ('snapshot','compare') or not re.fullmatch(re.escape(config['prefix'])+r'[a-z0-9-]{1,30}(?:@[^\s@]{1,100})?',request['email']):raise Failure('state-identity')
+        result=compose(config['env'],private,config['project'],'exec','-T','app','python','/e2e-registration-state.py',input=json.dumps(request),timeout=25)
+        value=json.loads(result.stdout)
+        if set(value)!={'users','codes','sessions','unverified_student','registration_code','one_way_password','unchanged'}:raise Failure('state-result')
+        print(json.dumps(value));return
     if args.action == 'admin':
         private=Path(os.environ['E2E_PRIVATE']); config=json.loads((private/'controller.json').read_text()); email=sys.stdin.read()
         if not re.fullmatch(r'e2e-[a-f0-9-]{36}@sdu\.edu\.kz',email): raise Failure('identity')
         compose(config['env'],private,config['project'],'exec','-T','app','python','-m','backend.admin','--email',email,timeout=25)
         return
+    if args.intentional_failure and args.selection!='smoke':raise Failure('failure-selection')
     if args.action: raise Failure('unsupported-action')
     if any(key in os.environ for key in ('PW_TEST_WORKERS','PW_TEST_SHARD','PW_TEST_RETRIES')): raise Failure('unsupported-parallel-override')
     SAFE.mkdir(exist_ok=True)
@@ -56,7 +64,7 @@ def main():
     owner=os.environ.get('MARKETPLACE_TEST_IMAGE_OWNER','')
     project='marketplace60-'+(owner.split('-')[1] if re.fullmatch(r'marketplace92-[a-f0-9]{20}',owner) else uuid.uuid4().hex[:20])
     private=Path(tempfile.mkdtemp(prefix=project+'-',dir=os.environ.get('MARKETPLACE_TEST_PRIVATE_ROOT'))); private.chmod(0o700)
-    record={'result':'FAIL','mode':'actual-compose-playwright','intentional_failure':args.intentional_failure,'stages':[],'cleanup':False}
+    record={'result':'FAIL','mode':'actual-compose-playwright','intentional_failure':args.intentional_failure,'stages':[],'cleanup':False,'selection':args.selection}
     env={key:os.environ[key] for key in ('PATH','HOME','SYSTEMROOT','DOCKER_HOST','DOCKER_CONTEXT','DOCKER_CONFIG','XDG_RUNTIME_DIR') if key in os.environ}
     with socket.socket() as sock: sock.bind(('127.0.0.1',0)); port=sock.getsockname()[1]
     origin='http://127.0.0.1:'+str(port)
@@ -66,10 +74,11 @@ def main():
     env['DATABASE_URL']='postgresql+psycopg://marketplace:'+env['POSTGRES_PASSWORD']+'@db:5432/marketplace'
     (private/'mail').mkdir(); (private/'mail').chmod(0o700)
     (private/'smtp.json').write_text(json.dumps({'username':env['SMTP_USERNAME'],'password':env['SMTP_PASSWORD']}))
-    (private/'controller.json').write_text(json.dumps({'env':env,'project':project}))
+    prefix='e2e-'+uuid.uuid4().hex+'-'
+    (private/'controller.json').write_text(json.dumps({'env':env,'project':project,'prefix':prefix}))
     try:
         record['candidate']=run(['git','rev-parse','HEAD']).stdout.strip()
-        inputs=['compose.yaml','Dockerfile','e2e/package-lock.json','e2e/playwright.config.cjs','e2e/fixtures.cjs','e2e/smoke.spec.cjs','e2e/safe-reporter.cjs','e2e/smtp_sink.py','tools/e2e_stack.py']
+        inputs=['compose.yaml','Dockerfile','e2e/package-lock.json','e2e/playwright.config.cjs','e2e/fixtures.cjs','e2e/smoke.spec.cjs','e2e/safe-reporter.cjs','e2e/smtp_sink.py','tools/e2e_stack.py','e2e/features/issue-61.spec.cjs','e2e/registration_state.py']
         record['input_sha256']={p:hashlib.sha256((REPO/p).read_bytes()).hexdigest() for p in inputs}
         record['docker']=run(['docker','version','--format','{{.Server.Version}}'],env).stdout.strip()
         record['compose']=run(['docker','compose','version','--short'],env).stdout.strip()
@@ -84,7 +93,7 @@ def main():
         (private/'ca.pem').chmod(0o644)
         shared=borrowed_image(env)
         if shared: env['MARKETPLACE_IMAGE']=shared
-        override={'services':{'smtp':{'image':env['MARKETPLACE_IMAGE'],'pull_policy':'never','user':'0:0','command':['python','/fixture/smtp_sink.py'],'volumes':[str(private)+':/fixture',str(REPO/'e2e/smtp_sink.py')+':/fixture/smtp_sink.py:ro'],'restart':'no','networks':['mail']},'app':{'environment':['SSL_CERT_FILE=/fixture-ca.pem'],'volumes':[str(private/'ca.pem')+':/fixture-ca.pem:ro'],'networks':['default','mail'],'depends_on':{'smtp':{'condition':'service_started'}}}},'networks':{'mail':{'internal':True}}}
+        override={'services':{'smtp':{'image':env['MARKETPLACE_IMAGE'],'pull_policy':'never','user':'0:0','command':['python','/fixture/smtp_sink.py'],'volumes':[str(private)+':/fixture',str(REPO/'e2e/smtp_sink.py')+':/fixture/smtp_sink.py:ro'],'restart':'no','networks':['mail']},'app':{'environment':['SSL_CERT_FILE=/fixture-ca.pem','E2E_ID_PREFIX='+prefix],'volumes':[str(private/'ca.pem')+':/fixture-ca.pem:ro',str(REPO/'e2e/registration_state.py')+':/e2e-registration-state.py:ro'],'networks':['default','mail'],'depends_on':{'smtp':{'condition':'service_started'}}}},'networks':{'mail':{'internal':True}}}
         (private/'override.yaml').write_text(json.dumps(override))
         compose(env,private,project,'config','--quiet')
         if not shared:compose(env,private,project,'build','app',timeout=600)
@@ -97,7 +106,7 @@ def main():
         record['postgresql']=compose(env,private,project,'exec','-T','db','psql','-U','marketplace','-d','marketplace','-At','-c','SHOW server_version').stdout.strip()
         record['playwright']=json.loads((REPO/'e2e/node_modules/@playwright/test/package.json').read_text())['version']
         record['browser_revision']=[b for b in json.loads((REPO/'e2e/node_modules/playwright-core/browsers.json').read_text())['browsers'] if b['name'] in ('chromium','chromium-headless-shell')]
-        child=dict(env,E2E_ORIGIN=origin,E2E_MAIL=str(private/'mail'),E2E_PRIVATE=str(private),E2E_PRIVATE_OUTPUT=str(private/'native-output'),E2E_SAFE_REPORT=str(SAFE/'tests.json'),E2E_SAFE_DIR=str(SAFE),E2E_PYTHON=sys.executable,E2E_INTENTIONAL_FAILURE='1' if args.intentional_failure else '0')
+        child=dict(env,E2E_SELECTION=args.selection,E2E_ID_PREFIX=prefix,E2E_ORIGIN=origin,E2E_MAIL=str(private/'mail'),E2E_PRIVATE=str(private),E2E_PRIVATE_OUTPUT=str(private/'native-output'),E2E_SAFE_REPORT=str(SAFE/'tests.json'),E2E_SAFE_DIR=str(SAFE),E2E_PYTHON=sys.executable,E2E_INTENTIONAL_FAILURE='1' if args.intentional_failure else '0')
         result=run(['node',str(REPO/'e2e/node_modules/@playwright/test/cli.js'),'test','--config',str(REPO/'e2e/playwright.config.cjs')],child,timeout=210,okay=True)
         record['playwright_exit']=result.returncode
         tests=json.loads((SAFE/'tests.json').read_text()); record['tests']=tests
@@ -105,7 +114,7 @@ def main():
             if result.returncode==0 or tests['status']!='failed' or not any(t['test']=='student' and t['status']=='failed' for t in tests['tests']): raise Failure('intentional-failure-not-recognized')
             stages=json.loads((SAFE/'student-stages.json').read_text())
             if 'controlled-failure-check' not in stages['stages']: raise Failure('failure-before-journey')
-        elif result.returncode or tests['status']!='passed' or len(tests['tests'])!=2: raise Failure('browser-journey')
+        elif result.returncode or tests['status']!='passed' or len(tests['tests'])!={'smoke':2,'registration':1,'full':3}[args.selection]: raise Failure('browser-journey')
         record['result']='PASS'
     except Failure as error: record['failure_stage']=str(error)
     except Exception: record['failure_stage']='controller-failure'

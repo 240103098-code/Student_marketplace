@@ -48,6 +48,9 @@ class Handler(socketserver.StreamRequestHandler):
                 recipient = match[1].lower() if match else None
                 reply = b'250 local sink only\r\n' if recipient else b'550 synthetic recipient required\r\n'
             elif verb == 'DATA' and authenticated and recipient:
+                if (ROOT/'fail-delivery').exists():
+                    with (ROOT/'mail-events.jsonl').open('a') as events:events.write(json.dumps({'recipient':recipient,'outcome':'rejected','tls':secure,'authenticated':authenticated})+'\n')
+                    self.wfile.write(b'451 controlled unavailable\r\n');self.wfile.flush();continue
                 self.wfile.write(b'354 message\r\n'); self.wfile.flush()
                 body = bytearray()
                 while True:
@@ -61,10 +64,13 @@ class Handler(socketserver.StreamRequestHandler):
                 if not code: return
                 # Exact unique recipient, registration purpose, atomic new message only.
                 destination = ROOT/'mail'/ (recipient + '.json')
-                if destination.exists(): return
+                if destination.exists():
+                    with (ROOT/'mail-events.jsonl').open('a') as events:events.write(json.dumps({'recipient':recipient,'outcome':'duplicate','tls':secure,'authenticated':authenticated})+'\n')
+                    self.wfile.write(b'451 duplicate synthetic recipient\r\n');self.wfile.flush();continue
                 temporary = ROOT/'mail'/ (uuid.uuid4().hex + '.tmp')
                 temporary.write_text(json.dumps({'code':code[1], 'purpose':'registration', 'tls':secure, 'authenticated':authenticated}))
                 temporary.rename(destination)
+                with (ROOT/'mail-events.jsonl').open('a') as events:events.write(json.dumps({'recipient':recipient,'outcome':'stored','tls':secure,'authenticated':authenticated})+'\n')
                 reply = b'250 stored privately\r\n'
             elif verb == 'QUIT':
                 self.wfile.write(b'221 bye\r\n'); return
