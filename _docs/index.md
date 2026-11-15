@@ -26,3 +26,5 @@ Current baseline: 292 backend tests (full verification requires guarded real Pos
 - [Additional Oracle automation preparation (#96)](oracle-cd.md): reviewed access plan, restricted controller and local regression checks; owner consent and actual deployment proof remain required.
 
 - [Registration E2E actual Linux evidence (#61)](evidence/e2e-61/README.md): exact runtime candidate, four isolated modes, safe provenance and honest failure history; final main publication verification remains separate.
+
+- [Planned operations roadmap (#99; documentation child #100)](operations-roadmap.md): current Oracle source automation versus separate dev/prod, manual promotion, three-signal telemetry, metrics/dashboard, alerts and a real AI on-call agent; runtime work remains planned.
