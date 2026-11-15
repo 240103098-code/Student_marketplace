@@ -226,6 +226,13 @@ class Rehearsal:
 
     def up(self,stack):
         self.compose(stack,'up','-d','--force-recreate','--wait','--wait-timeout','120',timeout=150)
+        self.wait_https(stack)
+
+    def recreate_app(self,stack):
+        self.compose(stack,'up','-d','--force-recreate','--wait','--wait-timeout','120','app','proxy',timeout=150)
+        self.wait_https(stack)
+
+    def wait_https(self,stack):
         # Compose waits for app health; proxy has no Docker healthcheck, so prove
         # the real verified HTTPS endpoint before the first normal request.
         end=time.monotonic()+15
@@ -331,6 +338,7 @@ class Rehearsal:
                 'upload':digest(self.api(stack,'/users/me/avatar',token=stack['token'])[2])}
 
     def preserved(self,prod,baseline,name):
+        self.record['active_stage']=name
         self.check(name,self.fingerprint(prod)==baseline and self.api(prod,'/users/me',token=prod['token'])[0]==200
                    and request(prod['origin'],'/health/ready',context=self.context)[0]==200)
 
@@ -408,8 +416,10 @@ class Rehearsal:
         self.check('dev-secret-replaced',original!=dev['environment']['JWT_SECRET_KEY'])
         self.save(dev);self.up(dev);self.preserved(prod,baseline,'prod-after-dev-secret-replacement')
         self.journey(dev)
-        self.compose(prod,'up','-d','--force-recreate','app','proxy',timeout=120)
+        self.record['active_stage']='prod-app-recreate'
+        self.recreate_app(prod)
         self.preserved(prod,baseline,'prod-after-recreate')
+        self.record['active_stage']='prod-down-up-retained-volumes'
         self.cleanup_project(prod,volumes=False);self.up(prod)
         self.preserved(prod,baseline,'prod-after-down-up-retained-volumes')
 
@@ -547,6 +557,9 @@ def main():
         categories={KeyError:'missing-fixture-field',TypeError:'fixture-type',ValueError:'fixture-value',
                     PermissionError:'fixture-permission',FileNotFoundError:'fixture-file-missing',
                     ConnectionRefusedError:'connection-refused',TimeoutError:'transport-timeout',
+                    ConnectionResetError:'connection-reset',ssl.SSLEOFError:'tls-eof',
+                    ssl.SSLZeroReturnError:'tls-closed',http.client.IncompleteRead:'http-incomplete-response',
+                    http.client.BadStatusLine:'http-status-line',
                     ssl.SSLCertVerificationError:'certificate-verification',
                     http.client.RemoteDisconnected:'remote-disconnected'}
         controller.record['failure_class']=categories.get(type(error),'other-controller-exception')

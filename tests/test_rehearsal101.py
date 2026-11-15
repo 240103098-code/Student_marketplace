@@ -48,6 +48,19 @@ class RehearsalSafety(unittest.TestCase):
                 self.controller.compose({'project':'unrelated-live-project'},'down','--volumes')
             run.assert_not_called()
 
+    def test_prod_recreate_waits_for_verified_https_after_transient_proxy_refusal(self):
+        stack={'project':self.controller.owner+'-prod','name':'prod','origin':'https://prod.marketplace.test:12345'}
+        self.controller.context=ssl.create_default_context()
+        with patch.object(self.controller,'compose') as compose,\
+             patch.object(self.controller,'proxy_diagnostics') as diagnostic,\
+             patch('tools.rehearsal101.request',side_effect=[ConnectionRefusedError(),(200,{},b'')]) as request,\
+             patch('tools.rehearsal101.time.sleep'):
+            self.controller.recreate_app(stack)
+        self.assertIn('--wait',compose.call_args.args)
+        self.assertEqual(request.call_count,2)
+        self.assertIs(request.call_args.kwargs['context'],self.controller.context)
+        diagnostic.assert_called_once_with(stack,'verified-http-200')
+
     def test_stack_is_production_validated_and_never_reads_ambient_secrets(self):
         # Create fixture files only; stack generation must not inspect an ambient .env.
         for name in ('dev','prod'):
