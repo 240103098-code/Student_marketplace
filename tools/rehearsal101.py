@@ -110,6 +110,7 @@ class Rehearsal:
         self.owner='marketplace101-'+uuid.uuid4().hex[:20]
         self.private=Path(tempfile.mkdtemp(prefix=self.owner+'-'))
         self.private.chmod(0o700)
+        self.fixture_user=str(os.getuid())+':'+str(os.getgid()) if hasattr(os,'getuid') else '10001:10001'
         # Inherit only the ordinary local executable/runtime environment.
         self.env={key:os.environ[key] for key in ('PATH','HOME','LANG','DOCKER_HOST','DOCKER_CONTEXT','DOCKER_CONFIG','XDG_RUNTIME_DIR') if key in os.environ}
         self.image=self.owner+':local'
@@ -192,7 +193,7 @@ class Rehearsal:
                        'migrate':{'condition':'service_completed_successfully'},'uploads-init':{'condition':'service_completed_successfully'},
                        'smtp':{'condition':'service_started'}},healthcheck={'test':['CMD','python','-m','backend.compose_runtime','probe'],
                        'interval':'5s','timeout':'6s','retries':12,'start_period':'10s'}),
-            'proxy':{'image':self.image,'pull_policy':'never','user':'0:0','command':['python','/proxy.py'],
+            'proxy':{'image':self.image,'pull_policy':'never','user':self.fixture_user,'command':['python','/proxy.py'],
                      'ports':['127.0.0.1:'+str(https_port)+':8443'],
                      'volumes':[str(self.private/'web')+':/tls:ro',str(ROOT/'ops/rehearsal101/proxy.py')+':/proxy.py:ro'],
                      'depends_on':{'app':{'condition':'service_healthy'}},'read_only':True,'cap_drop':['ALL']}}
@@ -212,13 +213,40 @@ class Rehearsal:
         # Compose waits for app health; proxy has no Docker healthcheck, so prove
         # the real verified HTTPS endpoint before the first normal request.
         end=time.monotonic()+15
+        probe='not-attempted'
         while time.monotonic()<end:
             try:
-                if request(stack['origin'],'/health/ready',context=self.context)[0]==200:return
-            except ssl.SSLCertVerificationError:raise Failure('fixture-tls-certificate') from None
-            except (OSError,http.client.HTTPException):pass
+                status=request(stack['origin'],'/health/ready',context=self.context)[0]
+                if status==200:return
+                probe='http-status-'+str(status)
+            except ssl.SSLCertVerificationError:
+                self.proxy_diagnostics(stack,'certificate-verification')
+                raise Failure('fixture-tls-certificate') from None
+            except ConnectionRefusedError:probe='connection-refused'
+            except TimeoutError:probe='transport-timeout'
+            except ssl.SSLError:probe='tls-transport'
+            except OSError:probe='network-transport'
+            except http.client.HTTPException:probe='http-transport'
             time.sleep(.1)
+        self.proxy_diagnostics(stack,probe)
         raise Failure('fixture-https-readiness-deadline')
+
+    def proxy_diagnostics(self,stack,probe):
+        # Construct only fixed status fields, never logs, mounts, environment or keys.
+        ids=self.compose(stack,'ps','-aq','proxy').stdout.split()
+        values=json.loads(self.run(['docker','inspect',*ids]).stdout) if ids else []
+        states=[]
+        for value in values:
+            labels=value['Config']['Labels']
+            require(labels.get(LABEL)==self.owner and labels.get('com.docker.compose.project')==stack['project'],
+                    'proxy-diagnostic-ownership')
+            states.append({'running':bool(value['State']['Running']),'exit_code':int(value['State']['ExitCode']),
+                           'oom_killed':bool(value['State'].get('OOMKilled'))})
+        key=self.private/'web/server.key'
+        info=key.stat()
+        self.record.setdefault('https_fixture_diagnostics',{})[stack['name']]={
+            'last_probe':probe,'containers':states,'private_key_mode':oct(info.st_mode&0o777),
+            'key_owner_matches_proxy':str(info.st_uid)==self.fixture_user.split(':')[0]}
 
     def api(self,stack,path,*,method='GET',value=None,token=None,cookie=None,origin=None,body=None,headers=None):
         h=dict(headers or {})

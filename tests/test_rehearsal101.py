@@ -60,6 +60,22 @@ class RehearsalSafety(unittest.TestCase):
             self.assertNotIn('ports',stack['config']['services']['db'])
             self.assertFalse(any(v.get('external') for v in stack['config']['volumes'].values()))
             self.assertEqual(stack['config']['services']['app']['depends_on']['migrate']['condition'],'service_completed_successfully')
+            self.assertEqual(stack['config']['services']['proxy']['user'],self.controller.fixture_user)
+            self.assertEqual(stack['config']['services']['proxy']['cap_drop'],['ALL'])
+
+    def test_proxy_diagnostics_keep_only_owned_state_and_permission_metadata(self):
+        web=self.controller.private/'web';web.mkdir()
+        (web/'server.key').write_text('PRIVATE KEY')
+        stack={'project':self.controller.owner+'-dev','name':'dev'}
+        info={'Config':{'Labels':{harness.LABEL:self.controller.owner,'com.docker.compose.project':stack['project']},
+                        'Env':['PRIVATE TOKEN']},'State':{'Running':False,'ExitCode':1,'OOMKilled':False},
+              'Mounts':[{'Source':'PRIVATE PATH'}]}
+        with patch.object(self.controller,'compose',return_value=subprocess.CompletedProcess([],0,'owned-container','')),\
+             patch.object(self.controller,'run',return_value=subprocess.CompletedProcess([],0,json.dumps([info]),'')):
+            self.controller.proxy_diagnostics(stack,'connection-refused')
+        value=self.controller.record['https_fixture_diagnostics']['dev']
+        self.assertEqual(value['containers'],[{'running':False,'exit_code':1,'oom_killed':False}])
+        self.assertNotIn('PRIVATE',json.dumps(value))
 
     def test_native_errors_and_timeout_never_reveal_output(self):
         for side in (subprocess.CompletedProcess([],1,'PRIVATE SECRET','PRIVATE TOKEN'),subprocess.TimeoutExpired('PRIVATE',1,output='PRIVATE')):
