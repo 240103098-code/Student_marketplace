@@ -1,0 +1,41 @@
+{
+  "runtime_candidate": "02b39b22d784eb0652c7d6f32cdb9ed372b5c216",
+  "run_id": 43714515394,
+  "run_url": "https://github.com/240103098-code/Student_marketplace/actions/runs/43714515394",
+  "artifact_id": 14162830094,
+  "artifact_zip_sha256": "17ed810aa3511c01a8001d9037f6ee31acc28f05b29bbbc58fea1a69a2e46fe9",
+  "artifact_zip_bytes": 21656,
+  "qa_acceptance_url": "https://github.com/240103098-code/Student_marketplace/issues/61#issuecomment-6894502137",
+  "input_identity": {
+    "method": "Each recorded SHA-256 compared with canonical git cat-file blob runtime_candidate:path bytes; all matched.",
+    "verified_counts": {
+      "summary.json": 225,
+      "e2e-smoke-run.json": 12,
+      "e2e-run.json": 12,
+      "e2e-registration-only-run.json": 12,
+      "e2e-intentional-failure-run.json": 12
+    },
+    "followup_scope": "Evidence and documentation only; no tested executable/workflow/spec/helper/dependency/map changes."
+  },
+  "safe_files_sha256": {
+    "summary.json": "3902a989d47c1dffe77527ed6bb9670929d5f97a81fe34a9b5aca5c38fa89cca",
+    "compose.json": "8561ea46b0bc850ff0c282a649187382e53fdd6057fa0a96bcf6f9fd66df587f",
+    "e2e-run.json": "fcd359bb20d2de7ac803dbe497943313f037efc7335a4e7b972e8300a87b431b",
+    "e2e-tests.json": "abb6b79395737c6737749f2605e2d3761c61268c5a917b0571a32a9b4b8d52f4",
+    "e2e-student-stages.json": "8ca81be5ea81d5c013feefbc7b57e6eb8abf6ce83feebdcfc3d3f2853bd16186",
+    "e2e-admin-stages.json": "c3427c2eb06c58d23a78284fdbbd610e0c1a763bb10dd3f169e9ff43a358da95",
+    "e2e-registration-stages.json": "f0ac1f9317bfd851f74a464c959135f626cba9891b1384a92b5102c4b6983c96",
+    "e2e-smoke-run.json": "3c74d75573954aeb9d2e27276b2cdebfb437989f9357085e4d1f486a09a4e014",
+    "e2e-smoke-tests.json": "ef7da6dbef878cb67b435ba5e1b041d3ee32d83e52763a783069a7125dff6eda",
+    "e2e-smoke-student-stages.json": "09dc3b2d8e4c3910895e37e84986d62f35847642ffca35286fc893f6c8c6fb71",
+    "e2e-smoke-admin-stages.json": "c3427c2eb06c58d23a78284fdbbd610e0c1a763bb10dd3f169e9ff43a358da95",
+    "e2e-registration-only-run.json": "9bf54b80b225cf67f6336deb93ba9809ff8c28ab06ade51a46ca3ef12ece0fb0",
+    "e2e-registration-only-tests.json": "7ecc24e03cba9aa91e6d90524a9b500f73fc42b7a17fe6fb61e13921a489277c",
+    "e2e-registration-only-registration-stages.json": "27b4a1a1801ab397f46f5e816212fb69e6facee0de149d26e052b1260fb6ce0f",
+    "e2e-intentional-failure-run.json": "f0eb79cafc4586ce1f353e2de56fa08f102ed33cbf2d08adbb552371b1295ba2",
+    "e2e-intentional-failure-tests.json": "8e18981c86a87c91bef3926efa6fbcaf359b09e68fe517ac4714769840c4ce7e",
+    "e2e-intentional-failure-student-stages.json": "7839084f0dc38324f09673d7a82e88fa8e1a79cde4b9dd1c9a818975c79d18af",
+    "e2e-intentional-failure-student-masked.png": "9fe45375bcc165ea6c67ddd531c421ebf499dac36e8694da630e9994d455656d"
+  },
+  "publication_status": "Runtime branch acceptance passed; exact final main CI/CD and independent publication verification remain required before closure."
+}

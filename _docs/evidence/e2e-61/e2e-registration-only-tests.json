@@ -1,0 +1,9 @@
+{
+  "status": "passed",
+  "tests": [
+    {
+      "test": "registration",
+      "status": "passed"
+    }
+  ]
+}

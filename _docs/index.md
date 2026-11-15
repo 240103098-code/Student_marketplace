@@ -24,3 +24,5 @@ Current baseline: 292 backend tests (full verification requires guarded real Pos
 
 - [CI for all currently implemented tests (#92)](ci.md): strict full-suite gate, one-image Compose chain and safe diagnostics; partial child of #86.
 - [Additional Oracle automation preparation (#96)](oracle-cd.md): reviewed access plan, restricted controller and local regression checks; owner consent and actual deployment proof remain required.
+
+- [Registration E2E actual Linux evidence (#61)](evidence/e2e-61/README.md): exact runtime candidate, four isolated modes, safe provenance and honest failure history; final main publication verification remains separate.

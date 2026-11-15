@@ -1,0 +1,40 @@
+{
+  "result": "PASS",
+  "mode": "real-docker-compose-postgresql",
+  "commit": "02b39b22d784eb0652c7d6f32cdb9ed372b5c216",
+  "checks": [
+    "missing required database/JWT secrets refuse before resource creation",
+    "fresh gated PG18 migration and non-root real static/API with zero demo users and no public DB port",
+    "readiness refuses unprepared migration head while liveness responds",
+    "bounded DB-outage readiness failure with responsive liveness and real pool/auth recovery",
+    "replaced app and DB containers retain rows, refresh lineage and exact protected avatar/listing bytes",
+    "down/up without volume deletion retains actual PG18 data and private uploads",
+    "actual connected React browser sign-in, reload and private listing with zero external requests",
+    "failed one-shot migration prevents fresh application start"
+  ],
+  "docker": "28.0.4",
+  "compose": "2.38.2",
+  "image_borrowed": true,
+  "services": [
+    "app",
+    "db",
+    "migrate",
+    "uploads-init"
+  ],
+  "application_image_id": "sha256:bff8ae3d4d1bd0f13b0b97c8926d2b91700b8137e1ce24098a7dc05cbda1ab70",
+  "postgresql": "18.6 (Debian 18.6-1.pgdg12+2)",
+  "runtime": {
+    "python": "3.13.15",
+    "uvicorn": "0.54.0",
+    "psycopg": "3.3.6"
+  },
+  "outage_readiness_seconds": 0.008,
+  "browser": {
+    "result": "PASS",
+    "version": "151.0.7922.34",
+    "real_api_responses": 16,
+    "external_requests": 0
+  },
+  "borrowed_image_preserved": true,
+  "owned_containers_volumes_and_networks_absent": true
+}
