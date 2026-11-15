@@ -7,6 +7,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
 
@@ -117,6 +118,23 @@ class RehearsalSafety(unittest.TestCase):
                 if accepted:self.assertEqual(capacity.grafana(obs),1)
                 else:
                     with self.assertRaisesRegex(harness.Failure,'grafana-query-values'):capacity.grafana(obs)
+
+    def test_slow_sampler_does_not_pause_fixed_rate_workload(self):
+        controller=self.controller
+        class SlowSampler:
+            def sample(self,name,elapsed,obs):
+                time.sleep(.8)
+                controller.record['samples'].append({'phase':name,'services':{},'aggregate_cpu_percent':0,
+                    'aggregate_memory_bytes':0,'runner_cpu_percent':0,'runner_used_memory_bytes':0})
+        stacks=({'name':'dev'},{'name':'prod'})
+        with patch('tools.rehearsal101_capacity.normal_login'),\
+             patch('tools.rehearsal101_capacity.load_read',return_value=(200,.001)),\
+             patch('tools.rehearsal101_capacity.otlp',return_value=100),\
+             patch('tools.rehearsal101_capacity.grafana',return_value=1):
+            result=capacity.phase(controller,SlowSampler(),stacks,'recovery',1.1,None)
+        self.assertLess(result['app_tick_lateness_peak_seconds'],.25)
+        self.assertEqual(result['app_reads']['dev']['completed'],3)
+        self.assertEqual(result['app_reads']['prod']['completed'],3)
 
 
 if __name__=='__main__':unittest.main()
