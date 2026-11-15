@@ -142,7 +142,9 @@ class Rehearsal:
     def certificates(self):
         self.run(['openssl','req','-x509','-newkey','rsa:2048','-nodes','-days','1',
                   '-keyout',str(self.private/'ca.key'),'-out',str(self.private/'ca.pem'),
-                  '-subj','/CN=Disposable marketplace101 CA','-addext','basicConstraints=critical,CA:TRUE'])
+                  '-subj','/CN=Disposable marketplace101 CA','-addext','basicConstraints=critical,CA:TRUE',
+                  '-addext','keyUsage=critical,keyCertSign,cRLSign','-addext','subjectKeyIdentifier=hash',
+                  '-addext','authorityKeyIdentifier=keyid:always'])
         leaves=[(environment+'-web','DNS:'+environment+'.marketplace.test',environment+'.marketplace.test')
                 for environment in ('dev','prod')]
         leaves += [(environment+'-smtp','DNS:smtp','smtp') for environment in ('dev','prod')]
@@ -150,11 +152,16 @@ class Rehearsal:
             directory=self.private/name;directory.mkdir()
             self.run(['openssl','req','-new','-newkey','rsa:2048','-nodes','-keyout',str(directory/'server.key'),
                       '-out',str(directory/'server.csr'),'-subj','/CN='+common_name])
-            (directory/'ext').write_text('subjectAltName='+san+'\nextendedKeyUsage=serverAuth\nbasicConstraints=CA:FALSE\n')
+            (directory/'ext').write_text('subjectAltName='+san+'\nextendedKeyUsage=serverAuth\n'
+                'basicConstraints=critical,CA:FALSE\nkeyUsage=critical,digitalSignature,keyEncipherment\n'
+                'subjectKeyIdentifier=hash\nauthorityKeyIdentifier=keyid,issuer\n')
             self.run(['openssl','x509','-req','-in',str(directory/'server.csr'),'-CA',str(self.private/'ca.pem'),
                       '-CAkey',str(self.private/'ca.key'),'-CAcreateserial','-days','1','-out',str(directory/'server.pem'),
                       '-extfile',str(directory/'ext')])
         self.context=ssl.create_default_context(cafile=str(self.private/'ca.pem'))
+        self.record['tls_verification']={'openssl':ssl.OPENSSL_VERSION,
+            'strict':bool(self.context.verify_flags & ssl.VERIFY_X509_STRICT),
+            'check_hostname':self.context.check_hostname,'certificate_required':self.context.verify_mode==ssl.CERT_REQUIRED}
         self.check('distinct-web-and-smtp-leaf-keys',len({
             (self.private/name/'server.key').read_bytes() for name,_,_ in leaves})==4)
 
@@ -230,7 +237,10 @@ class Rehearsal:
                     self.proxy_diagnostics(stack,'verified-http-200')
                     return
                 probe='http-status-'+str(status)
-            except ssl.SSLCertVerificationError:
+            except ssl.SSLCertVerificationError as error:
+                code=error.verify_code
+                self.record['tls_verification_failure']={'verify_code':int(code),
+                    'category':{9:'not-yet-valid',10:'expired',26:'purpose',62:'hostname',92:'ca-key-usage'}.get(code,'chain-validation')}
                 self.proxy_diagnostics(stack,'certificate-verification')
                 raise Failure('fixture-tls-certificate') from None
             except ConnectionRefusedError:probe='connection-refused'

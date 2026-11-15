@@ -8,6 +8,8 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import ssl
+import socket
 import tempfile
 import time
 import threading
@@ -227,6 +229,40 @@ class RehearsalSafety(unittest.TestCase):
             self.assertEqual(calls,[target.server_port])
         finally:
             for server in servers:server.shutdown();server.server_close()
+
+    def test_generated_fixture_chain_passes_strict_tls_and_rejects_other_host(self):
+        executable=shutil.which('openssl')
+        if executable is None:
+            fallback=Path('C:/Program Files/Git/usr/bin/openssl.exe')
+            if fallback.is_file():executable=str(fallback)
+        self.assertIsNotNone(executable,'OpenSSL is required for the rehearsal fixture regression')
+        native=self.controller.run
+        def run(args,**kwargs):return native([executable,*args[1:]] if args[0]=='openssl' else args,**kwargs)
+        with patch.object(self.controller,'run',side_effect=run):self.controller.certificates()
+        self.assertTrue(self.controller.context.verify_flags & ssl.VERIFY_X509_STRICT)
+        server_context=ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        web=self.controller.private/'dev-web'
+        server_context.load_cert_chain(web/'server.pem',web/'server.key')
+        for hostname,accepted in (('dev.marketplace.test',True),('prod.marketplace.test',False)):
+            with socket.socket() as listener:
+                listener.bind(('127.0.0.1',0));listener.listen();listener.settimeout(5)
+                def serve():
+                    raw,_=listener.accept()
+                    try:
+                        with server_context.wrap_socket(raw,server_side=True) as connection:connection.sendall(b'ok')
+                    except (ssl.SSLError,ConnectionResetError):raw.close()
+                worker=threading.Thread(target=serve);worker.start()
+                try:
+                    with socket.create_connection(listener.getsockname(),timeout=5) as raw:
+                        if accepted:
+                            with self.controller.context.wrap_socket(raw,server_hostname=hostname) as connection:
+                                self.assertEqual(connection.recv(2),b'ok')
+                        else:
+                            with self.assertRaises(ssl.SSLCertVerificationError) as rejected:
+                                self.controller.context.wrap_socket(raw,server_hostname=hostname)
+                            self.assertEqual(rejected.exception.verify_code,62)
+                finally:worker.join(timeout=5)
+                self.assertFalse(worker.is_alive())
 
 
 if __name__=='__main__':unittest.main()
