@@ -70,11 +70,12 @@ class HarnessContract(unittest.TestCase):
         cursor.fetchall.side_effect=[[],[]];cursor.fetchone.return_value=(0,)
         email='e2e-'+'a'*32+'-owned@sdu.edu.kz'
         output=io.StringIO()
-        with tempfile.TemporaryDirectory(dir=ROOT) as directory,patch.object(reader,'Path',return_value=Path(directory)),patch.object(reader.psycopg,'connect',return_value=connection) as connect,patch.dict(os.environ,{'E2E_ID_PREFIX':'e2e-'+'a'*32+'-','DATABASE_URL':'postgresql://fixture/owned'}),patch('sys.stdin',io.StringIO(json.dumps({'email':email,'password':'private','operation':'snapshot'}))),redirect_stdout(output):
+        with tempfile.TemporaryDirectory(dir=ROOT) as directory,patch.object(reader,'Path',return_value=Path(directory)),patch.object(reader.psycopg,'connect',return_value=connection) as connect,patch.dict(os.environ,{'E2E_ID_PREFIX':'e2e-'+'a'*32+'-','DATABASE_URL':'postgresql+psycopg://fixture/owned'}),patch('sys.stdin',io.StringIO(json.dumps({'email':email,'password':'private','operation':'snapshot'}))),redirect_stdout(output):
             reader.main()
             marker=next(Path(directory).iterdir())
             self.assertRegex(marker.read_text(),r'^[a-f0-9]{64}$')
         self.assertIn('default_transaction_read_only=on',connect.call_args.kwargs['options'])
+        self.assertEqual(connect.call_args.args,('postgresql://fixture/owned',))
         self.assertIn('statement_timeout=5000',connect.call_args.kwargs['options'])
         self.assertEqual(len(cursor.execute.call_args_list),3)
         for call in cursor.execute.call_args_list:

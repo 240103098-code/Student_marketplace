@@ -6,7 +6,7 @@ jobs:
   implemented:
     name: CI / implemented checks
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 55
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
@@ -43,6 +43,28 @@ jobs:
             ci-safe/e2e-admin-masked.png
             ci-safe/e2e-registration-stages.json
             ci-safe/e2e-registration-masked.png
+            ci-safe/e2e-smoke-run.json
+            ci-safe/e2e-smoke-tests.json
+            ci-safe/e2e-smoke-student-stages.json
+            ci-safe/e2e-smoke-admin-stages.json
+            ci-safe/e2e-smoke-student-masked.png
+            ci-safe/e2e-smoke-admin-masked.png
+            ci-safe/e2e-registration-only-run.json
+            ci-safe/e2e-registration-only-tests.json
+            ci-safe/e2e-registration-only-student-stages.json
+            ci-safe/e2e-registration-only-admin-stages.json
+            ci-safe/e2e-registration-only-student-masked.png
+            ci-safe/e2e-registration-only-admin-masked.png
+            ci-safe/e2e-registration-only-registration-stages.json
+            ci-safe/e2e-registration-only-registration-masked.png
+            ci-safe/e2e-intentional-failure-run.json
+            ci-safe/e2e-intentional-failure-tests.json
+            ci-safe/e2e-intentional-failure-student-stages.json
+            ci-safe/e2e-intentional-failure-admin-stages.json
+            ci-safe/e2e-intentional-failure-student-masked.png
+            ci-safe/e2e-intentional-failure-admin-masked.png
+            ci-safe/e2e-intentional-failure-registration-stages.json
+            ci-safe/e2e-intentional-failure-registration-masked.png
   gate:
     name: CI / required gate
     if: always()

@@ -112,6 +112,55 @@ def unittest_counts(output):
 def validate_counts(counts):
     if counts['discovered']<1 or counts['skipped'] or counts['passed']!=counts['discovered']:raise Failure('backend-tests')
 
+E2E_FILES=('run.json','tests.json','student-stages.json','admin-stages.json',
+           'student-masked.png','admin-masked.png','registration-stages.json','registration-masked.png')
+E2E_MODES=(('smoke','e2e-smoke-',(),False,{'student','admin'}),
+           ('full','e2e-',('--selection','full'),False,{'student','admin','registration'}),
+           ('registration','e2e-registration-only-',('--selection','registration'),False,{'registration'}),
+           ('smoke','e2e-intentional-failure-',('--intentional-failure',),True,{'student','admin'}))
+
+
+def playwright_modes(execute,safe,record,image_id):
+    """Fixed real-stack runs share one owned image, never a database or limiter."""
+    directory=ROOT/'e2e-safe'
+    record['playwright_modes']=[]
+    for selection,prefix,arguments,intentional,expected in E2E_MODES:
+        if directory.exists():raise Failure('playwright-verification')
+        try:
+            result=execute('playwright-suite',[sys.executable,'-m','tools.e2e_stack',*arguments],okay=True,timeout=600)
+            value=json.loads((directory/'run.json').read_text())
+            if (result.returncode or value['result']!='PASS' or value['candidate']!=record['candidate']
+                or value['image_id']!=image_id or value.get('borrowed_image_preserved') is not True
+                or value.get('cleanup') is not True or value.get('private_files_removed') is not True
+                or value.get('selection')!=selection or value.get('intentional_failure') is not intentional):
+                raise Failure('playwright-verification')
+            tests=value['tests'];rows=tests['tests'];ids=[row['test'] for row in rows]
+            if len(ids)!=len(expected) or set(ids)!=expected:raise Failure('playwright-verification')
+            if intentional:
+                journey=json.loads((directory/'student-stages.json').read_text())
+                if (value['playwright_exit']==0 or tests['status']!='failed'
+                    or not any(row=={'test':'student','status':'failed'} for row in rows)
+                    or 'controlled-failure-check' not in journey['stages']
+                    or not {'ui-register','private-smtp','ui-verify','ui-login','protected-reload','fresh-context-denied'}<=set(journey['completed'])):raise Failure('playwright-verification')
+            elif value['playwright_exit']!=0 or tests['status']!='passed' or any(row['status']!='passed' for row in rows):
+                raise Failure('playwright-verification')
+            record['playwright_modes'].append({'selection':selection,'intentional_failure':intentional,'result':'PASS','browser_status':tests['status'],'browser_exit':value['playwright_exit'],'tests':len(rows),'cleanup':True,'private_files_removed':True})
+            if selection=='full':
+                record['playwright_tests']=len(rows);record['playwright']=value['playwright'];record['browser_revision']=value['browser_revision']
+        finally:
+            # Preserve fixed safe evidence even when a child or its validation fails.
+            if directory.is_symlink():raise Failure('playwright-verification')
+            if directory.exists():
+                for source in directory.iterdir():
+                    if source.name not in E2E_FILES or source.is_symlink() or not source.is_file():raise Failure('playwright-verification')
+                for name in E2E_FILES:
+                    source=directory/name
+                    if source.is_file():shutil.copyfile(source,safe/(prefix+name))
+                # Exact fixed directory, verified file-only allowlist; never recursive deletion.
+                for source in directory.iterdir():source.unlink()
+                directory.rmdir()
+
+
 def main():
     if len(sys.argv)!=1:raise Failure('unsupported-arguments')
     safe=ROOT/'ci-safe'
@@ -179,13 +228,7 @@ def main():
         else:raise Failure('compose-record-missing')
         if compose.returncode or value['result']!='PASS' or value['application_image_id']!=image_id or value.get('borrowed_image_preserved') is not True:raise Failure('compose-verification')
         checked(stage)
-        stage='playwright-real-compose';result=execute('playwright-suite',[sys.executable,'-m','tools.e2e_stack','--selection','full'],okay=True,timeout=600)
-        e2e=ROOT/'e2e-safe'
-        for name in ('run.json','tests.json','student-stages.json','admin-stages.json','student-masked.png','admin-masked.png','registration-stages.json','registration-masked.png'):
-            if (e2e/name).is_file():shutil.copyfile(e2e/name,safe/('e2e-'+name))
-        value=json.loads((e2e/'run.json').read_text())
-        if result.returncode or value['result']!='PASS' or value['image_id']!=image_id or value.get('borrowed_image_preserved') is not True:raise Failure('playwright-verification')
-        record['playwright_tests']=len(value['tests']['tests']);record['playwright']=value['playwright'];record['browser_revision']=value['browser_revision'];checked(stage)
+        stage='playwright-real-compose';playwright_modes(execute,safe,record,image_id);checked(stage)
         record['result']='PASS'
     except Exception as error:capture_failure(record,stage,error)
     finally:
@@ -194,9 +237,6 @@ def main():
             if source.is_file():
                 value=json.loads(source.read_text())
                 (safe/'compose.json').write_text(json.dumps(value,indent=2)+'\n')
-            for name in ('run.json','tests.json','student-stages.json','admin-stages.json','student-masked.png','admin-masked.png','registration-stages.json','registration-masked.png'):
-                source=ROOT/'e2e-safe'/name
-                if source.is_file():shutil.copyfile(source,safe/('e2e-'+name))
         except Exception:record['diagnostic_copy_failed']=True
         outcomes=[]
         # Child timeouts may prevent their finally blocks. Their projects and private
