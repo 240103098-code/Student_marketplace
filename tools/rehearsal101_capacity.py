@@ -65,11 +65,20 @@ def candidate(r):
             'GF_SERVER_ENABLE_GZIP':'true'},
             'volumes':['grafana:/var/lib/grafana',str(directory/'provisioning')+':/etc/grafana/provisioning:ro'],
             'ports':['127.0.0.1:'+urllib.parse.urlsplit(endpoints['grafana']).netloc.split(':')[1]+':3000']}}
+    for config in services.values():config.pop('ports',None)
+    control_ports={'otlp':14318,'self':18888,'prometheus':19090,'grafana':13000}
+    services['control']={'image':r.image,'pull_policy':'never','user':r.fixture_user,
+        'command':['python','/proxy.py','--capacity-control'],
+        'volumes':[str(Path(__file__).resolve().parents[1]/'ops/rehearsal101/proxy.py')+':/proxy.py:ro'],
+        'networks':['default','ingress'],'read_only':True,
+        'ports':['127.0.0.1:'+str(urllib.parse.urlsplit(endpoints[key]).port)+':'+str(target)
+                 for key,target in control_ports.items()]}
     for service,config in services.items():
         config.update(resources(service,r.owner));config.update(cap_drop=['ALL'],security_opt=['no-new-privileges:true'])
     stack={'project':r.owner+'-obs','compose':directory/'compose.json','name':'obs','directory':directory,
            'config':{'services':services,'volumes':{v:{'labels':{LABEL:r.owner}} for v in ('metrics','grafana')},
-                     'networks':{'default':{'internal':True,'labels':{LABEL:r.owner}}}},
+                     'networks':{'default':{'internal':True,'labels':{LABEL:r.owner}},
+                                 'ingress':{'labels':{LABEL:r.owner},'driver_opts':{'com.docker.network.bridge.host_binding_ipv4':'127.0.0.1'}}}},
            'endpoints':endpoints,'auth':'Basic '+base64.b64encode(('fixture:'+grafana_password).encode()).decode()}
     r.save(stack);r.projects.append(stack)
     r.record['candidate_configuration']={'queue_capacity_requests':10,'queue_sizer':'requests (version factory source)',
@@ -77,7 +86,8 @@ def candidate(r):
         'retention_hours':24,'retained_block_limit_bytes':512000000,
         'WAL_head_reserve_bytes':512*1024*1024,'minimum_projection_fixed_reserve_bytes':1024*1024*1024,
         'notes':'Block retention is asynchronous; WAL/head add disk. Projections are not a retention soak or quota proof.',
-        'endpoints':'loopback-only control/generator ports; internal Docker network; no DB publication or external export',
+        'endpoints':'loopback-only fixed control relay on own ingress bridge; backend services internal-only; no DB publication or external export',
+        'relay_egress_boundary':'Relay has ingress bridge default route; code forwards only four hardcoded internal destinations. No claim of network-enforced relay egress denial.',
         'components':'otlp/http, memory_limiter, batch, prometheusremotewrite; metrics only'}
     return stack
 
@@ -173,12 +183,14 @@ class Sampler:
         require(bool(ids),'sampler-no-containers')
         inspected=json.loads(r.run(['docker','inspect',*ids],timeout=8).stdout)
         expected={(stack['project'],service) for stack in self.stacks for service in ('app','db','smtp','proxy')}
-        if obs:expected|={(obs['project'],service) for service in ('collector','prometheus','grafana')}
+        if obs:expected|={(obs['project'],service) for service in ('collector','prometheus','grafana','control')}
         seen=set();running=[]
         for info in inspected:
             labels=info['Config']['Labels'];service=labels['com.docker.compose.service'];project=labels['com.docker.compose.project']
             require(labels.get(LABEL)==r.owner,'sampler-owner')
             require(not info['State'].get('OOMKilled') and info['RestartCount']==0,'service-oom-or-restart')
+            expected_networks={project+'_default'}|({project+'_ingress'} if service in ('proxy','control') else set())
+            require(set(info['NetworkSettings']['Networks'])==expected_networks,'sampler-network-membership')
             if (project,service) in expected:
                 seen.add((project,service))
                 allowed_stop=phase=='outage' and obs and project==obs['project'] and service=='prometheus'
@@ -440,6 +452,7 @@ def projection(r):
         'oracle_usable_cpu_percent':80,'architecture_equivalence':'unproven; no linear x64-vCPU to ARM-OCPU conversion',
         'startup_budget_mib':{'both_apps_dbs':2*(256+384),'two_migrations_upload_init':2*(256+64),
                              'two_proxies_sinks':2*(96+96),'metrics_stack':192+384+256,
+                             'capacity_control_relay':96,
                              'OS_Docker_proxy_transients_reserve':1536,'logs_backup_disk':'separate 1GiB logs + aligned backup + >=4GiB/20% free reserve'},
         'interpretation':'Short run, fixed offered rate; WAL allocation/compaction noise makes linear growth uncertain. '
           'No trace/log storage or application SDK overhead measured. Hosted activation blocked; #103 platform-specific retest required.'}

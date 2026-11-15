@@ -1,5 +1,7 @@
 """Focused ownership, transport, privacy and stop regressions; no Docker/.env."""
 import contextlib
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import http.client
 import io
 import json
 import os
@@ -8,12 +10,14 @@ import shutil
 import subprocess
 import tempfile
 import time
+import threading
 import unittest
 from unittest.mock import patch
 
 from backend.config import Settings, load_settings
 from tools import rehearsal101 as harness
 from tools import rehearsal101_capacity as capacity
+from ops.rehearsal101.proxy import Handler as FixtureRelay
 
 
 class RehearsalSafety(unittest.TestCase):
@@ -72,13 +76,14 @@ class RehearsalSafety(unittest.TestCase):
         stack={'project':self.controller.owner+'-dev','name':'dev'}
         info={'Config':{'Labels':{harness.LABEL:self.controller.owner,'com.docker.compose.project':stack['project']},
                         'Env':['PRIVATE TOKEN']},'State':{'Running':False,'ExitCode':1,'OOMKilled':False},
-              'Mounts':[{'Source':'PRIVATE PATH'}]}
+              'Mounts':[{'Source':'PRIVATE PATH'}],'NetworkSettings':{'Ports':{'8443/tcp':[{'HostIp':'127.0.0.1','HostPort':'12345'}]}}}
         with patch.object(self.controller,'compose',return_value=subprocess.CompletedProcess([],0,'owned-container','')),\
              patch.object(self.controller,'run',return_value=subprocess.CompletedProcess([],0,json.dumps([info]),'')):
             self.controller.proxy_diagnostics(stack,'connection-refused')
         value=self.controller.record['https_fixture_diagnostics']['dev']
         self.assertEqual(value['containers'],[{'running':False,'exit_code':1,'oom_killed':False,'process_uid_gid':''}])
         self.assertNotIn('PRIVATE',json.dumps(value))
+        self.assertTrue(value['loopback_published'])
 
     def test_native_errors_and_timeout_never_reveal_output(self):
         for side in (subprocess.CompletedProcess([],1,'PRIVATE SECRET','PRIVATE TOKEN'),subprocess.TimeoutExpired('PRIVATE',1,output='PRIVATE')):
@@ -107,6 +112,13 @@ class RehearsalSafety(unittest.TestCase):
         self.assertEqual(grafana['GF_AUTH_ANONYMOUS_ENABLED'],'false')
         self.assertEqual(grafana['GF_ANALYTICS_REPORTING_ENABLED'],'false')
         self.assertTrue(obs['config']['networks']['default']['internal'])
+        for service in ('collector','prometheus','grafana'):
+            self.assertNotIn('ports',obs['config']['services'][service])
+            self.assertNotIn('networks',obs['config']['services'][service])
+        control=obs['config']['services']['control']
+        self.assertEqual(control['networks'],['default','ingress'])
+        self.assertTrue(all(p.startswith('127.0.0.1:') for p in control['ports']))
+        self.assertEqual(control['command'],['python','/proxy.py','--capacity-control'])
 
     def test_stop_duration_cannot_reset_under_continuous_overload(self):
         sampler=capacity.Sampler(self.controller,()) if os.name!='nt' else capacity.Sampler.__new__(capacity.Sampler)
@@ -181,6 +193,29 @@ class RehearsalSafety(unittest.TestCase):
         with self.assertRaisesRegex(harness.Failure,'fixed-scheduler-missed-tick'):
             capacity.tick_delay(self.controller,'load','app',3,1,.5)
         self.assertEqual(self.controller.record['scheduler_failure']['unoffered_due_slots'],5)
+
+    def test_fixture_relay_cannot_select_upstream_from_request_authority(self):
+        calls=[]
+        class Destination(BaseHTTPRequestHandler):
+            def log_message(self,*args):pass
+            def do_GET(self):
+                calls.append(self.server.server_port)
+                self.send_response(200);self.send_header('Content-Length','2');self.end_headers();self.wfile.write(b'ok')
+        target=ThreadingHTTPServer(('127.0.0.1',0),Destination)
+        forbidden=ThreadingHTTPServer(('127.0.0.1',0),Destination)
+        relay=ThreadingHTTPServer(('127.0.0.1',0),type('TestFixedRelay',(FixtureRelay,),{'upstream':target.server_address}))
+        servers=(target,forbidden,relay)
+        for server in servers:threading.Thread(target=server.serve_forever,daemon=True).start()
+        try:
+            connection=http.client.HTTPConnection(*relay.server_address,timeout=3)
+            connection.request('GET','http://127.0.0.1:'+str(forbidden.server_port)+'/different-authority',
+                               headers={'Host':'127.0.0.1:'+str(forbidden.server_port)})
+            response=connection.getresponse()
+            self.assertEqual((response.status,response.read()),(200,b'ok'))
+            connection.close()
+            self.assertEqual(calls,[target.server_port])
+        finally:
+            for server in servers:server.shutdown();server.server_close()
 
 
 if __name__=='__main__':unittest.main()

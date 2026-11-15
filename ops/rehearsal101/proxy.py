@@ -1,11 +1,14 @@
 """Disposable fixture HTTPS termination; no forwarded-header trust or request logging."""
 import http.client
+import argparse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import ssl
+import threading
 
 
 class Handler(BaseHTTPRequestHandler):
     protocol_version = 'HTTP/1.1'
+    upstream = ('app',8000)
 
     def log_message(self, *args):
         pass
@@ -16,7 +19,7 @@ class Handler(BaseHTTPRequestHandler):
         if not 0 <= size <= 6 * 1024 * 1024:
             self.send_error(413)
             return
-        connection = http.client.HTTPConnection('app', 8000, timeout=12)
+        connection = http.client.HTTPConnection(*self.upstream, timeout=12)
         try:
             headers = {k: v for k, v in self.headers.items()
                        if k.lower() not in ('connection', 'transfer-encoding', 'proxy-authorization')}
@@ -39,6 +42,21 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == '__main__':
+    parser=argparse.ArgumentParser()
+    parser.add_argument('--capacity-control',action='store_true')
+    args=parser.parse_args()
+    if args.capacity_control:
+        # Fixture-only fixed destinations. No caller-supplied host/URL/proxy authority.
+        mappings={14318:('collector',4318),18888:('collector',8888),
+                  19090:('prometheus',9090),13000:('grafana',3000)}
+        servers=[]
+        for port,target in mappings.items():
+            handler=type('FixedRelay',(Handler,),{'upstream':target})
+            server=ThreadingHTTPServer(('0.0.0.0',port),handler)
+            threading.Thread(target=server.serve_forever,daemon=True).start()
+            servers.append(server)
+        threading.Event().wait()
+        raise SystemExit(0)
     server = ThreadingHTTPServer(('0.0.0.0', 8443), Handler)
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     context.load_cert_chain('/tls/server.pem', '/tls/server.key')

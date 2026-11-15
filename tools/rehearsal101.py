@@ -30,7 +30,7 @@ ROOT = Path(__file__).resolve().parents[1]
 LABEL = 'marketplace.rehearsal101.owner'
 CAPS = {'app':(.50,256), 'db':(.50,384), 'migrate':(.50,256),
         'uploads-init':(.25,64), 'smtp':(.15,96), 'proxy':(.25,96),
-        'collector':(.50,192), 'prometheus':(.75,384), 'grafana':(.50,256)}
+        'collector':(.50,192), 'prometheus':(.75,384), 'grafana':(.50,256),'control':(.25,96)}
 PHASES = (('baseline',120), ('idle',120), ('load',300), ('outage',60), ('recovery',120))
 
 
@@ -200,12 +200,15 @@ class Rehearsal:
                        'smtp':{'condition':'service_started'}},healthcheck={'test':['CMD','python','-m','backend.compose_runtime','probe'],
                        'interval':'5s','timeout':'6s','retries':12,'start_period':'10s'}),
             'proxy':{'image':self.image,'pull_policy':'never','user':self.fixture_user,'command':['python','/proxy.py'],
+                     'networks':['default','ingress'],
                      'ports':['127.0.0.1:'+str(https_port)+':8443'],
-                     'volumes':[str(self.private/(name+'-web'))+':/tls:ro',str(ROOT/'ops/rehearsal101/proxy.py')+':/proxy.py:ro'],
+                     'volumes':[str(self.private/(name+'-web'))+':/tls:ro',str(ROOT/'ops/rehearsal101/proxy.py')+':/proxy.py:ro',
+                                str(self.private/'ca.pem')+':/fixture-ca.pem:ro'],
                      'depends_on':{'app':{'condition':'service_healthy'}},'read_only':True,'cap_drop':['ALL']}}
         for service,config in services.items():config.update(resources(service,self.owner))
         config={'services':services,'volumes':{v:{'labels':{LABEL:self.owner}} for v in ('pgdata','uploads')},
-                'networks':{'default':{'internal':True,'labels':{LABEL:self.owner}}}}
+                'networks':{'default':{'internal':True,'labels':{LABEL:self.owner}},
+                            'ingress':{'labels':{LABEL:self.owner},'driver_opts':{'com.docker.network.bridge.host_binding_ipv4':'127.0.0.1'}}}}
         stack={'name':name,'project':project,'directory':directory,'compose':directory/'compose.json',
                'config':config,'environment':environment,'origin':origin}
         self.save(stack);self.projects.append(stack)
@@ -253,8 +256,13 @@ class Rehearsal:
                            'process_uid_gid':value['Config'].get('User','')})
         key=self.private/(stack['name']+'-web')/'server.key'
         info=key.stat()
+        internal_probe='import socket,ssl,sys\ns=socket.create_connection(("127.0.0.1",8443),3)\ns=ssl.create_default_context(cafile="/fixture-ca.pem").wrap_socket(s,server_hostname=sys.argv[1])\ns.sendall(b"GET /health/ready HTTP/1.1\\r\\nHost: fixture\\r\\nConnection: close\\r\\n\\r\\n")\nresult=s.recv(1024);s.close();sys.exit(0 if result.startswith(b"HTTP/1.1 200 ") else 7)'
+        checked=self.compose(stack,'exec','-T','proxy','python','-c',internal_probe,stack['name']+'.marketplace.test',okay=True,timeout=8)
+        bindings=[binding for value in values for binding in (value['NetworkSettings'].get('Ports',{}).get('8443/tcp') or [])]
         self.record.setdefault('https_fixture_diagnostics',{})[stack['name']]={
             'last_probe':probe,'containers':states,'private_key_mode':oct(info.st_mode&0o777),
+            'internal_verified_tls_ready':checked.returncode==0,
+            'loopback_published':bool(bindings) and all(b['HostIp']=='127.0.0.1' for b in bindings),
             'key_owner_matches_proxy':str(info.st_uid)==self.fixture_user.split(':')[0]}
 
     def api(self,stack,path,*,method='GET',value=None,token=None,cookie=None,origin=None,body=None,headers=None):
@@ -331,7 +339,9 @@ class Rehearsal:
         for container in actual:
             labels=container['Config']['Labels']
             require(labels.get(LABEL)==self.owner and labels.get('com.docker.compose.project')==stack['project'],'inspect-labels')
-            require(all(name.startswith(stack['project']+'_') for name in container['NetworkSettings']['Networks']),'network-membership')
+            service=labels['com.docker.compose.service']
+            expected={stack['project']+'_default'}|({stack['project']+'_ingress'} if service=='proxy' else set())
+            require(set(container['NetworkSettings']['Networks'])==expected,'network-membership')
             for mount in container['Mounts']:
                 if mount['Type']=='volume':require(mount['Name'].startswith(stack['project']+'_'),'volume-membership')
         self.check(stack['name']+'-mount-network-labels')
@@ -356,6 +366,10 @@ class Rehearsal:
         probe='import socket,sys;s=socket.socket();s.settimeout(3);r=s.connect_ex((sys.argv[1],5432));s.close();sys.exit(0 if r==0 else 1)'
         require(self.compose(prod,'exec','-T','app','python','-c',probe,prodip).returncode==0,'prod-db-control-reachable')
         self.check('cross-network-denied',self.compose(dev,'exec','-T','app','python','-c',probe,prodip,okay=True).returncode!=0)
+        dns_probe='import socket,sys\ntry:socket.getaddrinfo(sys.argv[1],8443)\nexcept socket.gaierror:sys.exit(7)\nelse:sys.exit(0)'
+        prod_proxy=next(c for c in prodinfo if c['Config']['Labels']['com.docker.compose.service']=='proxy')
+        self.check('cross-environment-dns-denied',all(self.compose(dev,'exec','-T','app','python','-c',dns_probe,
+                   container['Name'].lstrip('/'),okay=True).returncode==7 for container in (prod_db,prod_proxy)))
         # Independent credential denial on target's network (not conflated with TCP denial).
         script='import psycopg,sys\ntry:\n c=psycopg.connect(host="db",dbname=sys.argv[1],user=sys.argv[2],password=sys.argv[3],connect_timeout=3);c.close()\nexcept psycopg.OperationalError:sys.exit(7)\nelse:sys.exit(0)'
         wrong=self.compose(prod,'exec','-T','app','python','-c',script,prod['environment']['POSTGRES_DB'],
