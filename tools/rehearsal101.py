@@ -209,6 +209,16 @@ class Rehearsal:
 
     def up(self,stack):
         self.compose(stack,'up','-d','--force-recreate','--wait','--wait-timeout','120',timeout=150)
+        # Compose waits for app health; proxy has no Docker healthcheck, so prove
+        # the real verified HTTPS endpoint before the first normal request.
+        end=time.monotonic()+15
+        while time.monotonic()<end:
+            try:
+                if request(stack['origin'],'/health/ready',context=self.context)[0]==200:return
+            except ssl.SSLCertVerificationError:raise Failure('fixture-tls-certificate') from None
+            except (OSError,http.client.HTTPException):pass
+            time.sleep(.1)
+        raise Failure('fixture-https-readiness-deadline')
 
     def api(self,stack,path,*,method='GET',value=None,token=None,cookie=None,origin=None,body=None,headers=None):
         h=dict(headers or {})
@@ -220,18 +230,26 @@ class Rehearsal:
 
     def journey(self,stack):
         email='rehearsal-'+uuid.uuid4().hex+'@sdu.edu.kz';password=secrets.token_hex(24)
+        self.record['active_stage']=stack['name']+'-register'
         require(self.api(stack,'/auth/register',method='POST',value={'email':email,'password':password})[0]==201,'normal-register')
+        self.record['active_stage']=stack['name']+'-smtp-wait'
         inbox=stack['directory']/'mail'/(email+'.json')
         end=time.monotonic()+15
         while not inbox.exists() and time.monotonic()<end:time.sleep(.1)
         require(inbox.exists(),'normal-smtp-delivery')
+        self.record['active_stage']=stack['name']+'-smtp-shape'
         message=json.loads(inbox.read_text());inbox.unlink()
+        require(set(message)=={'code','purpose','tls','authenticated'} and message['purpose']=='registration'
+                and re.fullmatch(r'[0-9]{6}',message['code']) is not None,'normal-smtp-shape')
         self.check(stack['name']+'-smtp-starttls-auth',message['tls'] and message['authenticated'])
+        self.record['active_stage']=stack['name']+'-verify'
         require(self.api(stack,'/auth/verify-email',method='POST',value={'email':email,'code':message['code']})[0]==200,'normal-verification')
+        self.record['active_stage']=stack['name']+'-login'
         status,headers,body=self.api(stack,'/auth/login',method='POST',value={'email':email,'password':password})
         require(status==200,'normal-login')
         stack.update(email=email,password=password,token=json.loads(body)['access_token'],cookie=headers['set-cookie'].split(';')[0])
         # Generate a nonsensitive PNG with the existing locked Pillow dependency.
+        self.record['active_stage']=stack['name']+'-upload'
         from PIL import Image
         import io
         image=io.BytesIO();Image.new('RGB',(8,8),(90,160,120)).save(image,format='PNG')
@@ -239,6 +257,7 @@ class Rehearsal:
         multipart=('--'+boundary+'\r\nContent-Disposition: form-data; name="image"; filename="synthetic.png"\r\nContent-Type: image/png\r\n\r\n').encode()+image.getvalue()+('\r\n--'+boundary+'--\r\n').encode()
         require(self.api(stack,'/users/me/avatar',method='POST',token=stack['token'],body=multipart,
                          headers={'Content-Type':'multipart/form-data; boundary='+boundary})[0]==200,'normal-upload')
+        self.record['active_stage']=stack['name']+'-private-read'
         self.check(stack['name']+'-own-private-read',self.api(stack,'/users/me',token=stack['token'])[0]==200)
         self.check(stack['name']+'-anonymous-denied',all(self.api(stack,p)[0]==401 for p in ('/users/me','/users/me/avatar')))
         stack['upload_hash']=digest(self.api(stack,'/users/me/avatar',token=stack['token'])[2])
@@ -461,7 +480,15 @@ def main():
     controller=Rehearsal()
     try:controller.main()
     except Failure as error:controller.record['failure_stage']=str(error)
-    except Exception:controller.record['failure_stage']='unexpected-controller-error'
+    except Exception as error:
+        controller.record['failure_stage']='unexpected-controller-error'
+        # Fixed exception classes only: never messages, traceback paths or payloads.
+        categories={KeyError:'missing-fixture-field',TypeError:'fixture-type',ValueError:'fixture-value',
+                    PermissionError:'fixture-permission',FileNotFoundError:'fixture-file-missing',
+                    ConnectionRefusedError:'connection-refused',TimeoutError:'transport-timeout',
+                    ssl.SSLCertVerificationError:'certificate-verification',
+                    http.client.RemoteDisconnected:'remote-disconnected'}
+        controller.record['failure_class']=categories.get(type(error),'other-controller-exception')
     finally:
         controller.cleanup()
         controller.record['finished_utc']=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime())
