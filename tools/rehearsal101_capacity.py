@@ -100,6 +100,15 @@ def query(obs,expression):
     return value['data']['result']
 
 
+def http_shape(status,headers,body):
+    headers={key.lower():value.lower() for key,value in headers.items()}
+    encoding=headers.get('content-encoding','identity')
+    media=headers.get('content-type','').split(';',1)[0]
+    return {'status':status,'body_bytes':len(body),'gzip_magic':body.startswith(b'\x1f\x8b'),
+            'encoding':encoding if encoding in ('identity','gzip') else 'other',
+            'media':media if media in ('text/plain','application/openmetrics-text','application/json') else 'other'}
+
+
 def scalar(obs,expression):
     values=query(obs,expression)
     return sum(float(v['value'][1]) for v in values)
@@ -145,18 +154,25 @@ def bytes_value(text):
     return float(match[1])*units[match[2]]
 
 
-def disk(r,obs,outage=False):
+def stamp(times,keys):
+    if times is not None:
+        value=(time.monotonic(),time.time())
+        for key in keys:times[key]=value
+
+
+def disk(r,obs,outage=False,times=None):
     values={}
-    for service,path in [('prometheus','/prometheus'),('grafana','/var/lib/grafana')]:
-        command=(['run','--rm','--no-deps','--entrypoint','du',service,'-sk',path]
-                 if service=='prometheus' and outage else ['exec','-T',service,'du','-sk',path])
-        result=r.compose(obs,*command,timeout=8)
-        values[service+'_bytes']=int(result.stdout.split()[0])*1024
-    for name in ('wal','chunks_head'):
-        command=(['run','--rm','--no-deps','--entrypoint','du','prometheus','-sk','/prometheus/'+name]
-                 if outage else ['exec','-T','prometheus','du','-sk','/prometheus/'+name])
-        result=r.compose(obs,*command,timeout=8,okay=True)
-        values[name+'_bytes']=int(result.stdout.split()[0])*1024 if result.returncode==0 else 0
+    script='for path in /prometheus /prometheus/wal /prometheus/chunks_head; do if test -d "$path"; then du -sk "$path"; else printf "0\\n"; fi; done'
+    command=(['run','--rm','--no-deps','--entrypoint','sh','prometheus','-ec',script]
+             if outage else ['exec','-T','prometheus','sh','-ec',script])
+    result=r.compose(obs,*command,timeout=8)
+    sizes=[int(line.split()[0])*1024 for line in result.stdout.splitlines()]
+    require(len(sizes)==3,'prometheus-disk-shape')
+    for key,value in zip(('prometheus_bytes','wal_bytes','chunks_head_bytes'),sizes):values[key]=value
+    stamp(times,['obs/'+key for key in values])
+    result=r.compose(obs,'exec','-T','grafana','du','-sk','/var/lib/grafana',timeout=8)
+    values['grafana_bytes']=int(result.stdout.split()[0])*1024
+    stamp(times,['obs/grafana_bytes'])
     return values
 
 
@@ -165,22 +181,24 @@ def host_cpu():
     return sum(fields),fields[3]+fields[4]
 
 
-def app_disk(r,stack):
+def app_disk(r,stack,times=None):
     # Fixed owned PGDATA only; two independent du calls avoid nested-path de-dup.
     result=r.compose(stack,'exec','-T','db','sh','-ec',
                      'for path in "$PGDATA" "$PGDATA/pg_wal"; do du -sk "$path"; done',timeout=8)
     values=[int(line.split()[0])*1024 for line in result.stdout.splitlines()]
     require(len(values)==2 and values[0]>=values[1]>=0,'app-pg-disk-result')
+    stamp(times,[stack['name']+'/pgdata_bytes_including_wal',stack['name']+'/pg_wal_bytes_subset'])
     script='from pathlib import Path\nr=Path("/data/uploads");paths=[r,*r.rglob("*")]\nassert not any(p.is_symlink() for p in paths)\nprint(sum(p.stat().st_blocks*512 for p in paths))'
     uploads=r.compose(stack,'exec','-T','app','python','-c',script,timeout=8).stdout.strip()
     require(uploads.isdecimal(),'app-upload-disk-result')
+    stamp(times,[stack['name']+'/uploads_allocated_bytes'])
     return {'pgdata_bytes_including_wal':values[0],'pg_wal_bytes_subset':values[1],
             'uploads_allocated_bytes':int(uploads)}
 
 
 class Sampler:
     def __init__(self,r,stacks):
-        self.r=r;self.stacks=stacks;self.previous_cpu=host_cpu();self.bad={};self.expected_outage=False
+        self.r=r;self.stacks=stacks;self.previous_cpu=host_cpu();self.bad={};self.previous_fields={};self.field_phase=None
 
     def sustained(self,key,bad,seconds=30):
         now=time.monotonic()
@@ -188,9 +206,32 @@ class Sampler:
         elif key not in self.bad:self.bad[key]=now
         elif now-self.bad[key]>=seconds:raise Failure(key)
 
+    def field_timing(self,phase,row,times):
+        gaps={key:value[0]-self.previous_fields[key] for key,value in times.items() if key in self.previous_fields}
+        row['field_timestamps_unix']={key:value[1] for key,value in times.items()}
+        row['field_gaps_seconds']=gaps
+        row['field_max_gap_seconds']=max(gaps.values(),default=0)
+        for key,value in times.items():self.previous_fields[key]=value[0]
+        self.r.record['samples'].append(row)
+        if row['field_max_gap_seconds']>5:
+            self.r.record['sampler_failure']={'phase':phase,'field':max(gaps,key=gaps.get),'actual_gap_seconds':row['field_max_gap_seconds']}
+            raise Failure('sampler-actual-field-gap')
+
     def sample(self,phase,elapsed,obs=None):
+        with ThreadPoolExecutor(max_workers=3) as pool:
+            return self._sample(phase,elapsed,obs,pool)
+
+    def _sample(self,phase,elapsed,obs,pool):
         r=self.r
+        if phase!=self.field_phase:self.previous_fields={};self.field_phase=phase
+        times={};app_probes=[]
+        for stack in self.stacks:
+            measured={}
+            app_probes.append((stack['name'],measured,pool.submit(app_disk,r,stack,measured)))
+        obs_times={}
+        obs_probe=pool.submit(disk,r,obs,phase=='outage',obs_times) if obs else None
         ids=[]
+        r.record['sampler_stage']='owned-container-inspection'
         for stack in self.stacks:ids+=r.compose(stack,'ps','-aq').stdout.split()
         if obs:ids+=r.compose(obs,'ps','-aq').stdout.split()
         require(bool(ids),'sampler-no-containers')
@@ -212,7 +253,9 @@ class Sampler:
                 require(service in ('migrate','uploads-init') and info['State']['ExitCode']==0,'unexpected-one-shot-exit')
             if info['State']['Running']:running.append(info['Id'])
         require(seen==expected,'missing-long-running-service')
+        r.record['sampler_stage']='docker-cpu-memory'
         stats=r.run(['docker','stats','--no-stream','--format','{{json .}}',*running],timeout=8)
+        stats_time=(time.monotonic(),time.time())
         byname={c['Name'].lstrip('/'):c for c in inspected}
         row={'phase':phase,'elapsed_seconds':round(elapsed,3),'timestamp_unix':time.time(),
              'services':{},'aggregate_cpu_percent':0,'aggregate_memory_bytes':0}
@@ -225,26 +268,35 @@ class Sampler:
             require(not info['State'].get('OOMKilled') and info['RestartCount']==0,'service-oom-or-restart')
             self.sustained('memory-stop-'+name,used>CAPS[service][1]*1024**2*.85)
             row['services'][name]={'cpu_percent':cpu,'memory_bytes':used,'memory_cap_bytes':CAPS[service][1]*1024**2}
+            times[name+'/cpu_percent']=stats_time;times[name+'/memory_bytes']=stats_time
             row['aggregate_cpu_percent']+=cpu;row['aggregate_memory_bytes']+=used
         self.sustained('aggregate-cpu-stop',row['aggregate_cpu_percent']>os.cpu_count()*100*.8)
+        times['aggregate_cpu_percent']=stats_time;times['aggregate_memory_bytes']=stats_time
         free=shutil.disk_usage(r.private)
         require(free.free>=max(4*1024**3,free.total*.2),'disk-stop')
         row['disk_free_bytes']=free.free
+        stamp(times,['disk_free_bytes'])
         current=host_cpu();total=current[0]-self.previous_cpu[0];idle=current[1]-self.previous_cpu[1]
         row['runner_cpu_percent']=100*os.cpu_count()*(1-idle/total) if total else 0
         self.previous_cpu=current
         memory=Path('/proc/meminfo').read_text()
         row['runner_used_memory_bytes']=(int(re.search(r'MemTotal:\s+(\d+)',memory)[1])-int(re.search(r'MemAvailable:\s+(\d+)',memory)[1]))*1024
         row['runner_load1']=os.getloadavg()[0]
-        row['app_storage']={stack['name']:app_disk(r,stack) for stack in self.stacks}
+        stamp(times,['runner_cpu_percent','runner_used_memory_bytes','runner_load1'])
+        row['app_storage']={}
+        for name,measured,future in app_probes:
+            row['app_storage'][name]=future.result(timeout=8);times.update(measured)
         for stack in self.stacks:
             try:healthy=request(stack['origin'],'/health/ready',context=r.context)[0]==200
             except Exception:healthy=False
             self.sustained(stack['name']+'-unhealthy-over-30s',not healthy)
             row[stack['name']+'_ready']=healthy
         if obs:
-            status,_,body=request(obs['endpoints']['self'],'/metrics')
+            r.record['sampler_stage']='collector-self-request'
+            status,headers,body=request(obs['endpoints']['self'],'/metrics')
+            r.record['sampler_http_shape']=http_shape(status,headers,body)
             require(status==200,'collector-self-metrics')
+            r.record['sampler_stage']='collector-self-parse'
             allmetrics=metrics(body.decode())
             # Explicit safe numeric catalog, with version-defined queue instrumentation required.
             row['collector']={k:v for k,v in allmetrics.items() if any(s in k for s in (
@@ -255,16 +307,19 @@ class Sampler:
             cap=sum(v for k,v in row['collector'].items() if k.endswith('queue_capacity'))
             require(cap==10 and 0<=queue<=cap,'collector-queue-bound')
             row['queue_requests']=queue;row['queue_capacity_requests']=cap
-            row['storage']=disk(r,obs,outage=phase=='outage')
+            stamp(times,['collector/'+key for key in row['collector']]+['queue_requests','queue_capacity_requests'])
+            row['storage']=obs_probe.result(timeout=8);times.update(obs_times)
             if phase=='recovery':
                 try:row['newest_stored_synthetic_timestamp']=scalar(obs,'max(timestamp(rehearsal_capacity_value))')
                 except Exception:row['newest_stored_synthetic_timestamp']=0
-        r.record['samples'].append(row)
+        self.field_timing(phase,row,times)
+        r.record['sampler_stage']='snapshot-complete'
         return row
 
 
 def normal_login(r,stack):
-    status,_,body=r.api(stack,'/auth/login',method='POST',value={'email':stack['email'],'password':stack['password']})
+    status,headers,body=r.api(stack,'/auth/login',method='POST',value={'email':stack['email'],'password':stack['password']})
+    r.record.setdefault('capacity_http_shapes',{})[stack['name']+'-normal-login']=http_shape(status,headers,body)
     require(status==200,'phase-normal-login')
     stack['token']=json.loads(body)['access_token']
 
@@ -288,7 +343,9 @@ def tick_delay(r,phase,kind,now,due,period):
 def phase(r,sampler,stacks,name,seconds,obs):
     r.record['active_stage']='capacity-'+name
     active=name in ('load','outage','recovery')
-    for stack in stacks:normal_login(r,stack)
+    for stack in stacks:
+        r.record['active_stage']='capacity-'+name+'-'+stack['name']+'-normal-login'
+        normal_login(r,stack)
     pools={s['name']:ThreadPoolExecutor(max_workers=4) for s in stacks}
     metric_pool=ThreadPoolExecutor(max_workers=1)
     grafana_pool=ThreadPoolExecutor(max_workers=1)
@@ -297,22 +354,28 @@ def phase(r,sampler,stacks,name,seconds,obs):
     metric_pending=None
     futures={s['name']:[] for s in stacks};metric_futures=[];grafana_futures=[]
     results={s['name']:{'offered':0,'scheduled':0,'scheduler_rejected':0,'completed':0,'errors':0,'latency_seconds':[]} for s in stacks}
+    r.record['active_stage']='capacity-'+name+'-storage-start'
     start_storage=disk(r,obs,outage=name=='outage') if obs else None
     app_storage_start={stack['name']:app_disk(r,stack) for stack in stacks}
     def counters():
         if not obs:return {}
-        status,_,raw=request(obs['endpoints']['self'],'/metrics')
+        r.record['active_stage']='capacity-'+name+'-collector-counters'
+        status,headers,raw=request(obs['endpoints']['self'],'/metrics')
+        r.record.setdefault('capacity_http_shapes',{})['collector-counters']=http_shape(status,headers,raw)
         require(status==200,'phase-collector-counters')
         values=metrics(raw.decode())
         selected={k:v for k,v in values.items() if any(s in k for s in ('metric_points','queue_','prometheusremotewrite_'))}
         if name!='outage':
-            status,_,raw=request(obs['endpoints']['prometheus'],'/metrics')
+            r.record['active_stage']='capacity-'+name+'-prometheus-counters'
+            status,headers,raw=request(obs['endpoints']['prometheus'],'/metrics')
+            r.record.setdefault('capacity_http_shapes',{})['prometheus-counters']=http_shape(status,headers,raw)
             require(status==200,'phase-tsdb-counter')
             found=re.search(rb'^prometheus_tsdb_head_samples_appended_total\s+([0-9.eE+\-]+)',raw,re.M)
             require(found is not None,'tsdb-counter-missing')
             selected['prometheus_tsdb_head_samples_appended_total']=float(found[1])
         return selected
     start_counters=counters()
+    r.record['active_stage']='capacity-'+name+'-sampling'
     # Setup disk/counter snapshots are outside the fixed offered-rate phase clock.
     started=time.monotonic();next_read=next_metric=next_grafana=next_sample=started
     start_wall=time.time();max_sample_gap=0;last_sample=started
@@ -347,12 +410,12 @@ def phase(r,sampler,stacks,name,seconds,obs):
                 next_grafana+=10
             if now>=next_sample:
                 gap=now-last_sample;max_sample_gap=max(max_sample_gap,gap)
-                require(gap<=5.5,'sampler-cadence-deadline')
+                require(gap<=5,'sampler-cadence-deadline')
                 if sample_futures:
                     require(sample_futures[-1].done(),'sampler-cadence-deadline')
                     sample_futures[-1].result()
                 sample_futures.append(sampler_pool.submit(sampler.sample,name,now-started,obs))
-                last_sample=now;next_sample+=5
+                last_sample=now;next_sample+=4
             time.sleep(.02)
         duration=time.monotonic()-started
         for future in sample_futures:future.result(timeout=10)
@@ -379,6 +442,8 @@ def phase(r,sampler,stacks,name,seconds,obs):
         samples=[s for s in r.record['samples'] if s['phase']==name]
         output={'duration_seconds':duration,'start_unix':start_wall,'end_unix':time.time(),'sample_count':len(samples),
                 'max_sample_gap_seconds':max_sample_gap,'app_reads':results,
+                'actual_field_gap_seconds':{'peak':max([s.get('field_max_gap_seconds',0) for s in samples],default=0),
+                                            'count':sum(len(s.get('field_gaps_seconds',{})) for s in samples)},
                 'app_tick_lateness_peak_seconds':max(read_lateness,default=0),
                 'otlp_tick_lateness_peak_seconds':max(metric_lateness,default=0),
                 'actual_app_offer_offsets_seconds':read_offsets,'actual_otlp_offer_offsets_seconds':metric_offsets,

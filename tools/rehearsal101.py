@@ -22,6 +22,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import traceback
 import urllib.parse
 import urllib.request
 import uuid
@@ -472,7 +473,8 @@ class Rehearsal:
         self.record['caps_cpu_memory_mib']=CAPS
         self.record['cpu_normalization']='100 percent = one logical CPU; x64 vCPU is not Oracle ARM OCPU'
         self.record['declared_cpu_budget']=os.cpu_count()
-        self.record['sampler_seconds']=5
+        self.record['sampler_seconds']=4
+        self.record['sampler_actual_field_max_seconds']=5
 
     def images(self):
         self.record['images']={}
@@ -540,6 +542,25 @@ class Rehearsal:
         if not self.record['cleanup']:self.record['result']='FAIL'
 
 
+def failure_metadata(error):
+    categories={KeyError:'missing-fixture-field',TypeError:'fixture-type',ValueError:'fixture-value',
+        PermissionError:'fixture-permission',FileNotFoundError:'fixture-file-missing',
+        ConnectionRefusedError:'connection-refused',TimeoutError:'transport-timeout',
+        ConnectionResetError:'connection-reset',ssl.SSLEOFError:'tls-eof',
+        ssl.SSLZeroReturnError:'tls-closed',http.client.IncompleteRead:'http-incomplete-response',
+        http.client.BadStatusLine:'http-status-line',json.JSONDecodeError:'json-decode',
+        UnicodeDecodeError:'text-decode',AttributeError:'fixture-attribute',NameError:'fixture-name',
+        UnboundLocalError:'fixture-unbound-name',IndexError:'fixture-index',OverflowError:'numeric-overflow',
+        ZeroDivisionError:'numeric-division',ssl.SSLCertVerificationError:'certificate-verification',
+        http.client.RemoteDisconnected:'remote-disconnected'}
+    result={'failure_class':categories.get(type(error),'other-controller-exception')}
+    for frame in traceback.extract_tb(error.__traceback__):
+        for filename in ('tools/rehearsal101.py','tools/rehearsal101_capacity.py'):
+            if Path(frame.filename).resolve()==(ROOT/filename).resolve():
+                result['failure_location']={'file':filename,'function':frame.name,'line':frame.lineno}
+    return result
+
+
 def main():
     parser=argparse.ArgumentParser()
     parser.add_argument('--confirm-disposable',required=True,choices=['issue-101-synthetic-only'])
@@ -553,16 +574,8 @@ def main():
     except Failure as error:controller.record['failure_stage']=str(error)
     except Exception as error:
         controller.record['failure_stage']='unexpected-controller-error'
-        # Fixed exception classes only: never messages, traceback paths or payloads.
-        categories={KeyError:'missing-fixture-field',TypeError:'fixture-type',ValueError:'fixture-value',
-                    PermissionError:'fixture-permission',FileNotFoundError:'fixture-file-missing',
-                    ConnectionRefusedError:'connection-refused',TimeoutError:'transport-timeout',
-                    ConnectionResetError:'connection-reset',ssl.SSLEOFError:'tls-eof',
-                    ssl.SSLZeroReturnError:'tls-closed',http.client.IncompleteRead:'http-incomplete-response',
-                    http.client.BadStatusLine:'http-status-line',
-                    ssl.SSLCertVerificationError:'certificate-verification',
-                    http.client.RemoteDisconnected:'remote-disconnected'}
-        controller.record['failure_class']=categories.get(type(error),'other-controller-exception')
+        # Fixed classes/public source callsite only: no messages, paths, source lines or locals.
+        controller.record.update(failure_metadata(error))
     finally:
         controller.record['last_controller_subprocess_exit_status']=controller.record.pop('last_subprocess_exit_status',None)
         controller.cleanup()

@@ -220,6 +220,33 @@ class RehearsalSafety(unittest.TestCase):
                                  'uploads_allocated_bytes':4096})
         self.assertNotIn('PRIVATE',json.dumps(result))
 
+    def test_actual_delayed_disk_sample_fails_even_when_cpu_cadence_is_four_seconds(self):
+        sampler=capacity.Sampler.__new__(capacity.Sampler)
+        sampler.r=self.controller;sampler.previous_fields={}
+        sampler.field_timing('load',{}, {'cpu':(0,1000),'pgdata':(0,1000)})
+        with self.assertRaisesRegex(harness.Failure,'sampler-actual-field-gap'):
+            sampler.field_timing('load',{}, {'cpu':(4,1004),'pgdata':(5.001,1005.001)})
+        self.assertEqual(self.controller.record['sampler_failure']['field'],'pgdata')
+        self.assertEqual(self.controller.record['samples'][-1]['field_timestamps_unix']['pgdata'],1005.001)
+
+    def test_fixed_exception_classification_drops_json_payload_and_private_path(self):
+        try:json.loads('PRIVATE TOKEN /private/location')
+        except json.JSONDecodeError as error:metadata=harness.failure_metadata(error)
+        self.assertEqual(metadata,{'failure_class':'json-decode'})
+        self.assertNotIn('PRIVATE',json.dumps(metadata))
+
+    def test_capacity_http_shape_is_fixed_vocabulary_without_headers_or_body(self):
+        value=capacity.http_shape(200,{'Content-Type':'PRIVATE TOKEN','Set-Cookie':'PRIVATE COOKIE'},b'PRIVATE BODY')
+        self.assertEqual(value,{'status':200,'body_bytes':12,'gzip_magic':False,'encoding':'identity','media':'other'})
+
+    def test_telemetry_disk_uses_one_prometheus_probe_and_one_grafana_probe(self):
+        results=[subprocess.CompletedProcess([],0,'1000 /private/total\n200 /private/wal\n10 /private/head\n',''),
+                 subprocess.CompletedProcess([],0,'5 /private/grafana\n','')]
+        with patch.object(self.controller,'compose',side_effect=results) as compose:
+            value=capacity.disk(self.controller,{},outage=True)
+        self.assertEqual(compose.call_count,2)
+        self.assertEqual(value,{'prometheus_bytes':1024000,'wal_bytes':204800,'chunks_head_bytes':10240,'grafana_bytes':5120})
+
     def test_fixture_relay_cannot_select_upstream_from_request_authority(self):
         calls=[]
         class Destination(BaseHTTPRequestHandler):

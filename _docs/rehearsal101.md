@@ -47,7 +47,7 @@ Prometheus receives remote write and retains at most 24 hours/512 MB metric bloc
 
 ## Measurement and limits
 
-The same actual Linux host records timestamps/source/run/attempt, kernel/architecture, CPU model/count, RAM/disk, Docker/Compose versions, image manifests, caps and five-second samples. CPU uses Docker's convention: **100% = one logical CPU**. The declared rehearsal CPU budget is the runner's reported logical CPU count, not Oracle's OCPU definition.
+The same actual Linux host records timestamps/source/run/attempt, kernel/architecture, CPU model/count, RAM/disk, Docker/Compose versions, image manifests, caps and a four-second sampler dispatch target. Actual timestamps accompany each CPU/RAM, host filesystem, per-environment PG/WAL/upload, telemetry disk and Collector counter measurement. Any actual repeated-field gap over five seconds fails; nominal dispatch alone cannot pass this criterion. A bounded three-worker disk snapshot overlaps Docker stats, and each Prometheus total/WAL/head measurement uses one probe, including during outage. Sampling cost remains part of measured host/service overhead. CPU uses Docker's convention: **100% = one logical CPU**. The declared rehearsal CPU budget is the runner's reported logical CPU count, not Oracle's OCPU definition.
 
 | Phase | Duration | Work |
 | --- | --- | --- |
