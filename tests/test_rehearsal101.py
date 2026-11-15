@@ -44,8 +44,9 @@ class RehearsalSafety(unittest.TestCase):
 
     def test_stack_is_production_validated_and_never_reads_ambient_secrets(self):
         # Create fixture files only; stack generation must not inspect an ambient .env.
-        (self.controller.private/'smtp').mkdir()
-        for filename in ('server.key','server.pem'):(self.controller.private/'smtp'/filename).write_text('fixture')
+        for name in ('dev','prod'):
+            (self.controller.private/(name+'-smtp')).mkdir()
+            for filename in ('server.key','server.pem'):(self.controller.private/(name+'-smtp')/filename).write_text('fixture')
         with patch.dict(os.environ,{'DATABASE_URL':'PRIVATE-LIVE','JWT_SECRET_KEY':'PRIVATE-LIVE'},clear=False):
             dev=self.controller.stack('dev');prod=self.controller.stack('prod')
         for name in ('POSTGRES_DB','POSTGRES_USER','POSTGRES_PASSWORD','JWT_SECRET_KEY','SMTP_PASSWORD','FRONTEND_ORIGINS'):
@@ -62,9 +63,11 @@ class RehearsalSafety(unittest.TestCase):
             self.assertEqual(stack['config']['services']['app']['depends_on']['migrate']['condition'],'service_completed_successfully')
             self.assertEqual(stack['config']['services']['proxy']['user'],self.controller.fixture_user)
             self.assertEqual(stack['config']['services']['proxy']['cap_drop'],['ALL'])
+            self.assertIn(str(self.controller.private/(stack['name']+'-web'))+':/tls:ro',stack['config']['services']['proxy']['volumes'])
+            self.assertNotIn(str(self.controller.private/'ca.key'),json.dumps(stack['config']))
 
     def test_proxy_diagnostics_keep_only_owned_state_and_permission_metadata(self):
-        web=self.controller.private/'web';web.mkdir()
+        web=self.controller.private/'dev-web';web.mkdir()
         (web/'server.key').write_text('PRIVATE KEY')
         stack={'project':self.controller.owner+'-dev','name':'dev'}
         info={'Config':{'Labels':{harness.LABEL:self.controller.owner,'com.docker.compose.project':stack['project']},

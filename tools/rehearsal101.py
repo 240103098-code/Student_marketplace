@@ -143,22 +143,28 @@ class Rehearsal:
         self.run(['openssl','req','-x509','-newkey','rsa:2048','-nodes','-days','1',
                   '-keyout',str(self.private/'ca.key'),'-out',str(self.private/'ca.pem'),
                   '-subj','/CN=Disposable marketplace101 CA','-addext','basicConstraints=critical,CA:TRUE'])
-        for name,san in [('web','DNS:dev.marketplace.test,DNS:prod.marketplace.test'),('smtp','DNS:smtp')]:
+        leaves=[(environment+'-web','DNS:'+environment+'.marketplace.test',environment+'.marketplace.test')
+                for environment in ('dev','prod')]
+        leaves += [(environment+'-smtp','DNS:smtp','smtp') for environment in ('dev','prod')]
+        for name,san,common_name in leaves:
             directory=self.private/name;directory.mkdir()
             self.run(['openssl','req','-new','-newkey','rsa:2048','-nodes','-keyout',str(directory/'server.key'),
-                      '-out',str(directory/'server.csr'),'-subj','/CN='+('smtp' if name=='smtp' else 'dev.marketplace.test')])
+                      '-out',str(directory/'server.csr'),'-subj','/CN='+common_name])
             (directory/'ext').write_text('subjectAltName='+san+'\nextendedKeyUsage=serverAuth\nbasicConstraints=CA:FALSE\n')
             self.run(['openssl','x509','-req','-in',str(directory/'server.csr'),'-CA',str(self.private/'ca.pem'),
                       '-CAkey',str(self.private/'ca.key'),'-CAcreateserial','-days','1','-out',str(directory/'server.pem'),
                       '-extfile',str(directory/'ext')])
         self.context=ssl.create_default_context(cafile=str(self.private/'ca.pem'))
+        self.check('distinct-web-and-smtp-leaf-keys',len({
+            (self.private/name/'server.key').read_bytes() for name,_,_ in leaves})==4)
 
     def stack(self,name):
         project=self.owner+'-'+name
         directory=self.private/name;directory.mkdir()
         (directory/'mail').mkdir()
         for filename in ('server.key','server.pem'):
-            shutil.copyfile(self.private/'smtp'/filename,directory/filename)
+            shutil.copyfile(self.private/(name+'-smtp')/filename,directory/filename)
+        (directory/'server.key').chmod(0o600)
         password=secrets.token_hex(32)
         role='fixture_'+name
         environment={'POSTGRES_DB':'fixture_'+name,'POSTGRES_USER':role,'POSTGRES_PASSWORD':password,
@@ -195,7 +201,7 @@ class Rehearsal:
                        'interval':'5s','timeout':'6s','retries':12,'start_period':'10s'}),
             'proxy':{'image':self.image,'pull_policy':'never','user':self.fixture_user,'command':['python','/proxy.py'],
                      'ports':['127.0.0.1:'+str(https_port)+':8443'],
-                     'volumes':[str(self.private/'web')+':/tls:ro',str(ROOT/'ops/rehearsal101/proxy.py')+':/proxy.py:ro'],
+                     'volumes':[str(self.private/(name+'-web'))+':/tls:ro',str(ROOT/'ops/rehearsal101/proxy.py')+':/proxy.py:ro'],
                      'depends_on':{'app':{'condition':'service_healthy'}},'read_only':True,'cap_drop':['ALL']}}
         for service,config in services.items():config.update(resources(service,self.owner))
         config={'services':services,'volumes':{v:{'labels':{LABEL:self.owner}} for v in ('pgdata','uploads')},
@@ -245,7 +251,7 @@ class Rehearsal:
             states.append({'running':bool(value['State']['Running']),'exit_code':int(value['State']['ExitCode']),
                            'oom_killed':bool(value['State'].get('OOMKilled')),
                            'process_uid_gid':value['Config'].get('User','')})
-        key=self.private/'web/server.key'
+        key=self.private/(stack['name']+'-web')/'server.key'
         info=key.stat()
         self.record.setdefault('https_fixture_diagnostics',{})[stack['name']]={
             'last_probe':probe,'containers':states,'private_key_mode':oct(info.st_mode&0o777),
@@ -521,7 +527,9 @@ def main():
                     http.client.RemoteDisconnected:'remote-disconnected'}
         controller.record['failure_class']=categories.get(type(error),'other-controller-exception')
     finally:
+        controller.record['last_controller_subprocess_exit_status']=controller.record.pop('last_subprocess_exit_status',None)
         controller.cleanup()
+        controller.record.pop('last_subprocess_exit_status',None)
         controller.record['finished_utc']=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime())
         (safe/'summary.json').write_text(json.dumps(controller.record,indent=2)+'\n')
     print(json.dumps({key:controller.record[key] for key in ('result','cleanup')}))
