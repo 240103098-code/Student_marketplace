@@ -135,14 +135,17 @@ def playwright_modes(execute,safe,record,image_id):
                 or value.get('selection')!=selection or value.get('intentional_failure') is not intentional):
                 raise Failure('playwright-verification')
             tests=value['tests'];rows=tests['tests'];ids=[row['test'] for row in rows]
-            if len(ids)!=len(expected) or set(ids)!=expected:raise Failure('playwright-verification')
             if intentional:
+                # onBegin still validates the declared two-smoke topology. With
+                # maxFailures=1, the unexecuted admin may have no onTestEnd row.
+                if len(ids)!=len(set(ids)) or not set(ids)<=expected:raise Failure('playwright-verification')
                 journey=json.loads((directory/'student-stages.json').read_text())
-                if (value['playwright_exit']==0 or tests['status']!='failed'
+                if (value['playwright_exit']!=1 or tests['status']!='failed'
                     or not any(row=={'test':'student','status':'failed'} for row in rows)
+                    or any(row!={'test':'admin','status':'skipped'} for row in rows if row['test']!='student')
                     or 'controlled-failure-check' not in journey['stages']
                     or not {'ui-register','private-smtp','ui-verify','ui-login','protected-reload','fresh-context-denied'}<=set(journey['completed'])):raise Failure('playwright-verification')
-            elif value['playwright_exit']!=0 or tests['status']!='passed' or any(row['status']!='passed' for row in rows):
+            elif len(ids)!=len(expected) or set(ids)!=expected or value['playwright_exit']!=0 or tests['status']!='passed' or any(row['status']!='passed' for row in rows):
                 raise Failure('playwright-verification')
             record['playwright_modes'].append({'selection':selection,'intentional_failure':intentional,'result':'PASS','browser_status':tests['status'],'browser_exit':value['playwright_exit'],'tests':len(rows),'cleanup':True,'private_files_removed':True})
             if selection=='full':

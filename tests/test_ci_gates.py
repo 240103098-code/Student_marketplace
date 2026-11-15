@@ -20,6 +20,7 @@ class ImplementedCIGates(unittest.TestCase):
             intentional='--intentional-failure' in args
             selection=args[args.index('--selection')+1] if '--selection' in args else 'smoke'
             ids={'smoke':['student','admin'],'full':['student','admin','registration'],'registration':['registration']}[selection]
+            if intentional:ids=['student']  # Actual maxFailures=1 lifecycle omits admin end record.
             value={'candidate':candidate,'result':'PASS','image_id':image,'borrowed_image_preserved':True,
                    'cleanup':True,'private_files_removed':True,'selection':selection,'intentional_failure':intentional,
                    'playwright_exit':1 if intentional else 0,'playwright':'fixture','browser_revision':[],
@@ -42,6 +43,8 @@ class ImplementedCIGates(unittest.TestCase):
             self.assertEqual(record['playwright_modes'][-1]['browser_status'],'failed')
             self.assertEqual(record['playwright_modes'][-1]['browser_exit'],1)
             self.assertEqual(record['playwright_modes'][-1]['result'],'PASS')
+            self.assertEqual(record['playwright_modes'][-1]['tests'],1)
+            self.assertEqual(json.loads((safe/'e2e-intentional-failure-tests.json').read_text()),{'status':'failed','tests':[{'test':'student','status':'failed'}]})
             for prefix in ('e2e-smoke-','e2e-','e2e-registration-only-','e2e-intentional-failure-'):
                 self.assertTrue((safe/(prefix+'run.json')).is_file())
                 self.assertNotIn('PRIVATE', (safe/(prefix+'run.json')).read_text())
@@ -58,7 +61,12 @@ class ImplementedCIGates(unittest.TestCase):
                 self.assertTrue((safe/'e2e-smoke-run.json').is_file(),'failed mode still retains safe diagnostics')
 
     def test_intentional_mode_rejects_a_successful_browser_or_wrong_failing_test(self):
-        for change in ({'playwright_exit':0},{'tests':{'status':'failed','tests':[{'test':'student','status':'passed'},{'test':'admin','status':'failed'}]}}):
+        for change in ({'playwright_exit':0},{'playwright_exit':2},*({'tests':{'status':'failed','tests':rows}} for rows in (
+            [{'test':'student','status':'passed'},{'test':'admin','status':'failed'}],
+            [{'test':'student','status':'failed'},{'test':'admin','status':'failed'}],
+            [{'test':'student','status':'failed'},{'test':'admin','status':'passed'}],
+            [{'test':'student','status':'failed'},{'test':'student','status':'failed'}],
+            [{'test':'student','status':'failed'},{'test':'unexpected','status':'skipped'}]))):
             with self.subTest(change=change),tempfile.TemporaryDirectory() as directory:
                 root=Path(directory);safe=root/'safe';safe.mkdir()
                 def mutate(value):
@@ -66,6 +74,15 @@ class ImplementedCIGates(unittest.TestCase):
                 with self.assertRaises(Failure):self.run_modes(root,safe,mutate)
                 self.assertTrue((safe/'e2e-intentional-failure-run.json').is_file())
                 self.assertTrue((safe/'e2e-registration-only-run.json').is_file())
+
+    def test_intentional_mode_retains_an_actual_unexecuted_admin_record_when_emitted(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);safe=root/'safe';safe.mkdir()
+            def mutate(value):
+                if value['intentional_failure']:value['tests']['tests'].append({'test':'admin','status':'skipped'})
+            _,record=self.run_modes(root,safe,mutate)
+            self.assertEqual(record['playwright_modes'][-1]['tests'],2)
+            self.assertEqual(json.loads((safe/'e2e-intentional-failure-tests.json').read_text())['tests'],[{'test':'student','status':'failed'},{'test':'admin','status':'skipped'}])
 
     def test_dynamic_backend_count_requires_success_and_zero_skips(self):
         counts=unittest_counts('Ran 317 tests in 12.34s\n\nOK\n')
