@@ -8,3 +8,13 @@ class SafeReporter {
  printsToStdio(){return false;}
 }
 module.exports=SafeReporter;
+const REGISTRATION_STEPS=new Set(['duplicate-form','duplicate-http','duplicate-feedback','duplicate-state','duplicate-delivery-count','duplicate-response-body','duplicate-page-text','duplicate-storage','duplicate-privacy','duplicate-no-navigation','duplicate-layout']);
+class RegistrationProgress {
+ constructor(){this.started=performance.now();this.rows=[];}
+ async step(name,action){
+  if(!REGISTRATION_STEPS.has(name)||this.rows.length>=32)throw new Error('Unsupported registration step');
+  const row={step:name,started_ms:Math.floor(performance.now()-this.started)};this.rows.push(row);
+  const value=await action();row.completed_ms=Math.floor(performance.now()-this.started);return value;
+ }
+}
+module.exports.RegistrationProgress=RegistrationProgress;

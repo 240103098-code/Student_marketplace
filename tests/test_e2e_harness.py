@@ -51,6 +51,24 @@ class HarnessContract(unittest.TestCase):
             with self.assertRaisesRegex(e2e_stack.Failure,'failure-selection'):e2e_stack.main()
             create.assert_not_called()
 
+    def test_registration_progress_records_only_fixed_steps_and_monotonic_times(self):
+        script="""const {RegistrationProgress}=require('./e2e/safe-reporter.cjs');
+        (async()=>{const p=new RegistrationProgress();
+        const value=await p.step('duplicate-http',()=>Promise.resolve('PRIVATE PASSWORD BODY'));
+        if(value!=='PRIVATE PASSWORD BODY')throw Error();
+        try{await p.step('duplicate-state',()=>{throw Error('PRIVATE DATABASE DETAILS');});}catch{}
+        try{await p.step('PRIVATE EMAIL',()=>{});process.exit(2);}catch{}
+        if(p.rows.length!==2)process.exit(3);process.stdout.write(JSON.stringify(p.rows));})();"""
+        result=subprocess.run(['node','-e',script],cwd=ROOT,capture_output=True,text=True,timeout=10)
+        self.assertEqual(result.returncode,0);self.assertEqual(result.stderr,'')
+        self.assertNotIn('PRIVATE',result.stdout)
+        rows=json.loads(result.stdout)
+        self.assertEqual([row['step'] for row in rows],['duplicate-http','duplicate-state'])
+        self.assertEqual(set(rows[0]),{'step','started_ms','completed_ms'})
+        self.assertEqual(set(rows[1]),{'step','started_ms'})
+        self.assertGreaterEqual(rows[0]['completed_ms'],rows[0]['started_ms'])
+        self.assertGreaterEqual(rows[1]['started_ms'],rows[0]['completed_ms'])
+
     def test_state_reader_is_read_only_and_drops_invalid_input(self):
         # Subprocess refuses malformed identity/action before attempting any database connection.
         for request in ({'email':'external@example.com','password':'private','operation':'snapshot'}, {'email':'e2e-'+'a'*32+'-owned@sdu.edu.kz','password':'private','operation':'delete'}):
