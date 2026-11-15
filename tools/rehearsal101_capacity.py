@@ -2,6 +2,7 @@
 import base64
 from concurrent.futures import ThreadPoolExecutor
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -103,9 +104,12 @@ def grafana(obs):
     require(status==200,'grafana-authenticated-query')
     value=json.loads(body)
     frames=value.get('results',{}).get('A',{}).get('frames',[])
-    require(frames and any(isinstance(value,(int,float)) and not isinstance(value,bool)
-                           for frame in frames for column in frame.get('data',{}).get('values',[])
-                           for value in column),'grafana-query-values')
+    require(frames and any(field.get('type')=='number' and index<len(frame.get('data',{}).get('values',[]))
+                           and any(isinstance(value,(int,float)) and not isinstance(value,bool)
+                                   and math.isfinite(value) and abs(value-5050)<.001
+                                   for value in frame['data']['values'][index])
+                           for frame in frames for index,field in enumerate(frame.get('schema',{}).get('fields',[]))),
+            'grafana-query-values')
     return 1
 
 

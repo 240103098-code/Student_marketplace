@@ -107,5 +107,16 @@ class RehearsalSafety(unittest.TestCase):
         self.assertEqual(len(points),100)
         self.assertEqual({p['attributes'][0]['value']['intValue'] for p in points},{str(n) for n in range(100)})
 
+    def test_grafana_proof_requires_actual_expected_measurement_not_timestamp(self):
+        obs={'endpoints':{'grafana':'http://127.0.0.1:1'},'auth':'synthetic'}
+        for value,accepted in ((None,False),(float('inf'),False),(42,False),(5050,True)):
+            frame={'schema':{'fields':[{'type':'time'},{'type':'number'}]},
+                   'data':{'values':[[1900000000000],[value]]}}
+            body=json.dumps({'results':{'A':{'frames':[frame]}}}).encode()
+            with self.subTest(value=value),patch('tools.rehearsal101_capacity.request',return_value=(200,{},body)):
+                if accepted:self.assertEqual(capacity.grafana(obs),1)
+                else:
+                    with self.assertRaisesRegex(harness.Failure,'grafana-query-values'):capacity.grafana(obs)
+
 
 if __name__=='__main__':unittest.main()
