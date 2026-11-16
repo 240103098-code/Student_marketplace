@@ -75,11 +75,11 @@ class LocalTLS(http.client.HTTPSConnection):
         self.sock = self._context.wrap_socket(raw,server_hostname=self.host)
 
 
-def request(origin, path, *, method='GET', body=None, headers=None, context=None):
+def request(origin, path, *, method='GET', body=None, headers=None, context=None, timeout=8):
     parsed = urllib.parse.urlsplit(origin)
-    connection = (LocalTLS(parsed.hostname,parsed.port,context=context,timeout=8)
+    connection = (LocalTLS(parsed.hostname,parsed.port,context=context,timeout=timeout)
                   if parsed.scheme=='https' else
-                  http.client.HTTPConnection('127.0.0.1',parsed.port,timeout=8))
+                  http.client.HTTPConnection('127.0.0.1',parsed.port,timeout=timeout))
     try:
         connection.request(method,path,body,headers or {})
         response=connection.getresponse()

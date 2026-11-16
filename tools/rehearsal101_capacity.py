@@ -124,10 +124,10 @@ def candidate(r):
     return stack
 
 
-def query(obs,expression,at=None):
+def query(obs,expression,at=None,request_timeout=8):
     params={'query':expression,'timeout':'4s'}
     if at is not None:params['time']=str(at)
-    status,_,body=request(obs['endpoints']['prometheus'],'/api/v1/query?'+urllib.parse.urlencode(params))
+    status,_,body=request(obs['endpoints']['prometheus'],'/api/v1/query?'+urllib.parse.urlencode(params),timeout=request_timeout)
     require(status==200,'prometheus-query')
     value=json.loads(body)
     require(value['status']=='success','prometheus-query-result')
@@ -141,6 +141,33 @@ def http_shape(status,headers,body):
     return {'status':status,'body_bytes':len(body),'gzip_magic':body.startswith(b'\x1f\x8b'),
             'encoding':encoding if encoding in ('identity','gzip') else 'other',
             'media':media if media in ('text/plain','application/openmetrics-text','application/json') else 'other'}
+
+
+def candidate_counter_ready(r,obs,limit=15):
+    require(0<limit<=15,'counter-readiness-limit')
+    started=time.monotonic();deadline=started+limit
+    family='prometheus_tsdb_head_samples_appended_total'
+    r.record['active_stage']='capacity-counter-readiness'
+    while time.monotonic()<deadline:
+        remaining=deadline-time.monotonic()
+        status,headers,raw=request(obs['endpoints']['prometheus'],'/metrics',timeout=min(3,max(.001,remaining/2)))
+        value=prometheus_counter(raw,family) if status==200 else None
+        up_values=query(obs,'up{job="collector-capacity"}',request_timeout=min(3,max(.001,deadline-time.monotonic())))
+        up=sum(float(item['value'][1]) for item in up_values) if up_values else None
+        elapsed=time.monotonic()-started
+        r.record['candidate_counter_readiness']={
+            'duration_seconds':elapsed,'collector_scrape_up':up,'appended_counter_value':value,
+            'help_present':bool(re.search(rb'^# HELP '+family.encode()+rb'\s',raw,re.M)),
+            'type_present':bool(re.search(rb'^# TYPE '+family.encode()+rb'\s',raw,re.M)),
+            'sample_present':value is not None,'http_shape':http_shape(status,headers,raw),
+            'source':'Prometheus v3.9.1 tsdb/head.go CounterVec; head_append.go Commit binds type children.'}
+        if up==1 and value is not None:
+            require(elapsed<=limit,'counter-readiness-deadline')
+            return
+        remaining=deadline-time.monotonic()
+        if remaining>0:time.sleep(min(.25,remaining))
+    r.record['candidate_counter_readiness']['duration_seconds']=time.monotonic()-started
+    raise Failure('counter-readiness-deadline')
 
 
 def scalar(obs,expression,at=None):
@@ -660,6 +687,7 @@ def capacity(r,dev,prod):
         time.sleep(1)
     else:raise Failure('candidate-readiness')
     r.check('grafana-anonymous-denied',request(obs['endpoints']['grafana'],'/api/datasources')[0]==401)
+    candidate_counter_ready(r,obs)
     phase(r,sampler,stacks,'idle',120,obs)
     # Warm only the metric/query path before the fixed load clock, without hiding its cost.
     r.record['capacity_warmup_points']=otlp(obs)

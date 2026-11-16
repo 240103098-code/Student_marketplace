@@ -287,6 +287,30 @@ class RehearsalSafety(unittest.TestCase):
         self.assertEqual(exit_code.exception.code,1)
         self.assertEqual(output.getvalue(),'Rehearsal invocation refused\n')
 
+    def test_scrape_readiness_waits_for_observed_counter_after_initial_absence(self):
+        clock=[0.0]
+        responses=[(200,{},b'unrelated 1\n'),(200,{},b'prometheus_tsdb_head_samples_appended_total{type="float"} 0\n')]
+        with patch('tools.rehearsal101_capacity.time.monotonic',side_effect=lambda:clock[0]),\
+             patch('tools.rehearsal101_capacity.time.sleep',side_effect=lambda seconds:clock.__setitem__(0,clock[0]+seconds)),\
+             patch('tools.rehearsal101_capacity.request',side_effect=responses),\
+             patch('tools.rehearsal101_capacity.query',side_effect=[[],[{'value':[0,'1']}]]):
+            capacity.candidate_counter_ready(self.controller,{'endpoints':{'prometheus':'http://127.0.0.1:1'}})
+        value=self.controller.record['candidate_counter_readiness']
+        self.assertEqual(value['duration_seconds'],.25)
+        self.assertTrue(value['sample_present'])
+        self.assertEqual(value['appended_counter_value'],0)
+
+    def test_scrape_readiness_missing_family_fails_without_inventing_zero(self):
+        clock=[0.0]
+        with patch('tools.rehearsal101_capacity.time.monotonic',side_effect=lambda:clock[0]),\
+             patch('tools.rehearsal101_capacity.time.sleep',side_effect=lambda seconds:clock.__setitem__(0,clock[0]+seconds)),\
+             patch('tools.rehearsal101_capacity.request',return_value=(200,{},b'unrelated 1\n')),\
+             patch('tools.rehearsal101_capacity.query',return_value=[{'value':[0,'1']}]):
+            with self.assertRaisesRegex(harness.Failure,'counter-readiness-deadline'):
+                capacity.candidate_counter_ready(self.controller,{'endpoints':{'prometheus':'http://127.0.0.1:1'}},limit=.5)
+        self.assertIsNone(self.controller.record['candidate_counter_readiness']['appended_counter_value'])
+        self.assertEqual(self.controller.record['candidate_counter_readiness']['duration_seconds'],.5)
+
     def test_fixture_relay_cannot_select_upstream_from_request_authority(self):
         calls=[]
         class Destination(BaseHTTPRequestHandler):
