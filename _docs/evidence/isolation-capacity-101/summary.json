@@ -1,0 +1,2605 @@
+{
+  "schema_version": 1,
+  "scope": "Actual disposable Linux isolation and metrics-only capacity rehearsal; hosted activation blocked",
+  "runtime_source": "7a153312d9160c9b8e3ebc669a4d5c840cf08e31",
+  "evidence_revision": "Evidence-only descendant of runtime_source; no runtime execution of this documentation revision is claimed.",
+  "runtime_inputs_verified_against_git_blobs": true,
+  "runtime_input_sha256": {
+    "ops/rehearsal101/proxy.py": "f3ee2a71b2ecee5810d56d28ed08b0c3d99fc6aa7375508c1848a034845cdc4c",
+    "ops/rehearsal101/browser.cjs": "4e8c9ee2e0cb81a5d1e345cba5f1766ca2fa2256e0442a54be0a680d01f61430",
+    "ops/rehearsal101/images.json": "259d01b255376ffe58d43bee2f30f2de74006299c40f6263b01153fa6c33e31e",
+    "tools/rehearsal101_capacity.py": "522e5cfd565646c52483bb9d06c4fc864b18f86e7c2a5fc159efe78f9c9e869e",
+    "tools/rehearsal101.py": "44f12fd58dc96f65db03ec57b3dfe3519f700bb17d136a9e34a025c942dc6f1e",
+    ".github/workflows/rehearsal101.yml": "14c9533d47f3bf2dde598c36d3521279b1a06d76cf59ee5f88b144eb19c8858e",
+    "Dockerfile": "1f65b708da95e49d56e6523c3184bac5a6ee77a624c302c499891e23b1c62553",
+    "compose.yaml": "86f4c00150916c69f023042f7addadeca668785b76afdcc13609a58dd74573dc",
+    "requirements.lock": "27806829910d4d2aae66b5b3469295fc95a793889bd2ad339f534d38731e8c26",
+    "e2e/smtp_sink.py": "ecd669fb6855a925dc5853743f3dc840d94fecca2292da3088848d279dd76b46"
+  },
+  "run": {
+    "GITHUB_RUN_ID": "43880113023",
+    "GITHUB_RUN_ATTEMPT": "1",
+    "GITHUB_SHA": "7a153312d9160c9b8e3ebc669a4d5c840cf08e31",
+    "GITHUB_REPOSITORY": "240103098-code/Student_marketplace",
+    "url": "https://github.com/240103098-code/Student_marketplace/actions/runs/43880113023/attempts/1"
+  },
+  "artifact": {
+    "id": 14232403302,
+    "zip_sha256": "7589c4371afec9686184d93e3ab7068fbc9bbdfbb61e32127c05fcd25f9ec777",
+    "full_safe_json_sha256": "ddf6a61fc55d1b2ad9fbc3a5f0c1cba2e7087c2a65aa3c11e694cc1e9f3584df",
+    "retention_days": 7,
+    "aggregate_policy": "No raw logs, labels, secrets, inboxes or repetitive sample rows; phase/service summaries retained."
+  },
+  "started_utc": "2026-11-16T13:54:20Z",
+  "finished_utc": "2026-11-16T14:11:54Z",
+  "result": "PASS",
+  "host": {
+    "system": "Linux-7.0.0-1014-aws-x86_64-with-glibc2.39",
+    "kernel": "7.0.0-1014-aws",
+    "architecture": "x86_64",
+    "cpu_count": 4,
+    "cpu_model": "Intel(R) Xeon(R) 6975P-C",
+    "memory_kib": 16078424,
+    "free_disk_bytes": 92659855360,
+    "docker": "28.0.4",
+    "compose": "2.38.2"
+  },
+  "images": {
+    "collector": {
+      "pin": "otel/opentelemetry-collector-contrib:0.145.0@sha256:a7343f01869071ea3f4c5e1e97df1bb1b3c4d5c77247db80e053a80b9df530c4",
+      "platforms": {
+        "linux/386": "sha256:1417ff80ed63d009a6b772090b3a58a017f241c6f7eafa2ae242935e5af041b9",
+        "linux/amd64": "sha256:ac7ad5529b8cf522aa03792bb6d667a7df7d2c3f3da40b2746c51c113ea28c8c",
+        "linux/arm64": "sha256:61de0b5ce96583e389dbe0846f29fbef27e35c063ea52f369f3a92a5941713c2",
+        "linux/arm": "sha256:60135544dd6c4e2757d63955b7b759f846c5b33b85bccff6bd74b67e8fe498ff",
+        "linux/ppc64le": "sha256:3dfb40e24a2620f9e7db6aafae64841b72ed83c8ade8f11bb25de597463496e8",
+        "linux/riscv64": "sha256:9c8adf75deb1e69157e0fbe485035a92915ddc05412a44dd013331b8223dce16",
+        "linux/s390x": "sha256:c999995b2c717b8c02c106cf30df521434675d7ffab37dcb18370d12bf2d3291"
+      },
+      "actual": "amd64"
+    },
+    "prometheus": {
+      "pin": "prom/prometheus:v3.9.1@sha256:1f0f50f06acaceb0f5670d2c8a658a599affe7b0d8e78b898c1035653849a702",
+      "platforms": {
+        "linux/amd64": "sha256:2024d7bdfc559f6254de22d65e62d799eaa8eb818fe5dbeca212d3f200b70890",
+        "linux/arm64": "sha256:d82c5a30f98eb9b4cf2f2639af48f9a2a2df3a404c905b418be6278d2a021404",
+        "linux/arm": "sha256:98b84f23e6022974e81fe249fa97c4f32ba33ba97406ecd9cb2da9b7b943deea",
+        "linux/ppc64le": "sha256:c6ad6796409a96c21e8d7a203caf655ca29f88197b0ed51683b8be386c125db4",
+        "linux/s390x": "sha256:8019e3a2e7483508e6ce9bbd20a47798da0a7bd968de21578f0a912806970f69"
+      },
+      "actual": "amd64"
+    },
+    "grafana": {
+      "pin": "grafana/grafana:12.3.3@sha256:9e1e77ade304069aee3196e9a4f210830e96e80ce9a2640891eccc324b152faf",
+      "platforms": {
+        "linux/amd64": "sha256:62a54c76afbeea0b8523b7afcd9e7ee1f0e39806035fd90ffc333a19e9358f2f",
+        "linux/arm64": "sha256:0be615b1d4717a76bfc846b7ee2f84fed8200d56a75b77049d1a1cbf380cd136",
+        "linux/arm": "sha256:8451d5ee7d3a436228861f4fa8b5602ffe065af44dd5e95d6b4b351a6517525e"
+      },
+      "actual": "amd64"
+    }
+  },
+  "application_image_id": "sha256:ce57eac21f176cfececb830d991f8a32483bd46f707778d6b5fa500872601b5f",
+  "caps_cpu_memory_mib": {
+    "app": [
+      0.5,
+      256
+    ],
+    "db": [
+      0.5,
+      384
+    ],
+    "migrate": [
+      0.5,
+      256
+    ],
+    "uploads-init": [
+      0.25,
+      64
+    ],
+    "smtp": [
+      0.15,
+      96
+    ],
+    "proxy": [
+      0.25,
+      96
+    ],
+    "collector": [
+      0.5,
+      192
+    ],
+    "prometheus": [
+      0.75,
+      384
+    ],
+    "grafana": [
+      0.5,
+      256
+    ],
+    "control": [
+      0.25,
+      96
+    ]
+  },
+  "pids_limit_each": 128,
+  "logs_each": {
+    "driver": "json-file",
+    "max_size_bytes_each": 2097152,
+    "files": 2
+  },
+  "stop_thresholds": {
+    "oom_or_unexpected_restart_or_exit": "immediate",
+    "app_unhealthy_seconds": 30,
+    "aggregate_cpu_percent": 320.0,
+    "aggregate_cpu_sustained_seconds": 30,
+    "service_memory_fraction": 0.85,
+    "service_memory_sustained_seconds": 30,
+    "free_disk": "max(4 GiB, 20% total filesystem)",
+    "actual_sample_field_max_seconds": 5,
+    "dispatch_target_seconds": 3,
+    "queue_requests_max": 10
+  },
+  "checks": {
+    "distinct-web-and-smtp-leaf-keys": true,
+    "dev-smtp-starttls-auth": true,
+    "dev-own-private-read": true,
+    "dev-anonymous-denied": true,
+    "prod-smtp-starttls-auth": true,
+    "prod-own-private-read": true,
+    "prod-anonymous-denied": true,
+    "browser-cookie-isolation": true,
+    "dev-cross-jwt-denied": true,
+    "dev-cross-cookie-denied": true,
+    "dev-cross-origin-denied": true,
+    "prod-cross-jwt-denied": true,
+    "prod-cross-cookie-denied": true,
+    "prod-cross-origin-denied": true,
+    "distinct-secrets": true,
+    "dev-mount-network-labels": true,
+    "dev-db-identity": true,
+    "prod-mount-network-labels": true,
+    "prod-db-identity": true,
+    "cross-network-denied": true,
+    "cross-environment-dns-denied": true,
+    "cross-db-credentials-denied": true,
+    "prod-after-dev-write": true,
+    "prod-after-dev-migration": true,
+    "dev-migration-failure-blocks-startup": true,
+    "prod-after-dev-migration-failure": true,
+    "prod-after-dev-reset": true,
+    "dev-invalid-secret-blocks-startup": true,
+    "prod-after-invalid-dev-secret": true,
+    "dev-secret-replaced": true,
+    "prod-after-dev-secret-replacement": true,
+    "prod-after-recreate": true,
+    "prod-after-down-up-retained-volumes": true,
+    "grafana-anonymous-denied": true,
+    "grafana-authenticated-stored-value": true,
+    "load-fixed-app-target": true,
+    "load-fixed-scheduler-cadence": true,
+    "load-otlp-offered-target": true,
+    "load-query-visible-series": true,
+    "load-stored-sample-target": true,
+    "load-grafana-query-target": true,
+    "outage-fixed-app-target": true,
+    "outage-fixed-scheduler-cadence": true,
+    "outage-queue-growth": true,
+    "recovery-fixed-app-target": true,
+    "recovery-fixed-scheduler-cadence": true,
+    "recovery-otlp-offered-target": true,
+    "recovery-query-visible-ingestion": true,
+    "recovery-within-120s": true,
+    "recovery-queue-drained": true,
+    "metric-flow-reconciled": true
+  },
+  "browser": {
+    "result": "PASS",
+    "browser": "151.0.7922.34",
+    "stacks": [
+      {
+        "environment": "dev",
+        "trusted_navigation": true,
+        "secure_host_only_cookie": true,
+        "cross_host_cookie_absent": true
+      },
+      {
+        "environment": "prod",
+        "trusted_navigation": true,
+        "secure_host_only_cookie": true,
+        "cross_host_cookie_absent": true
+      }
+    ],
+    "external_requests": 0
+  },
+  "tls_verification": {
+    "openssl": "OpenSSL 3.0.13 30 Jan 2024",
+    "strict": true,
+    "check_hostname": true,
+    "certificate_required": true
+  },
+  "https_fixture_diagnostics": {
+    "dev": {
+      "last_probe": "verified-http-200",
+      "containers": [
+        {
+          "running": true,
+          "exit_code": 0,
+          "oom_killed": false,
+          "process_uid_gid": "1001:1001"
+        }
+      ],
+      "private_key_mode": "0o600",
+      "internal_verified_tls_ready": true,
+      "loopback_published": true,
+      "key_owner_matches_proxy": true
+    },
+    "prod": {
+      "last_probe": "verified-http-200",
+      "containers": [
+        {
+          "running": true,
+          "exit_code": 0,
+          "oom_killed": false,
+          "process_uid_gid": "1001:1001"
+        }
+      ],
+      "private_key_mode": "0o600",
+      "internal_verified_tls_ready": true,
+      "loopback_published": true,
+      "key_owner_matches_proxy": true
+    }
+  },
+  "prod_fingerprints": {
+    "data": "ba4257009e6780ab33cf8fd57a9b3b270833874b535cf7ff4a6b5bdb26c161f3",
+    "head": "0003_listings",
+    "upload": "9240f8e1bf06f4f51d8c46cf306b956004ae5c166e3ae3eae9f2a62d39ceeac6"
+  },
+  "candidate_counter_readiness": {
+    "duration_seconds": 4.622781650999968,
+    "collector_scrape_up": 1.0,
+    "appended_counter_value": 18.0,
+    "help_present": true,
+    "type_present": true,
+    "sample_present": true,
+    "http_shape": {
+      "status": 200,
+      "body_bytes": 83096,
+      "gzip_magic": false,
+      "encoding": "identity",
+      "media": "text/plain"
+    },
+    "source": "Prometheus v3.9.1 tsdb/head.go CounterVec; head_append.go Commit binds type children."
+  },
+  "sampling": {
+    "count": 240,
+    "max_actual_field_gap_seconds": 4.038938916999996,
+    "min_free_disk_bytes": 89822040064,
+    "max_service_memory_fraction_of_cap": 0.46171875,
+    "all_observed_app_ready": true
+  },
+  "phases": {
+    "baseline": {
+      "duration_seconds": 120.01523622499997,
+      "start_unix": 1794837516.629975,
+      "end_unix": 1794837636.6452138,
+      "sample_count": 40,
+      "actual_field_gap_seconds": {
+        "peak": 4.01745221200008,
+        "count": 1092
+      },
+      "app_reads": {
+        "dev": {
+          "offered": 0,
+          "scheduled": 0,
+          "scheduler_rejected": 0,
+          "completed": 0,
+          "errors": 0,
+          "achieved_success_per_second": 0.0,
+          "latency_p95_seconds": 0,
+          "latency_peak_seconds": 0
+        },
+        "prod": {
+          "offered": 0,
+          "scheduled": 0,
+          "scheduler_rejected": 0,
+          "completed": 0,
+          "errors": 0,
+          "achieved_success_per_second": 0.0,
+          "latency_p95_seconds": 0,
+          "latency_peak_seconds": 0
+        }
+      },
+      "app_tick_lateness_peak_seconds": 0,
+      "otlp_tick_lateness_peak_seconds": 0,
+      "app_offer_interval_seconds": {
+        "min": 0,
+        "max": 0
+      },
+      "otlp_offer_interval_seconds": {
+        "min": 0,
+        "max": 0
+      },
+      "otlp_offered_points": 0,
+      "otlp_accepted_points": 0,
+      "otlp_failed_or_unscheduled_points": 0,
+      "otlp_explicitly_rejected_points": 0,
+      "grafana_query_success": 0,
+      "grafana_query_errors": 0,
+      "aggregate_cpu_percent": {
+        "peak": 65.14000000000001,
+        "p95": 55.779999999999994,
+        "count": 40
+      },
+      "aggregate_memory_bytes": {
+        "peak": 327449313.28000003,
+        "p95": 325719162.88,
+        "count": 40
+      },
+      "runner_cpu_percent": {
+        "peak": 121.64948453608248,
+        "p95": 61.71809841534612,
+        "count": 40
+      },
+      "runner_used_memory_bytes": {
+        "peak": 1529352192,
+        "p95": 1510490112,
+        "count": 40
+      },
+      "service_summaries": {
+        "prod/smtp": {
+          "cpu_percent": {
+            "count": 40,
+            "peak": 0.01,
+            "p95": 0.01
+          },
+          "memory_bytes": {
+            "count": 40,
+            "peak": 14994636.8,
+            "p95": 14994636.8
+          }
+        },
+        "dev/smtp": {
+          "cpu_percent": {
+            "count": 40,
+            "peak": 0.01,
+            "p95": 0.01
+          },
+          "memory_bytes": {
+            "count": 40,
+            "peak": 15592325.12,
+            "p95": 15592325.12
+          }
+        },
+        "dev/proxy": {
+          "cpu_percent": {
+            "count": 40,
+            "peak": 0.02,
+            "p95": 0.02
+          },
+          "memory_bytes": {
+            "count": 40,
+            "peak": 15183380.48,
+            "p95": 15162408.96
+          }
+        },
+        "prod/proxy": {
+          "cpu_percent": {
+            "count": 40,
+            "peak": 0.01,
+            "p95": 0.01
+          },
+          "memory_bytes": {
+            "count": 40,
+            "peak": 15676211.2,
+            "p95": 15634268.16
+          }
+        },
+        "dev/db": {
+          "cpu_percent": {
+            "count": 40,
+            "peak": 6.48,
+            "p95": 6.1
+          },
+          "memory_bytes": {
+            "count": 40,
+            "peak": 35085352.96,
+            "p95": 34980495.36
+          }
+        },
+        "dev/app": {
+          "cpu_percent": {
+            "count": 40,
+            "peak": 51.02,
+            "p95": 49.93
+          },
+          "memory_bytes": {
+            "count": 40,
+            "peak": 122368819.2,
+            "p95": 111883059.2
+          }
+        },
+        "prod/app": {
+          "cpu_percent": {
+            "count": 40,
+            "peak": 50.76,
+            "p95": 49.79
+          },
+          "memory_bytes": {
+            "count": 40,
+            "peak": 115133644.8,
+            "p95": 107793612.8
+          }
+        },
+        "prod/db": {
+          "cpu_percent": {
+            "count": 40,
+            "peak": 6.91,
+            "p95": 6.18
+          },
+          "memory_bytes": {
+            "count": 40,
+            "peak": 35389440.0,
+            "p95": 35274096.64
+          }
+        }
+      },
+      "app_storage": {
+        "dev": {
+          "start": {
+            "pgdata_bytes_including_wal": 66117632,
+            "pg_wal_bytes_subset": 33566720,
+            "uploads_allocated_bytes": 16384
+          },
+          "end": {
+            "pgdata_bytes_including_wal": 66281472,
+            "pg_wal_bytes_subset": 33566720,
+            "uploads_allocated_bytes": 16384
+          },
+          "growth": {
+            "pgdata_bytes_including_wal": 163840,
+            "pg_wal_bytes_subset": 0,
+            "uploads_allocated_bytes": 0
+          },
+          "summaries": {
+            "pgdata_bytes_including_wal": {
+              "count": 40,
+              "peak": 66281472,
+              "p95": 66281472
+            },
+            "pg_wal_bytes_subset": {
+              "count": 40,
+              "peak": 33566720,
+              "p95": 33566720
+            },
+            "uploads_allocated_bytes": {
+              "count": 40,
+              "peak": 16384,
+              "p95": 16384
+            }
+          }
+        },
+        "prod": {
+          "start": {
+            "pgdata_bytes_including_wal": 65953792,
+            "pg_wal_bytes_subset": 33566720,
+            "uploads_allocated_bytes": 16384
+          },
+          "end": {
+            "pgdata_bytes_including_wal": 66281472,
+            "pg_wal_bytes_subset": 33566720,
+            "uploads_allocated_bytes": 16384
+          },
+          "growth": {
+            "pgdata_bytes_including_wal": 327680,
+            "pg_wal_bytes_subset": 0,
+            "uploads_allocated_bytes": 0
+          },
+          "summaries": {
+            "pgdata_bytes_including_wal": {
+              "count": 40,
+              "peak": 66281472,
+              "p95": 66281472
+            },
+            "pg_wal_bytes_subset": {
+              "count": 40,
+              "peak": 33566720,
+              "p95": 33566720
+            },
+            "uploads_allocated_bytes": {
+              "count": 40,
+              "peak": 16384,
+              "p95": 16384
+            }
+          }
+        }
+      },
+      "storage_start": null,
+      "storage_end": null,
+      "counter_deltas": {},
+      "counter_catalog_start": {
+        "receiver_accepted": {
+          "observed": false,
+          "value": null,
+          "metric": null
+        },
+        "receiver_refused": {
+          "observed": false,
+          "value": null,
+          "metric": null
+        },
+        "exporter_sent": {
+          "observed": false,
+          "value": null,
+          "metric": null
+        },
+        "exporter_failed_attempt_points": {
+          "observed": false,
+          "value": null,
+          "metric": null
+        },
+        "exporter_enqueue_failed_points": {
+          "observed": false,
+          "value": null,
+          "metric": null
+        },
+        "queue_size": {
+          "observed": false,
+          "value": null,
+          "metric": null
+        },
+        "queue_capacity": {
+          "observed": false,
+          "value": null,
+          "metric": null
+        }
+      },
+      "counter_catalog_end": {
+        "receiver_accepted": {
+          "observed": false,
+          "value": null,
+          "metric": null
+        },
+        "receiver_refused": {
+          "observed": false,
+          "value": null,
+          "metric": null
+        },
+        "exporter_sent": {
+          "observed": false,
+          "value": null,
+          "metric": null
+        },
+        "exporter_failed_attempt_points": {
+          "observed": false,
+          "value": null,
+          "metric": null
+        },
+        "exporter_enqueue_failed_points": {
+          "observed": false,
+          "value": null,
+          "metric": null
+        },
+        "queue_size": {
+          "observed": false,
+          "value": null,
+          "metric": null
+        },
+        "queue_capacity": {
+          "observed": false,
+          "value": null,
+          "metric": null
+        }
+      },
+      "counter_observation_times": {}
+    },
+    "idle": {
+      "duration_seconds": 120.01714225599994,
+      "start_unix": 1794837647.8133357,
+      "end_unix": 1794837767.8304787,
+      "sample_count": 40,
+      "actual_field_gap_seconds": {
+        "peak": 4.012106729999914,
+        "count": 1716
+      },
+      "app_reads": {
+        "dev": {
+          "offered": 0,
+          "scheduled": 0,
+          "scheduler_rejected": 0,
+          "completed": 0,
+          "errors": 0,
+          "achieved_success_per_second": 0.0,
+          "latency_p95_seconds": 0,
+          "latency_peak_seconds": 0
+        },
+        "prod": {
+          "offered": 0,
+          "scheduled": 0,
+          "scheduler_rejected": 0,
+          "completed": 0,
+          "errors": 0,
+          "achieved_success_per_second": 0.0,
+          "latency_p95_seconds": 0,
+          "latency_peak_seconds": 0
+        }
+      },
+      "app_tick_lateness_peak_seconds": 0,
+      "otlp_tick_lateness_peak_seconds": 0,
+      "app_offer_interval_seconds": {
+        "min": 0,
+        "max": 0
+      },
+      "otlp_offer_interval_seconds": {
+        "min": 0,
+        "max": 0
+      },
+      "otlp_offered_points": 0,
+      "otlp_accepted_points": 0,
+      "otlp_failed_or_unscheduled_points": 0,
+      "otlp_explicitly_rejected_points": 0,
+      "grafana_query_success": 0,
+      "grafana_query_errors": 0,
+      "aggregate_cpu_percent": {
+        "peak": 74.12000000000002,
+        "p95": 69.23000000000002,
+        "count": 40
+      },
+      "aggregate_memory_bytes": {
+        "peak": 485312430.0799999,
+        "p95": 477605396.48,
+        "count": 40
+      },
+      "runner_cpu_percent": {
+        "peak": 70.40475306349796,
+        "p95": 63.54515050167224,
+        "count": 40
+      },
+      "runner_used_memory_bytes": {
+        "peak": 1734103040,
+        "p95": 1715773440,
+        "count": 40
+      },
+      "service_summaries": {
+        "prod/smtp": {
+          "cpu_percent": {
+            "count": 40,
+            "peak": 0.01,
+            "p95": 0.01
+          },
+          "memory_bytes": {
+            "count": 40,
+            "peak": 14994636.8,
+            "p95": 14994636.8
+          }
+        },
+        "dev/smtp": {
+          "cpu_percent": {
+            "count": 40,
+            "peak": 0.01,
+            "p95": 0.01
+          },
+          "memory_bytes": {
+            "count": 40,
+            "peak": 15592325.12,
+            "p95": 15592325.12
+          }
+        },
+        "dev/proxy": {
+          "cpu_percent": {
+            "count": 40,
+            "peak": 0.01,
+            "p95": 0.01
+          },
+          "memory_bytes": {
+            "count": 40,
+            "peak": 15151923.2,
+            "p95": 15151923.2
+          }
+        },
+        "prod/proxy": {
+          "cpu_percent": {
+            "count": 40,
+            "peak": 0.01,
+            "p95": 0.01
+          },
+          "memory_bytes": {
+            "count": 40,
+            "peak": 15151923.2,
+            "p95": 15151923.2
+          }
+        },
+        "obs/prometheus": {
+          "cpu_percent": {
+            "count": 40,
+            "peak": 2.32,
+            "p95": 2.25
+          },
+          "memory_bytes": {
+            "count": 40,
+            "peak": 21107834.88,
+            "p95": 21002977.28
+          }
+        },
+        "obs/control": {
+          "cpu_percent": {
+            "count": 40,
+            "peak": 0.04,
+            "p95": 0.04
+          },
+          "memory_bytes": {
+            "count": 40,
+            "peak": 15508439.04,
+            "p95": 15508439.04
+          }
+        },
+        "dev/db": {
+          "cpu_percent": {
+            "count": 40,
+            "peak": 7.35,
+            "p95": 6.49
+          },
+          "memory_bytes": {
+            "count": 40,
+            "peak": 38723911.68,
+            "p95": 34980495.36
+          }
+        },
+        "obs/collector": {
+          "cpu_percent": {
+            "count": 40,
+            "peak": 0.16,
+            "p95": 0.15
+          },
+          "memory_bytes": {
+            "count": 40,
+            "peak": 36784046.08,
+            "p95": 36259758.08
+          }
+        },
+        "dev/app": {
+          "cpu_percent": {
+            "count": 40,
+            "peak": 50.77,
+            "p95": 48.74
+          },
+          "memory_bytes": {
+            "count": 40,
+            "peak": 123627110.4,
+            "p95": 110624768.0
+          }
+        },
+        "prod/app": {
+          "cpu_percent": {
+            "count": 40,
+            "peak": 51.56,
+            "p95": 49.67
+          },
+          "memory_bytes": {
+            "count": 40,
+            "peak": 115133644.8,
+            "p95": 113351065.6
+          }
+        },
+        "prod/db": {
+          "cpu_percent": {
+            "count": 40,
+            "peak": 6.77,
+            "p95": 6.4
+          },
+          "memory_bytes": {
+            "count": 40,
+            "peak": 37780193.28,
+            "p95": 35515269.12
+          }
+        },
+        "obs/grafana": {
+          "cpu_percent": {
+            "count": 40,
+            "peak": 3.96,
+            "p95": 2.3
+          },
+          "memory_bytes": {
+            "count": 40,
+            "peak": 83036733.44,
+            "p95": 82952847.36
+          }
+        }
+      },
+      "app_storage": {
+        "dev": {
+          "start": {
+            "pgdata_bytes_including_wal": 66281472,
+            "pg_wal_bytes_subset": 33566720,
+            "uploads_allocated_bytes": 16384
+          },
+          "end": {
+            "pgdata_bytes_including_wal": 66281472,
+            "pg_wal_bytes_subset": 33566720,
+            "uploads_allocated_bytes": 16384
+          },
+          "growth": {
+            "pgdata_bytes_including_wal": 0,
+            "pg_wal_bytes_subset": 0,
+            "uploads_allocated_bytes": 0
+          },
+          "summaries": {
+            "pgdata_bytes_including_wal": {
+              "count": 40,
+              "peak": 66281472,
+              "p95": 66281472
+            },
+            "pg_wal_bytes_subset": {
+              "count": 40,
+              "peak": 33566720,
+              "p95": 33566720
+            },
+            "uploads_allocated_bytes": {
+              "count": 40,
+              "peak": 16384,
+              "p95": 16384
+            }
+          }
+        },
+        "prod": {
+          "start": {
+            "pgdata_bytes_including_wal": 66281472,
+            "pg_wal_bytes_subset": 33566720,
+            "uploads_allocated_bytes": 16384
+          },
+          "end": {
+            "pgdata_bytes_including_wal": 66281472,
+            "pg_wal_bytes_subset": 33566720,
+            "uploads_allocated_bytes": 16384
+          },
+          "growth": {
+            "pgdata_bytes_including_wal": 0,
+            "pg_wal_bytes_subset": 0,
+            "uploads_allocated_bytes": 0
+          },
+          "summaries": {
+            "pgdata_bytes_including_wal": {
+              "count": 40,
+              "peak": 66281472,
+              "p95": 66281472
+            },
+            "pg_wal_bytes_subset": {
+              "count": 40,
+              "peak": 33566720,
+              "p95": 33566720
+            },
+            "uploads_allocated_bytes": {
+              "count": 40,
+              "peak": 16384,
+              "p95": 16384
+            }
+          }
+        }
+      },
+      "storage_start": {
+        "prometheus_bytes": 20480,
+        "wal_bytes": 8192,
+        "chunks_head_bytes": 4096,
+        "grafana_bytes": 1302528
+      },
+      "storage_end": {
+        "prometheus_bytes": 24576,
+        "wal_bytes": 12288,
+        "chunks_head_bytes": 4096,
+        "grafana_bytes": 1302528
+      },
+      "counter_deltas": {
+        "prometheus_tsdb_head_samples_appended_total": 432.0,
+        "otelcol_exporter_prometheusremotewrite_consumers": 0.0
+      },
+      "counter_catalog_start": {
+        "receiver_accepted": {
+          "observed": false,
+          "value": null,
+          "metric": null
+        },
+        "receiver_refused": {
+          "observed": false,
+          "value": null,
+          "metric": null
+        },
+        "exporter_sent": {
+          "observed": false,
+          "value": null,
+          "metric": null
+        },
+        "exporter_failed_attempt_points": {
+          "observed": false,
+          "value": null,
+          "metric": null
+        },
+        "exporter_enqueue_failed_points": {
+          "observed": false,
+          "value": null,
+          "metric": null
+        },
+        "queue_size": {
+          "observed": true,
+          "value": 0.0,
+          "metric": "otelcol_exporter_queue_size"
+        },
+        "queue_capacity": {
+          "observed": true,
+          "value": 10.0,
+          "metric": "otelcol_exporter_queue_capacity"
+        }
+      },
+      "counter_catalog_end": {
+        "receiver_accepted": {
+          "observed": false,
+          "value": null,
+          "metric": null
+        },
+        "receiver_refused": {
+          "observed": false,
+          "value": null,
+          "metric": null
+        },
+        "exporter_sent": {
+          "observed": false,
+          "value": null,
+          "metric": null
+        },
+        "exporter_failed_attempt_points": {
+          "observed": false,
+          "value": null,
+          "metric": null
+        },
+        "exporter_enqueue_failed_points": {
+          "observed": false,
+          "value": null,
+          "metric": null
+        },
+        "queue_size": {
+          "observed": true,
+          "value": 0.0,
+          "metric": "otelcol_exporter_queue_size"
+        },
+        "queue_capacity": {
+          "observed": true,
+          "value": 10.0,
+          "metric": "otelcol_exporter_queue_capacity"
+        }
+      },
+      "counter_observation_times": {
+        "start": {
+          "collector_observed_unix": 1794837647.8097615,
+          "prometheus_observed_unix": 1794837647.8129234
+        },
+        "end": {
+          "collector_observed_unix": 1794837768.630743,
+          "prometheus_observed_unix": 1794837768.6335766
+        }
+      },
+      "queue_requests": {
+        "count": 40,
+        "peak": 0.0,
+        "p95": 0.0,
+        "capacity": 10
+      },
+      "disk_summaries": {
+        "prometheus_bytes": {
+          "count": 40,
+          "peak": 24576,
+          "p95": 24576
+        },
+        "grafana_bytes": {
+          "count": 40,
+          "peak": 1302528,
+          "p95": 1302528
+        },
+        "wal_bytes": {
+          "count": 40,
+          "peak": 12288,
+          "p95": 12288
+        },
+        "chunks_head_bytes": {
+          "count": 40,
+          "peak": 4096,
+          "p95": 4096
+        }
+      },
+      "query_visible_synthetic_samples": 0,
+      "query_visible_series": 0,
+      "synthetic_query_window": {
+        "start_unix": 1794837647.8124788,
+        "end_unix": 1794837767.8304787,
+        "evaluation_unix": 1794837767.8304787,
+        "range_milliseconds": 120018
+      }
+    },
+    "load": {
+      "duration_seconds": 300.0073846559999,
+      "start_unix": 1794837770.115595,
+      "end_unix": 1794838070.1229796,
+      "sample_count": 100,
+      "actual_field_gap_seconds": {
+        "peak": 4.018406311000035,
+        "count": 4950
+      },
+      "app_reads": {
+        "dev": {
+          "offered": 600,
+          "scheduled": 600,
+          "scheduler_rejected": 0,
+          "completed": 600,
+          "errors": 0,
+          "achieved_success_per_second": 1.9999507701718187,
+          "latency_p95_seconds": 0.04723516399997152,
+          "latency_peak_seconds": 0.056672033000040756
+        },
+        "prod": {
+          "offered": 600,
+          "scheduled": 600,
+          "scheduler_rejected": 0,
+          "completed": 600,
+          "errors": 0,
+          "achieved_success_per_second": 1.9999507701718187,
+          "latency_p95_seconds": 0.06869952400006696,
+          "latency_peak_seconds": 0.08518506100006107
+        }
+      },
+      "app_tick_lateness_peak_seconds": 0.020056715000009717,
+      "otlp_tick_lateness_peak_seconds": 0.020056715000009717,
+      "app_offer_interval_seconds": {
+        "min": 0.48203580899996723,
+        "max": 0.5149741569999833
+      },
+      "otlp_offer_interval_seconds": {
+        "min": 0.9842120079999859,
+        "max": 1.0170728620000773
+      },
+      "otlp_offered_points": 30000,
+      "otlp_accepted_points": 30000,
+      "otlp_failed_or_unscheduled_points": 0,
+      "otlp_explicitly_rejected_points": 0,
+      "grafana_query_success": 30,
+      "grafana_query_errors": 0,
+      "aggregate_cpu_percent": {
+        "peak": 80.57,
+        "p95": 76.18,
+        "count": 100
+      },
+      "aggregate_memory_bytes": {
+        "peak": 506619494.4,
+        "p95": 503243079.68,
+        "count": 100
+      },
+      "runner_cpu_percent": {
+        "peak": 87.77362520021357,
+        "p95": 78.25356842989083,
+        "count": 100
+      },
+      "runner_used_memory_bytes": {
+        "peak": 1739751424,
+        "p95": 1731629056,
+        "count": 100
+      },
+      "service_summaries": {
+        "prod/smtp": {
+          "cpu_percent": {
+            "count": 100,
+            "peak": 0.01,
+            "p95": 0.01
+          },
+          "memory_bytes": {
+            "count": 100,
+            "peak": 14994636.8,
+            "p95": 14994636.8
+          }
+        },
+        "dev/smtp": {
+          "cpu_percent": {
+            "count": 100,
+            "peak": 0.01,
+            "p95": 0.01
+          },
+          "memory_bytes": {
+            "count": 100,
+            "peak": 15592325.12,
+            "p95": 15592325.12
+          }
+        },
+        "dev/proxy": {
+          "cpu_percent": {
+            "count": 100,
+            "peak": 0.69,
+            "p95": 0.56
+          },
+          "memory_bytes": {
+            "count": 100,
+            "peak": 16074670.08,
+            "p95": 15823011.84
+          }
+        },
+        "prod/proxy": {
+          "cpu_percent": {
+            "count": 100,
+            "peak": 0.73,
+            "p95": 0.62
+          },
+          "memory_bytes": {
+            "count": 100,
+            "peak": 16116613.12,
+            "p95": 16074670.08
+          }
+        },
+        "obs/prometheus": {
+          "cpu_percent": {
+            "count": 100,
+            "peak": 3.02,
+            "p95": 2.39
+          },
+          "memory_bytes": {
+            "count": 100,
+            "peak": 26172456.96,
+            "p95": 25868369.92
+          }
+        },
+        "obs/control": {
+          "cpu_percent": {
+            "count": 100,
+            "peak": 0.34,
+            "p95": 0.27
+          },
+          "memory_bytes": {
+            "count": 100,
+            "peak": 16252928.0,
+            "p95": 16001269.76
+          }
+        },
+        "dev/db": {
+          "cpu_percent": {
+            "count": 100,
+            "peak": 7.37,
+            "p95": 6.78
+          },
+          "memory_bytes": {
+            "count": 100,
+            "peak": 35085352.96,
+            "p95": 34865152.0
+          }
+        },
+        "obs/collector": {
+          "cpu_percent": {
+            "count": 100,
+            "peak": 1.69,
+            "p95": 0.35
+          },
+          "memory_bytes": {
+            "count": 100,
+            "peak": 56256102.4,
+            "p95": 55972986.88
+          }
+        },
+        "dev/app": {
+          "cpu_percent": {
+            "count": 100,
+            "peak": 51.04,
+            "p95": 49.57
+          },
+          "memory_bytes": {
+            "count": 100,
+            "peak": 123522252.8,
+            "p95": 103536394.24
+          }
+        },
+        "prod/app": {
+          "cpu_percent": {
+            "count": 100,
+            "peak": 51.51,
+            "p95": 50.49
+          },
+          "memory_bytes": {
+            "count": 100,
+            "peak": 113141350.4,
+            "p95": 110834483.2
+          }
+        },
+        "prod/db": {
+          "cpu_percent": {
+            "count": 100,
+            "peak": 6.99,
+            "p95": 6.73
+          },
+          "memory_bytes": {
+            "count": 100,
+            "peak": 39468400.64,
+            "p95": 35819356.16
+          }
+        },
+        "obs/grafana": {
+          "cpu_percent": {
+            "count": 100,
+            "peak": 4.64,
+            "p95": 2.38
+          },
+          "memory_bytes": {
+            "count": 100,
+            "peak": 82806046.72,
+            "p95": 82648760.32
+          }
+        }
+      },
+      "app_storage": {
+        "dev": {
+          "start": {
+            "pgdata_bytes_including_wal": 66281472,
+            "pg_wal_bytes_subset": 33566720,
+            "uploads_allocated_bytes": 16384
+          },
+          "end": {
+            "pgdata_bytes_including_wal": 66281472,
+            "pg_wal_bytes_subset": 33566720,
+            "uploads_allocated_bytes": 16384
+          },
+          "growth": {
+            "pgdata_bytes_including_wal": 0,
+            "pg_wal_bytes_subset": 0,
+            "uploads_allocated_bytes": 0
+          },
+          "summaries": {
+            "pgdata_bytes_including_wal": {
+              "count": 100,
+              "peak": 66281472,
+              "p95": 66281472
+            },
+            "pg_wal_bytes_subset": {
+              "count": 100,
+              "peak": 33566720,
+              "p95": 33566720
+            },
+            "uploads_allocated_bytes": {
+              "count": 100,
+              "peak": 16384,
+              "p95": 16384
+            }
+          }
+        },
+        "prod": {
+          "start": {
+            "pgdata_bytes_including_wal": 66281472,
+            "pg_wal_bytes_subset": 33566720,
+            "uploads_allocated_bytes": 16384
+          },
+          "end": {
+            "pgdata_bytes_including_wal": 66281472,
+            "pg_wal_bytes_subset": 33566720,
+            "uploads_allocated_bytes": 16384
+          },
+          "growth": {
+            "pgdata_bytes_including_wal": 0,
+            "pg_wal_bytes_subset": 0,
+            "uploads_allocated_bytes": 0
+          },
+          "summaries": {
+            "pgdata_bytes_including_wal": {
+              "count": 100,
+              "peak": 66281472,
+              "p95": 66281472
+            },
+            "pg_wal_bytes_subset": {
+              "count": 100,
+              "peak": 33566720,
+              "p95": 33566720
+            },
+            "uploads_allocated_bytes": {
+              "count": 100,
+              "peak": 16384,
+              "p95": 16384
+            }
+          }
+        }
+      },
+      "storage_start": {
+        "prometheus_bytes": 24576,
+        "wal_bytes": 12288,
+        "chunks_head_bytes": 4096,
+        "grafana_bytes": 1302528
+      },
+      "storage_end": {
+        "prometheus_bytes": 458752,
+        "wal_bytes": 315392,
+        "chunks_head_bytes": 135168,
+        "grafana_bytes": 1302528
+      },
+      "counter_deltas": {
+        "prometheus_tsdb_head_samples_appended_total": 44884.0,
+        "otelcol_receiver_accepted_metric_points_total": 30000.0,
+        "otelcol_exporter_sent_metric_points_total": 30000.0,
+        "otelcol_exporter_send_failed_metric_points_total": 0.0,
+        "otelcol_receiver_failed_metric_points_total": 0.0,
+        "otelcol_exporter_prometheusremotewrite_sent_batches_total": 300.0,
+        "otelcol_processor_accepted_metric_points_total": 30000.0,
+        "otelcol_receiver_refused_metric_points_total": 0.0,
+        "otelcol_exporter_prometheusremotewrite_consumers": 0.0,
+        "otelcol_exporter_prometheusremotewrite_translated_time_series_total": 30000.0
+      },
+      "counter_catalog_start": {
+        "receiver_accepted": {
+          "observed": true,
+          "value": 100.0,
+          "metric": "otelcol_receiver_accepted_metric_points_total"
+        },
+        "receiver_refused": {
+          "observed": true,
+          "value": 0.0,
+          "metric": "otelcol_receiver_refused_metric_points_total"
+        },
+        "exporter_sent": {
+          "observed": true,
+          "value": 100.0,
+          "metric": "otelcol_exporter_sent_metric_points_total"
+        },
+        "exporter_failed_attempt_points": {
+          "observed": true,
+          "value": 0.0,
+          "metric": "otelcol_exporter_send_failed_metric_points_total"
+        },
+        "exporter_enqueue_failed_points": {
+          "observed": false,
+          "value": null,
+          "metric": null
+        },
+        "queue_size": {
+          "observed": true,
+          "value": 0.0,
+          "metric": "otelcol_exporter_queue_size"
+        },
+        "queue_capacity": {
+          "observed": true,
+          "value": 10.0,
+          "metric": "otelcol_exporter_queue_capacity"
+        }
+      },
+      "counter_catalog_end": {
+        "receiver_accepted": {
+          "observed": true,
+          "value": 30100.0,
+          "metric": "otelcol_receiver_accepted_metric_points_total"
+        },
+        "receiver_refused": {
+          "observed": true,
+          "value": 0.0,
+          "metric": "otelcol_receiver_refused_metric_points_total"
+        },
+        "exporter_sent": {
+          "observed": true,
+          "value": 30100.0,
+          "metric": "otelcol_exporter_sent_metric_points_total"
+        },
+        "exporter_failed_attempt_points": {
+          "observed": true,
+          "value": 0.0,
+          "metric": "otelcol_exporter_send_failed_metric_points_total"
+        },
+        "exporter_enqueue_failed_points": {
+          "observed": false,
+          "value": null,
+          "metric": null
+        },
+        "queue_size": {
+          "observed": true,
+          "value": 0.0,
+          "metric": "otelcol_exporter_queue_size"
+        },
+        "queue_capacity": {
+          "observed": true,
+          "value": 10.0,
+          "metric": "otelcol_exporter_queue_capacity"
+        }
+      },
+      "counter_observation_times": {
+        "start": {
+          "collector_observed_unix": 1794837770.1105027,
+          "prometheus_observed_unix": 1794837770.1149287
+        },
+        "end": {
+          "collector_observed_unix": 1794838071.4310865,
+          "prometheus_observed_unix": 1794838071.4344065
+        }
+      },
+      "queue_requests": {
+        "count": 100,
+        "peak": 1.0,
+        "p95": 0.0,
+        "capacity": 10
+      },
+      "disk_summaries": {
+        "prometheus_bytes": {
+          "count": 100,
+          "peak": 458752,
+          "p95": 442368
+        },
+        "grafana_bytes": {
+          "count": 100,
+          "peak": 1302528,
+          "p95": 1302528
+        },
+        "wal_bytes": {
+          "count": 100,
+          "peak": 315392,
+          "p95": 299008
+        },
+        "chunks_head_bytes": {
+          "count": 100,
+          "peak": 135168,
+          "p95": 135168
+        }
+      },
+      "query_visible_synthetic_samples": 30000.0,
+      "query_visible_series": 100.0,
+      "synthetic_query_window": {
+        "start_unix": 1794837770.1149797,
+        "end_unix": 1794838070.1229796,
+        "evaluation_unix": 1794838070.1229796,
+        "range_milliseconds": 300008
+      }
+    },
+    "outage": {
+      "duration_seconds": 60.00216676600007,
+      "start_unix": 1794838073.4111211,
+      "end_unix": 1794838133.413288,
+      "sample_count": 20,
+      "actual_field_gap_seconds": {
+        "peak": 4.038938916999996,
+        "count": 927
+      },
+      "app_reads": {
+        "dev": {
+          "offered": 120,
+          "scheduled": 120,
+          "scheduler_rejected": 0,
+          "completed": 120,
+          "errors": 0,
+          "achieved_success_per_second": 1.9999277770748338,
+          "latency_p95_seconds": 0.04800772999988112,
+          "latency_peak_seconds": 0.052905755999972826
+        },
+        "prod": {
+          "offered": 120,
+          "scheduled": 120,
+          "scheduler_rejected": 0,
+          "completed": 120,
+          "errors": 0,
+          "achieved_success_per_second": 1.9999277770748338,
+          "latency_p95_seconds": 0.06940396900017731,
+          "latency_peak_seconds": 0.08549372299989955
+        }
+      },
+      "app_tick_lateness_peak_seconds": 0.02008554799999729,
+      "otlp_tick_lateness_peak_seconds": 0.02008554799999729,
+      "app_offer_interval_seconds": {
+        "min": 0.4821608770000694,
+        "max": 0.5085805830001391
+      },
+      "otlp_offer_interval_seconds": {
+        "min": 0.9847012440000071,
+        "max": 1.0098535519998677
+      },
+      "otlp_offered_points": 6000,
+      "otlp_accepted_points": 6000,
+      "otlp_failed_or_unscheduled_points": 0,
+      "otlp_explicitly_rejected_points": 0,
+      "grafana_query_success": 0,
+      "grafana_query_errors": 6,
+      "aggregate_cpu_percent": {
+        "peak": 110.41,
+        "p95": 85.00000000000001,
+        "count": 20
+      },
+      "aggregate_memory_bytes": {
+        "peak": 505245859.8400001,
+        "p95": 491960401.91999996,
+        "count": 20
+      },
+      "runner_cpu_percent": {
+        "peak": 100.33333333333334,
+        "p95": 98.57022708158114,
+        "count": 20
+      },
+      "runner_used_memory_bytes": {
+        "peak": 1755344896,
+        "p95": 1740865536,
+        "count": 20
+      },
+      "service_summaries": {
+        "prod/smtp": {
+          "cpu_percent": {
+            "count": 20,
+            "peak": 0.01,
+            "p95": 0.01
+          },
+          "memory_bytes": {
+            "count": 20,
+            "peak": 14994636.8,
+            "p95": 14994636.8
+          }
+        },
+        "dev/smtp": {
+          "cpu_percent": {
+            "count": 20,
+            "peak": 0.01,
+            "p95": 0.01
+          },
+          "memory_bytes": {
+            "count": 20,
+            "peak": 15592325.12,
+            "p95": 15592325.12
+          }
+        },
+        "dev/proxy": {
+          "cpu_percent": {
+            "count": 20,
+            "peak": 0.52,
+            "p95": 0.51
+          },
+          "memory_bytes": {
+            "count": 20,
+            "peak": 15854469.12,
+            "p95": 15833497.6
+          }
+        },
+        "prod/proxy": {
+          "cpu_percent": {
+            "count": 20,
+            "peak": 0.58,
+            "p95": 0.53
+          },
+          "memory_bytes": {
+            "count": 20,
+            "peak": 15854469.12,
+            "p95": 15802040.32
+          }
+        },
+        "obs/control": {
+          "cpu_percent": {
+            "count": 20,
+            "peak": 0.28,
+            "p95": 0.27
+          },
+          "memory_bytes": {
+            "count": 20,
+            "peak": 16074670.08,
+            "p95": 16022241.28
+          }
+        },
+        "dev/db": {
+          "cpu_percent": {
+            "count": 20,
+            "peak": 7.11,
+            "p95": 6.98
+          },
+          "memory_bytes": {
+            "count": 20,
+            "peak": 34896609.28,
+            "p95": 34886123.52
+          }
+        },
+        "obs/collector": {
+          "cpu_percent": {
+            "count": 20,
+            "peak": 0.47,
+            "p95": 0.4
+          },
+          "memory_bytes": {
+            "count": 20,
+            "peak": 56717475.84,
+            "p95": 56696504.32
+          }
+        },
+        "dev/app": {
+          "cpu_percent": {
+            "count": 20,
+            "peak": 54.71,
+            "p95": 50.79
+          },
+          "memory_bytes": {
+            "count": 20,
+            "peak": 123522252.8,
+            "p95": 123102822.4
+          }
+        },
+        "prod/app": {
+          "cpu_percent": {
+            "count": 20,
+            "peak": 50.86,
+            "p95": 50.06
+          },
+          "memory_bytes": {
+            "count": 20,
+            "peak": 113246208.0,
+            "p95": 108317900.8
+          }
+        },
+        "prod/db": {
+          "cpu_percent": {
+            "count": 20,
+            "peak": 6.7,
+            "p95": 6.63
+          },
+          "memory_bytes": {
+            "count": 20,
+            "peak": 35441868.8,
+            "p95": 35368468.48
+          }
+        },
+        "obs/grafana": {
+          "cpu_percent": {
+            "count": 20,
+            "peak": 3.29,
+            "p95": 2.74
+          },
+          "memory_bytes": {
+            "count": 20,
+            "peak": 82617303.04,
+            "p95": 82585845.76
+          }
+        }
+      },
+      "app_storage": {
+        "dev": {
+          "start": {
+            "pgdata_bytes_including_wal": 66281472,
+            "pg_wal_bytes_subset": 33566720,
+            "uploads_allocated_bytes": 16384
+          },
+          "end": {
+            "pgdata_bytes_including_wal": 66281472,
+            "pg_wal_bytes_subset": 33566720,
+            "uploads_allocated_bytes": 16384
+          },
+          "growth": {
+            "pgdata_bytes_including_wal": 0,
+            "pg_wal_bytes_subset": 0,
+            "uploads_allocated_bytes": 0
+          },
+          "summaries": {
+            "pgdata_bytes_including_wal": {
+              "count": 20,
+              "peak": 66281472,
+              "p95": 66281472
+            },
+            "pg_wal_bytes_subset": {
+              "count": 20,
+              "peak": 33566720,
+              "p95": 33566720
+            },
+            "uploads_allocated_bytes": {
+              "count": 20,
+              "peak": 16384,
+              "p95": 16384
+            }
+          }
+        },
+        "prod": {
+          "start": {
+            "pgdata_bytes_including_wal": 66281472,
+            "pg_wal_bytes_subset": 33566720,
+            "uploads_allocated_bytes": 16384
+          },
+          "end": {
+            "pgdata_bytes_including_wal": 66281472,
+            "pg_wal_bytes_subset": 33566720,
+            "uploads_allocated_bytes": 16384
+          },
+          "growth": {
+            "pgdata_bytes_including_wal": 0,
+            "pg_wal_bytes_subset": 0,
+            "uploads_allocated_bytes": 0
+          },
+          "summaries": {
+            "pgdata_bytes_including_wal": {
+              "count": 20,
+              "peak": 66281472,
+              "p95": 66281472
+            },
+            "pg_wal_bytes_subset": {
+              "count": 20,
+              "peak": 33566720,
+              "p95": 33566720
+            },
+            "uploads_allocated_bytes": {
+              "count": 20,
+              "peak": 16384,
+              "p95": 16384
+            }
+          }
+        }
+      },
+      "storage_start": {
+        "prometheus_bytes": 479232,
+        "wal_bytes": 335872,
+        "chunks_head_bytes": 135168,
+        "grafana_bytes": 1302528
+      },
+      "storage_end": {
+        "prometheus_bytes": 479232,
+        "wal_bytes": 335872,
+        "chunks_head_bytes": 135168,
+        "grafana_bytes": 1302528
+      },
+      "counter_deltas": {
+        "otelcol_receiver_accepted_metric_points_total": 6000.0,
+        "otelcol_exporter_sent_metric_points_total": 0.0,
+        "otelcol_exporter_send_failed_metric_points_total": 1200.0,
+        "otelcol_receiver_failed_metric_points_total": 0.0,
+        "otelcol_exporter_prometheusremotewrite_sent_batches_total": 68.0,
+        "otelcol_processor_accepted_metric_points_total": 6000.0,
+        "otelcol_receiver_refused_metric_points_total": 0.0,
+        "otelcol_exporter_prometheusremotewrite_consumers": 0.0,
+        "otelcol_exporter_prometheusremotewrite_translated_time_series_total": 1300.0
+      },
+      "counter_catalog_start": {
+        "receiver_accepted": {
+          "observed": true,
+          "value": 30100.0,
+          "metric": "otelcol_receiver_accepted_metric_points_total"
+        },
+        "receiver_refused": {
+          "observed": true,
+          "value": 0.0,
+          "metric": "otelcol_receiver_refused_metric_points_total"
+        },
+        "exporter_sent": {
+          "observed": true,
+          "value": 30100.0,
+          "metric": "otelcol_exporter_sent_metric_points_total"
+        },
+        "exporter_failed_attempt_points": {
+          "observed": true,
+          "value": 0.0,
+          "metric": "otelcol_exporter_send_failed_metric_points_total"
+        },
+        "exporter_enqueue_failed_points": {
+          "observed": false,
+          "value": null,
+          "metric": null
+        },
+        "queue_size": {
+          "observed": true,
+          "value": 0.0,
+          "metric": "otelcol_exporter_queue_size"
+        },
+        "queue_capacity": {
+          "observed": true,
+          "value": 10.0,
+          "metric": "otelcol_exporter_queue_capacity"
+        }
+      },
+      "counter_catalog_end": {
+        "receiver_accepted": {
+          "observed": true,
+          "value": 36100.0,
+          "metric": "otelcol_receiver_accepted_metric_points_total"
+        },
+        "receiver_refused": {
+          "observed": true,
+          "value": 0.0,
+          "metric": "otelcol_receiver_refused_metric_points_total"
+        },
+        "exporter_sent": {
+          "observed": true,
+          "value": 30100.0,
+          "metric": "otelcol_exporter_sent_metric_points_total"
+        },
+        "exporter_failed_attempt_points": {
+          "observed": true,
+          "value": 1200.0,
+          "metric": "otelcol_exporter_send_failed_metric_points_total"
+        },
+        "exporter_enqueue_failed_points": {
+          "observed": true,
+          "value": 3900.0,
+          "metric": "otelcol_exporter_enqueue_failed_metric_points_total"
+        },
+        "queue_size": {
+          "observed": true,
+          "value": 9.0,
+          "metric": "otelcol_exporter_queue_size"
+        },
+        "queue_capacity": {
+          "observed": true,
+          "value": 10.0,
+          "metric": "otelcol_exporter_queue_capacity"
+        }
+      },
+      "counter_observation_times": {
+        "start": {
+          "collector_observed_unix": 1794838073.4108248
+        },
+        "end": {
+          "collector_observed_unix": 1794838134.2363107
+        }
+      },
+      "queue_requests": {
+        "count": 20,
+        "peak": 10.0,
+        "p95": 10.0,
+        "capacity": 10
+      },
+      "disk_summaries": {
+        "prometheus_bytes": {
+          "count": 20,
+          "peak": 479232,
+          "p95": 479232
+        },
+        "grafana_bytes": {
+          "count": 20,
+          "peak": 1302528,
+          "p95": 1302528
+        },
+        "wal_bytes": {
+          "count": 20,
+          "peak": 335872,
+          "p95": 335872
+        },
+        "chunks_head_bytes": {
+          "count": 20,
+          "peak": 135168,
+          "p95": 135168
+        }
+      }
+    },
+    "recovery": {
+      "duration_seconds": 117.85346922300005,
+      "start_unix": 1794838135.5384743,
+      "end_unix": 1794838253.3919413,
+      "sample_count": 40,
+      "actual_field_gap_seconds": {
+        "peak": 4.032638140000017,
+        "count": 1989
+      },
+      "app_reads": {
+        "dev": {
+          "offered": 236,
+          "scheduled": 236,
+          "scheduler_rejected": 0,
+          "completed": 236,
+          "errors": 0,
+          "achieved_success_per_second": 2.0024866603921976,
+          "latency_p95_seconds": 0.046996065000030285,
+          "latency_peak_seconds": 0.05181569800015495
+        },
+        "prod": {
+          "offered": 236,
+          "scheduled": 236,
+          "scheduler_rejected": 0,
+          "completed": 236,
+          "errors": 0,
+          "achieved_success_per_second": 2.0024866603921976,
+          "latency_p95_seconds": 0.05237999799987847,
+          "latency_peak_seconds": 0.06489007400000446
+        }
+      },
+      "app_tick_lateness_peak_seconds": 0.019905824000034045,
+      "otlp_tick_lateness_peak_seconds": 0.019905824000034045,
+      "app_offer_interval_seconds": {
+        "min": 0.4823265109998829,
+        "max": 0.5086018059998878
+      },
+      "otlp_offer_interval_seconds": {
+        "min": 0.9848040899998978,
+        "max": 1.0110179789999165
+      },
+      "otlp_offered_points": 11800,
+      "otlp_accepted_points": 11800,
+      "otlp_failed_or_unscheduled_points": 0,
+      "otlp_explicitly_rejected_points": 0,
+      "grafana_query_success": 12,
+      "grafana_query_errors": 0,
+      "aggregate_cpu_percent": {
+        "peak": 104.88000000000001,
+        "p95": 96.25999999999999,
+        "count": 40
+      },
+      "aggregate_memory_bytes": {
+        "peak": 525368033.28000003,
+        "p95": 511191285.76,
+        "count": 40
+      },
+      "runner_cpu_percent": {
+        "peak": 115.42080501829588,
+        "p95": 96.41367806505423,
+        "count": 40
+      },
+      "runner_used_memory_bytes": {
+        "peak": 1792847872,
+        "p95": 1754107904,
+        "count": 40
+      },
+      "service_summaries": {
+        "prod/smtp": {
+          "cpu_percent": {
+            "count": 40,
+            "peak": 0.01,
+            "p95": 0.01
+          },
+          "memory_bytes": {
+            "count": 40,
+            "peak": 14994636.8,
+            "p95": 14994636.8
+          }
+        },
+        "dev/smtp": {
+          "cpu_percent": {
+            "count": 40,
+            "peak": 0.01,
+            "p95": 0.01
+          },
+          "memory_bytes": {
+            "count": 40,
+            "peak": 15592325.12,
+            "p95": 15592325.12
+          }
+        },
+        "dev/proxy": {
+          "cpu_percent": {
+            "count": 40,
+            "peak": 0.68,
+            "p95": 0.54
+          },
+          "memory_bytes": {
+            "count": 40,
+            "peak": 16106127.36,
+            "p95": 15843983.36
+          }
+        },
+        "prod/proxy": {
+          "cpu_percent": {
+            "count": 40,
+            "peak": 0.69,
+            "p95": 0.57
+          },
+          "memory_bytes": {
+            "count": 40,
+            "peak": 16116613.12,
+            "p95": 16085155.84
+          }
+        },
+        "obs/prometheus": {
+          "cpu_percent": {
+            "count": 40,
+            "peak": 2.89,
+            "p95": 2.39
+          },
+          "memory_bytes": {
+            "count": 40,
+            "peak": 28500295.68,
+            "p95": 28280094.72
+          }
+        },
+        "obs/control": {
+          "cpu_percent": {
+            "count": 40,
+            "peak": 0.28,
+            "p95": 0.26
+          },
+          "memory_bytes": {
+            "count": 40,
+            "peak": 16074670.08,
+            "p95": 16022241.28
+          }
+        },
+        "dev/db": {
+          "cpu_percent": {
+            "count": 40,
+            "peak": 7.82,
+            "p95": 6.66
+          },
+          "memory_bytes": {
+            "count": 40,
+            "peak": 35221667.84,
+            "p95": 34949038.08
+          }
+        },
+        "obs/collector": {
+          "cpu_percent": {
+            "count": 40,
+            "peak": 0.39,
+            "p95": 0.37
+          },
+          "memory_bytes": {
+            "count": 40,
+            "peak": 56056872.96,
+            "p95": 55134126.08
+          }
+        },
+        "dev/app": {
+          "cpu_percent": {
+            "count": 40,
+            "peak": 54.44,
+            "p95": 50.18
+          },
+          "memory_bytes": {
+            "count": 40,
+            "peak": 123941683.2,
+            "p95": 119642521.6
+          }
+        },
+        "prod/app": {
+          "cpu_percent": {
+            "count": 40,
+            "peak": 50.97,
+            "p95": 49.63
+          },
+          "memory_bytes": {
+            "count": 40,
+            "peak": 115867648.0,
+            "p95": 108947046.4
+          }
+        },
+        "prod/db": {
+          "cpu_percent": {
+            "count": 40,
+            "peak": 7.06,
+            "p95": 6.84
+          },
+          "memory_bytes": {
+            "count": 40,
+            "peak": 39227228.16,
+            "p95": 35599155.2
+          }
+        },
+        "obs/grafana": {
+          "cpu_percent": {
+            "count": 40,
+            "peak": 3.37,
+            "p95": 2.91
+          },
+          "memory_bytes": {
+            "count": 40,
+            "peak": 82785075.2,
+            "p95": 82638274.56
+          }
+        }
+      },
+      "app_storage": {
+        "dev": {
+          "start": {
+            "pgdata_bytes_including_wal": 66281472,
+            "pg_wal_bytes_subset": 33566720,
+            "uploads_allocated_bytes": 16384
+          },
+          "end": {
+            "pgdata_bytes_including_wal": 66281472,
+            "pg_wal_bytes_subset": 33566720,
+            "uploads_allocated_bytes": 16384
+          },
+          "growth": {
+            "pgdata_bytes_including_wal": 0,
+            "pg_wal_bytes_subset": 0,
+            "uploads_allocated_bytes": 0
+          },
+          "summaries": {
+            "pgdata_bytes_including_wal": {
+              "count": 40,
+              "peak": 66281472,
+              "p95": 66281472
+            },
+            "pg_wal_bytes_subset": {
+              "count": 40,
+              "peak": 33566720,
+              "p95": 33566720
+            },
+            "uploads_allocated_bytes": {
+              "count": 40,
+              "peak": 16384,
+              "p95": 16384
+            }
+          }
+        },
+        "prod": {
+          "start": {
+            "pgdata_bytes_including_wal": 66281472,
+            "pg_wal_bytes_subset": 33566720,
+            "uploads_allocated_bytes": 16384
+          },
+          "end": {
+            "pgdata_bytes_including_wal": 66281472,
+            "pg_wal_bytes_subset": 33566720,
+            "uploads_allocated_bytes": 16384
+          },
+          "growth": {
+            "pgdata_bytes_including_wal": 0,
+            "pg_wal_bytes_subset": 0,
+            "uploads_allocated_bytes": 0
+          },
+          "summaries": {
+            "pgdata_bytes_including_wal": {
+              "count": 40,
+              "peak": 66281472,
+              "p95": 66281472
+            },
+            "pg_wal_bytes_subset": {
+              "count": 40,
+              "peak": 33566720,
+              "p95": 33566720
+            },
+            "uploads_allocated_bytes": {
+              "count": 40,
+              "peak": 16384,
+              "p95": 16384
+            }
+          }
+        }
+      },
+      "storage_start": {
+        "prometheus_bytes": 487424,
+        "wal_bytes": 344064,
+        "chunks_head_bytes": 135168,
+        "grafana_bytes": 1302528
+      },
+      "storage_end": {
+        "prometheus_bytes": 741376,
+        "wal_bytes": 466944,
+        "chunks_head_bytes": 266240,
+        "grafana_bytes": 1302528
+      },
+      "counter_deltas": {
+        "otelcol_exporter_sent_metric_points_total": 11800.0,
+        "otelcol_exporter_prometheusremotewrite_sent_batches_total": 118.0,
+        "prometheus_tsdb_head_samples_appended_total": 18240.0,
+        "otelcol_receiver_accepted_metric_points_total": 11800.0,
+        "otelcol_exporter_send_failed_metric_points_total": 0.0,
+        "otelcol_receiver_failed_metric_points_total": 0.0,
+        "otelcol_processor_accepted_metric_points_total": 11800.0,
+        "otelcol_receiver_refused_metric_points_total": 0.0,
+        "otelcol_exporter_prometheusremotewrite_consumers": 0.0,
+        "otelcol_exporter_prometheusremotewrite_translated_time_series_total": 11800.0
+      },
+      "counter_catalog_start": {
+        "receiver_accepted": {
+          "observed": true,
+          "value": 36100.0,
+          "metric": "otelcol_receiver_accepted_metric_points_total"
+        },
+        "receiver_refused": {
+          "observed": true,
+          "value": 0.0,
+          "metric": "otelcol_receiver_refused_metric_points_total"
+        },
+        "exporter_sent": {
+          "observed": true,
+          "value": 31000.0,
+          "metric": "otelcol_exporter_sent_metric_points_total"
+        },
+        "exporter_failed_attempt_points": {
+          "observed": true,
+          "value": 1200.0,
+          "metric": "otelcol_exporter_send_failed_metric_points_total"
+        },
+        "exporter_enqueue_failed_points": {
+          "observed": true,
+          "value": 3900.0,
+          "metric": "otelcol_exporter_enqueue_failed_metric_points_total"
+        },
+        "queue_size": {
+          "observed": true,
+          "value": 0.0,
+          "metric": "otelcol_exporter_queue_size"
+        },
+        "queue_capacity": {
+          "observed": true,
+          "value": 10.0,
+          "metric": "otelcol_exporter_queue_capacity"
+        }
+      },
+      "counter_catalog_end": {
+        "receiver_accepted": {
+          "observed": true,
+          "value": 47900.0,
+          "metric": "otelcol_receiver_accepted_metric_points_total"
+        },
+        "receiver_refused": {
+          "observed": true,
+          "value": 0.0,
+          "metric": "otelcol_receiver_refused_metric_points_total"
+        },
+        "exporter_sent": {
+          "observed": true,
+          "value": 42800.0,
+          "metric": "otelcol_exporter_sent_metric_points_total"
+        },
+        "exporter_failed_attempt_points": {
+          "observed": true,
+          "value": 1200.0,
+          "metric": "otelcol_exporter_send_failed_metric_points_total"
+        },
+        "exporter_enqueue_failed_points": {
+          "observed": true,
+          "value": 3900.0,
+          "metric": "otelcol_exporter_enqueue_failed_metric_points_total"
+        },
+        "queue_size": {
+          "observed": true,
+          "value": 0.0,
+          "metric": "otelcol_exporter_queue_size"
+        },
+        "queue_capacity": {
+          "observed": true,
+          "value": 10.0,
+          "metric": "otelcol_exporter_queue_capacity"
+        }
+      },
+      "counter_observation_times": {
+        "start": {
+          "collector_observed_unix": 1794838135.5348206,
+          "prometheus_observed_unix": 1794838135.53811
+        },
+        "end": {
+          "collector_observed_unix": 1794838255.6144946,
+          "prometheus_observed_unix": 1794838255.617948
+        }
+      },
+      "queue_requests": {
+        "count": 40,
+        "peak": 0.0,
+        "p95": 0.0,
+        "capacity": 10
+      },
+      "disk_summaries": {
+        "prometheus_bytes": {
+          "count": 40,
+          "peak": 741376,
+          "p95": 733184
+        },
+        "grafana_bytes": {
+          "count": 40,
+          "peak": 1302528,
+          "p95": 1302528
+        },
+        "wal_bytes": {
+          "count": 40,
+          "peak": 466944,
+          "p95": 458752
+        },
+        "chunks_head_bytes": {
+          "count": 40,
+          "peak": 266240,
+          "p95": 266240
+        }
+      },
+      "query_visible_synthetic_samples": 11800.0,
+      "query_visible_series": 100.0,
+      "synthetic_query_window": {
+        "start_unix": 1794838135.5379412,
+        "end_unix": 1794838253.3919413,
+        "evaluation_unix": 1794838253.3919413,
+        "range_milliseconds": 117854
+      }
+    }
+  },
+  "metric_reconciliation": {
+    "source_window": {
+      "start_unix": 1794837770.1149414,
+      "end_unix": 1794838253.3919413,
+      "evaluation_unix": 1794838253.3919413
+    },
+    "observation_unix": 1794838261.6757886,
+    "settlement_wait_seconds": 6.047357110000121,
+    "settlement_rule": "No producer; queue empty and sent/stored stable for >=2 repeated observations after >=6s, deadline15s.",
+    "final_counter_catalog": {
+      "receiver_accepted": {
+        "observed": true,
+        "value": 47900.0,
+        "metric": "otelcol_receiver_accepted_metric_points_total"
+      },
+      "receiver_refused": {
+        "observed": true,
+        "value": 0.0,
+        "metric": "otelcol_receiver_refused_metric_points_total"
+      },
+      "exporter_sent": {
+        "observed": true,
+        "value": 42800.0,
+        "metric": "otelcol_exporter_sent_metric_points_total"
+      },
+      "exporter_failed_attempt_points": {
+        "observed": true,
+        "value": 1200.0,
+        "metric": "otelcol_exporter_send_failed_metric_points_total"
+      },
+      "exporter_enqueue_failed_points": {
+        "observed": true,
+        "value": 3900.0,
+        "metric": "otelcol_exporter_enqueue_failed_metric_points_total"
+      },
+      "queue_size": {
+        "observed": true,
+        "value": 0.0,
+        "metric": "otelcol_exporter_queue_size"
+      },
+      "queue_capacity": {
+        "observed": true,
+        "value": 10.0,
+        "metric": "otelcol_exporter_queue_capacity"
+      }
+    },
+    "counter_deltas_from_preload": {
+      "receiver_accepted": 47800.0,
+      "receiver_refused": 0.0,
+      "exporter_sent": 42700.0,
+      "exporter_failed_attempt_points": 1200.0,
+      "exporter_enqueue_failed_points": null
+    },
+    "http_offered_points": 47800,
+    "http_accepted_points": 47800,
+    "http_explicitly_rejected_points": 0,
+    "generator_failed_or_unscheduled_points": 0,
+    "query_visible_stored_points": 42700.0,
+    "accepted_not_exported_after_settle_points": 5100.0,
+    "failure_counter_semantics": "Failed send attempt-points can include retries; not a lost-point count. Enqueue failures/refusals are separate; missing baseline delta remains null."
+  },
+  "controlled_export_failure_attempts": {
+    "semantics": "Cumulative attempt/refusal/enqueue counters; never interpreted as unique lost points.",
+    "observed_counters": {
+      "otelcol_exporter_enqueue_failed_metric_points_total": 3900.0,
+      "otelcol_exporter_send_failed_metric_points_total": 1200.0,
+      "otelcol_receiver_refused_metric_points_total": 0.0
+    }
+  },
+  "recovery_seconds_upper_bound": 4.032814848000044,
+  "recovery_restart_complete_unix": 1794838134.3782833,
+  "projection": {
+    "observed_growth_bytes": 434176,
+    "observed_bytes_per_query_visible_sample": 14.472533333333333,
+    "app_pg_wal_upload_storage": {
+      "dev": {
+        "start": {
+          "pgdata_bytes_including_wal": 66281472,
+          "pg_wal_bytes_subset": 33566720,
+          "uploads_allocated_bytes": 16384
+        },
+        "end": {
+          "pgdata_bytes_including_wal": 66281472,
+          "pg_wal_bytes_subset": 33566720,
+          "uploads_allocated_bytes": 16384
+        },
+        "growth": {
+          "pgdata_bytes_including_wal": 0,
+          "pg_wal_bytes_subset": 0,
+          "uploads_allocated_bytes": 0
+        },
+        "summaries": {
+          "pgdata_bytes_including_wal": {
+            "count": 100,
+            "peak": 66281472,
+            "p95": 66281472
+          },
+          "pg_wal_bytes_subset": {
+            "count": 100,
+            "peak": 33566720,
+            "p95": 33566720
+          },
+          "uploads_allocated_bytes": {
+            "count": 100,
+            "peak": 16384,
+            "p95": 16384
+          }
+        }
+      },
+      "prod": {
+        "start": {
+          "pgdata_bytes_including_wal": 66281472,
+          "pg_wal_bytes_subset": 33566720,
+          "uploads_allocated_bytes": 16384
+        },
+        "end": {
+          "pgdata_bytes_including_wal": 66281472,
+          "pg_wal_bytes_subset": 33566720,
+          "uploads_allocated_bytes": 16384
+        },
+        "growth": {
+          "pgdata_bytes_including_wal": 0,
+          "pg_wal_bytes_subset": 0,
+          "uploads_allocated_bytes": 0
+        },
+        "summaries": {
+          "pgdata_bytes_including_wal": {
+            "count": 100,
+            "peak": 66281472,
+            "p95": 66281472
+          },
+          "pg_wal_bytes_subset": {
+            "count": 100,
+            "peak": 33566720,
+            "p95": 33566720
+          },
+          "uploads_allocated_bytes": {
+            "count": 100,
+            "peak": 16384,
+            "p95": 16384
+          }
+        }
+      }
+    },
+    "app_pg_upload_observed_growth_bytes": 0,
+    "app_storage_accounting": "PGDATA includes WAL; WAL is a reported subset, never added twice. Actual allocated upload bytes include directories.",
+    "growth_bytes_per_hour": 5209983.753540717,
+    "growth_bytes_per_day": 125039610.08497721,
+    "conservative_24h_bytes": 1323821044.1699543,
+    "conservative_7d_unretained_bytes": 2824296365.189681,
+    "retained_24h_blocks_cap_bytes": 512000000,
+    "retention_excludes_WAL_head": true,
+    "fixed_WAL_compaction_grafana_reserve_bytes": 1073741824,
+    "growth_safety_factor": 2,
+    "baseline_to_idle_memory_p95_delta": 151886233.60000002,
+    "baseline_to_load_cpu_p95_delta": 20.400000000000013,
+    "baseline_to_load_memory_p95_delta": 177523916.8,
+    "oracle_hypothetical_total_memory_bytes": 6442450944,
+    "oracle_reserved_memory_bytes": 1610612736,
+    "oracle_remaining_memory_bytes": 4831838208,
+    "local_loaded_peak_memory_bytes": 506619494.4,
+    "local_measured_memory_with_50pct_margin_fits_hypothetical_remainder": true,
+    "local_loaded_peak_logical_cpu_percent": 80.57,
+    "oracle_reserved_cpu_percent": 20,
+    "oracle_usable_cpu_percent": 80,
+    "architecture_equivalence": "unproven; no linear x64-vCPU to ARM-OCPU conversion",
+    "startup_budget_mib": {
+      "both_apps_dbs": 1280,
+      "two_migrations_upload_init": 640,
+      "two_proxies_sinks": 384,
+      "metrics_stack": 832,
+      "capacity_control_relay": 96,
+      "OS_Docker_proxy_transients_reserve": 1536,
+      "logs_backup_disk": "separate 1GiB logs + aligned backup + >=4GiB/20% free reserve"
+    },
+    "interpretation": "Short run, fixed offered rate; WAL allocation/compaction noise makes linear growth uncertain. No trace/log storage or application SDK overhead measured. Hosted activation blocked; #103 platform-specific retest required."
+  },
+  "cleanup": {
+    "cleanup": true,
+    "owned_image_removed": true,
+    "private_files_removed": true
+  },
+  "ordinary_ci": {
+    "url": "https://github.com/240103098-code/Student_marketplace/actions/runs/43880113006/attempts/1",
+    "artifact_id": 14233070728,
+    "artifact_zip_sha256": "859276313b1f53df92541756c04b169f7b1536c7c5b071c92fc57ee32625e291",
+    "full_safe_json_sha256": "f557ce35c909667482a6ae08a0abc4065e94605e099ef01849918d8c3a304ea4",
+    "all_input_hashes_match_git_blobs": true,
+    "verified_input_count": 229,
+    "result": "PASS",
+    "candidate": "7a153312d9160c9b8e3ebc669a4d5c840cf08e31",
+    "checks": [
+      "fresh-guarded-loopback-postgresql",
+      "backend-tests",
+      "canonical-openapi",
+      "frontend-tests",
+      "frontend-typecheck",
+      "frontend-build",
+      "frontend-production-mock-exclusion",
+      "compose-readiness-persistence",
+      "playwright-real-compose"
+    ],
+    "cleanup": true,
+    "backend": {
+      "discovered": 410,
+      "executed": 410,
+      "skipped": 0,
+      "failed": 0,
+      "errors": 0,
+      "passed": 410,
+      "failed_test_ids": []
+    },
+    "frontend": {
+      "numTotalTests": 166,
+      "numPassedTests": 166,
+      "numFailedTests": 0,
+      "numPendingTests": 0,
+      "numTodoTests": 0
+    },
+    "playwright_modes": [
+      {
+        "selection": "smoke",
+        "intentional_failure": false,
+        "result": "PASS",
+        "browser_status": "passed",
+        "browser_exit": 0,
+        "tests": 2,
+        "cleanup": true,
+        "private_files_removed": true
+      },
+      {
+        "selection": "full",
+        "intentional_failure": false,
+        "result": "PASS",
+        "browser_status": "passed",
+        "browser_exit": 0,
+        "tests": 3,
+        "cleanup": true,
+        "private_files_removed": true
+      },
+      {
+        "selection": "registration",
+        "intentional_failure": false,
+        "result": "PASS",
+        "browser_status": "passed",
+        "browser_exit": 0,
+        "tests": 1,
+        "cleanup": true,
+        "private_files_removed": true
+      },
+      {
+        "selection": "smoke",
+        "intentional_failure": true,
+        "result": "PASS",
+        "browser_status": "failed",
+        "browser_exit": 1,
+        "tests": 1,
+        "cleanup": true,
+        "private_files_removed": true
+      }
+    ],
+    "python": "3.13.15",
+    "node": "v24.19.0",
+    "npm": "12.2.0",
+    "docker": "28.0.4",
+    "compose": "2.38.2",
+    "postgresql": "18.6 (Debian 18.6-1.pgdg12+2)",
+    "playwright": "1.62.1",
+    "browser_revision": [
+      {
+        "name": "chromium",
+        "revision": "1234",
+        "installByDefault": true,
+        "browserVersion": "151.0.7922.34",
+        "title": "Chrome for Testing"
+      },
+      {
+        "name": "chromium-headless-shell",
+        "revision": "1234",
+        "installByDefault": true,
+        "browserVersion": "151.0.7922.34",
+        "title": "Chrome Headless Shell"
+      }
+    ]
+  },
+  "acceptance_outcomes": {
+    "AC1": "Observed: distinct projects/DB identities/secrets/leaf keys/volumes/networks; production validation, trusted HTTPS and host-only browser cookies.",
+    "AC2": "Observed: normal auth and authenticated STARTTLS sinks; own private reads; anonymous/cross-token/cookie/Origin/browser denial.",
+    "AC3": "Observed: all dev write/migration/reset/startup-failure/secret-replacement preservation checks, network/DB credential denial, prod recreate/down-up persistence.",
+    "AC4": "Observed: pinned official multiarch images; one Collector/Prometheus/Grafana; synthetic stored values and authenticated numeric Grafana query.",
+    "AC5": "Observed: all five actual phases, fixed-rate business reads/OTLP/Grafana load and actual per-field timing/service/runner/storage measurements.",
+    "AC6": "Observed: bounded queue/retry/caps, controlled outage/loss and fresh recovery, real disk growth and explicit short-run retention projections.",
+    "AC7": "Local measurements/budgets/stops recorded. Hosted ARM activation remains blocked; no architecture or unmeasured SDK/trace/log fit claim.",
+    "AC8": "Reviewed future preservation/cutover plan in _docs/rehearsal101.md; no live cutover/backup/restore/reset/promotion performed.",
+    "AC9": "Actual source/run/hash/artifact/cleanup plus durable aggregates recorded; final independent evidence/publication QA remains required."
+  },
+  "limits": [
+    "Narrow synthetic account/photo read workload, not production traffic.",
+    "Metrics-only candidate; actual SDK, trace/log storage/export and future workload overhead excluded; remeasure under #103.",
+    "Short storage run, allocation/compaction noise; retention is asynchronous and not a quota/soak proof.",
+    "No x64 vCPU to ARM OCPU equivalence; reserve >=1.5 GiB and 20% CPU plus disk/backups before any hosted decision.",
+    "Docker host administrators are outside the isolation boundary.",
+    "No new hosted environment, external SMTP/notification or live-resource/secret transition."
+  ],
+  "retention_unit_clarification": {
+    "argument": "--storage.tsdb.retention.size=512MB",
+    "effective_limit_bytes": 536870912,
+    "effective_limit_mib": 512,
+    "original_reported_decimal_bytes": 512000000,
+    "explanation": "The original controller report uses an incorrect decimal byte label. Prometheus 3.9.1 parses the actual MB flag in powers of two. Original report/hash and measured growth are unchanged.",
+    "source": "https://github.com/prometheus/prometheus/blob/v3.9.1/cmd/prometheus/main.go#L424"
+  },
+  "candidate_configuration_as_reported": {
+    "queue_capacity_requests": 10,
+    "queue_sizer": "requests (version factory source)",
+    "retry_max_seconds": 20,
+    "batch_points": 100,
+    "collector_limit_mib": 128,
+    "retention_hours": 24,
+    "retained_block_limit_bytes": 512000000,
+    "WAL_head_reserve_bytes": 536870912,
+    "minimum_projection_fixed_reserve_bytes": 1073741824,
+    "notes": "Block retention is asynchronous; WAL/head add disk. Projections are not a retention soak or quota proof.",
+    "endpoints": "loopback-only fixed control relay on own ingress bridge; backend services internal-only; no DB publication or external export",
+    "relay_egress_boundary": "Relay has ingress bridge default route; code forwards only four hardcoded internal destinations. No claim of network-enforced relay egress denial.",
+    "components": "otlp/http, memory_limiter, batch, prometheusremotewrite; metrics only"
+  }
+}

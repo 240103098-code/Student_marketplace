@@ -4,7 +4,7 @@ Planning snapshot **2026-11-16** for [#99 — Track isolated dev/prod, manual pr
 
 ## Current operation and preserved assignment
 
-Current #101 implementation status is tracked in [disposable rehearsal](rehearsal101.md). Its candidate is opt-in/local only; actual Linux acceptance and hosted capacity remain unproved until linked measured evidence and independent QA. The planning snapshot below retains its historical wording.
+Current #101 status is tracked in [disposable rehearsal](rehearsal101.md) and [actual Linux evidence](evidence/isolation-capacity-101/verification.md): runtime source `7a153312d9160c9b8e3ebc669a4d5c840cf08e31` passed the disposable isolation and metrics-only measurements. Independent evidence/publication QA remains separate, and hosted ARM activation is still blocked/capacity unproven. This does not implement the later packages. The planning snapshot below retains its historical wording.
 
 The additional [Oracle demo #95](https://github.com/240103098-code/Student_marketplace/issues/95) and [automation #96](https://github.com/240103098-code/Student_marketplace/issues/96) currently rebuild trusted green-main source natively on the existing ARM host. [Oracle operations](oracle-demo.md), [current controller and dated rollback evidence](oracle-cd.md), and [implemented CI](ci.md) describe actual behavior. The single additional live demo is not the new isolated development/production arrangement. Preserve its public URLs, PostgreSQL, uploads, volumes, stable secrets and restricted controller until a separately reviewed, authorized transition. Publishing this documentation still exercises existing CI/CD; it does not change that automatic path.
 
