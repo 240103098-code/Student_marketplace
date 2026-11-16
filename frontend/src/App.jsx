@@ -18,6 +18,11 @@ import { AccountDeletion } from './AccountDeletion.jsx';
 import { PasswordForm } from './PasswordForm.jsx';
 import { LoginForm } from './LoginForm.jsx';
 import { RegistrationForm, VerificationForm } from './AccountForms.jsx';
+import { Button } from './ui/Button.jsx';
+import { Notice } from './ui/Notice.jsx';
+import { Skeleton } from './ui/Skeleton.jsx';
+import { NotFound } from './ui/NotFound.jsx';
+import { PriceTag } from './ui/PriceTag.jsx';
 
 const MockPanel=import.meta.env.DEV&&isMockMode?lazy(()=>import('./MockPanel.jsx')):null;
 const views = {
@@ -128,19 +133,24 @@ function AppShell() {
     description: 'We could not find this page. Head back home to explore the marketplace.',
   };
 
+  const notFound = !guarded && !views[path] && !editId && !detailId && !adminListing;
+  const authed = auth.status === 'authenticated';
+
   return (
     <>
       <a className="skip-link" href="#main">Skip to content</a>
       {MockPanel&&<Suspense fallback={<p role="status">Loading synthetic demo controls…</p>}><MockPanel/></Suspense>}
       <SiteHeader auth={auth} path={path} navigate={navigate} signOut={signOut} logoutPending={logoutPending} logoutError={logoutError}/>
       <main id="main" className={`main-content ${path.startsWith('/admin')?'admin-page':'student-page'} ${['/login','/register','/verify','/forgot-password','/reset-password','/account/password'].includes(path)?'auth-page':''}`} data-page={path} tabIndex={-1}>
+        <div className="page-fade" key={path}>
         <div className="preview-label">{['/register', '/verify'].includes(path) ? 'University accounts' : auth.status==='authenticated' ? 'University marketplace' : 'University community'}</div>
+        {notFound ? <NotFound authed={authed} navigate={navigate} headingRef={heading} /> : <>
         <h1 ref={heading} tabIndex={-1}>{view.title}</h1>
         <p className="intro">{view.description}</p>
-        {auth.message && <p role="status" className="form-feedback info">{auth.message}</p>}
-        {logoutError && <p role="alert" className="form-feedback error">{logoutError}</p>}
+        </>}
+        {auth.message && <Notice tone="info">{auth.message}</Notice>}
         {logoutPending && <p role="status">Confirming sign-out...</p>}
-        {guarded && <p role="status">Checking your session...</p>}
+        {guarded && <><p role="status">Checking your session...</p><Skeleton shape="block" height={96} /></>}
         {path === '/admin/reports' && !guarded && <AdminReports navigate={navigate} />}
         {path === '/admin/listings' && !guarded && <AdminListings navigate={navigate} />}
         {adminListing && !guarded && <AdminListingDetail listingId={adminListing} key={adminListing} navigate={navigate} />}
@@ -163,17 +173,17 @@ function AppShell() {
         {path === '/verify' && <VerificationForm initialEmail={verification.email} cooldowns={verification.cooldowns} navigate={navigate} onCooldown={(email, deadline) => setVerification(previous => ({ email, cooldowns: { ...previous.cooldowns, [email]: deadline } }))} />}
         {path === '/' && (
           <div className="actions">
-            <a className="button primary" href="/marketplace" onClick={navigate}>Explore marketplace</a>
-            <a className="button secondary" href="/register" onClick={navigate}>Create an account</a>
+            <Button variant="primary" size="large" href="/marketplace" onClick={navigate}>Explore marketplace</Button>
+            <Button variant="secondary" size="large" href="/register" onClick={navigate}>Create an account</Button>
           </div>
         )}
-        {!views[path] && !editId && !detailId && !adminListing && <a className="button secondary" href="/" onClick={navigate}>Back to home</a>}
         <aside className="preview-note" aria-label="Preview information">
-          <span className="note-dot" aria-hidden="true" />
+          <PriceTag amount="Prices in" decorative />
           <p>Only verified university students can access approved marketplace listings. Negotiate, pay and arrange pickup directly with the seller.</p>
         </aside>
+        </div>
       </main>
-      <footer className="site-footer">Student Marketplace <span aria-hidden="true">В·</span> For your university community</footer>
+      <footer className="site-footer"><strong>Student Marketplace</strong> <span aria-hidden="true">·</span> For your university community</footer>
     </>
   );
 }
