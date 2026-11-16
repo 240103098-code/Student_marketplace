@@ -42,8 +42,10 @@ def create_app(settings: Settings, database: Database | None = None, *, sender=N
     @asynccontextmanager
     async def lifespan(app):
         try:
+            app.state.telemetry.start()
             yield
         finally:
+            app.state.telemetry.stop()
             close_owned_resources()
 
     app = FastAPI(title="Student Marketplace", lifespan=lifespan)
@@ -95,4 +97,7 @@ def create_app(settings: Settings, database: Database | None = None, *, sender=N
     app.include_router(listing_photos_router)
     from backend.openapi_contract import install_contract
     install_contract(app)
+    from backend.telemetry import Telemetry, TelemetryMiddleware
+    app.state.telemetry = Telemetry(settings, database.engine, app.routes)
+    app.add_middleware(TelemetryMiddleware, telemetry=app.state.telemetry)
     return app

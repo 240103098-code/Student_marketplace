@@ -16,6 +16,9 @@ dependencies = [
     "PyJWT==2.15.1",
     "Pillow==12.3.0",
     "python-multipart==0.0.32",
+    "opentelemetry-api==1.45.1",
+    "opentelemetry-sdk==1.45.1",
+    "opentelemetry-exporter-otlp-proto-http==1.45.1",
 ]
 
 [project.optional-dependencies]

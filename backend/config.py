@@ -56,6 +56,37 @@ class Settings(BaseSettings):
     smtp_security: Literal["starttls", "tls"] = Field(
         default="starttls", alias="SMTP_SECURITY"
     )
+    telemetry_enabled: bool = Field(default=False, alias="TELEMETRY_ENABLED")
+    telemetry_endpoint: str = Field(default="http://127.0.0.1:4318", alias="TELEMETRY_ENDPOINT")
+    telemetry_service: Literal["student-marketplace"] = Field(default="student-marketplace", alias="TELEMETRY_SERVICE")
+    telemetry_version: str = Field(default="0.1.0", alias="TELEMETRY_VERSION")
+
+    @field_validator("telemetry_version")
+    @classmethod
+    def telemetry_safe_version(cls, value):
+        if not re.fullmatch(r"[0-9][0-9a-f.\-]{0,63}", value):
+            raise ValueError("TELEMETRY_VERSION requires a bounded release or commit identifier")
+        return value
+
+    @field_validator("telemetry_endpoint")
+    @classmethod
+    def telemetry_private_endpoint(cls, value):
+        try:
+            parsed = urlsplit(value)
+            # HTTP is accepted solely on explicit local/private fixture names.
+            local = parsed.hostname in {"localhost", "collector"}
+            try:
+                local = local or ipaddress.ip_address(parsed.hostname).is_loopback
+            except ValueError:
+                pass
+            if (parsed.scheme not in {"http", "https"} or not parsed.hostname
+                or parsed.username or parsed.password or parsed.query or parsed.fragment
+                or parsed.path not in {"", "/"} or parsed.port == 0
+                or (parsed.scheme == "http" and not local)):
+                raise ValueError()
+        except (ValueError, TypeError):
+            raise ValueError("TELEMETRY_ENDPOINT requires an explicit safe OTLP origin") from None
+        return value.rstrip("/")
 
     @classmethod
     def settings_customise_sources(cls, settings_cls, **sources):
