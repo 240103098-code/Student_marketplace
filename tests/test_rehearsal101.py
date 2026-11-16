@@ -1,6 +1,7 @@
 """Focused ownership, transport, privacy and stop regressions; no Docker/.env."""
 import contextlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from concurrent.futures import Future
 import http.client
 import io
 import json
@@ -374,6 +375,25 @@ class RehearsalSafety(unittest.TestCase):
         slow=actual[1]['field_timestamps_unix']
         self.assertGreater(slow['aggregate_cpu_percent']-slow['runner_cpu_percent'],1)
         self.assertLess(max(row['field_gaps_seconds'].get('runner_cpu_percent',0) for row in actual),3.5)
+
+    def test_phase_id_discovery_precedes_any_measurement_probe_launch(self):
+        stack,sampler,inspected,stats,host,disk=self.sampled_fixture()
+        events=[]
+        class ImmediatePool:
+            def submit(self,fn,*args):
+                events.append('probe')
+                future=Future();future.set_result(fn(*args));return future
+        def discover(*args,**kwargs):
+            events.append('discover')
+            return subprocess.CompletedProcess([],0,'id-app id-db id-smtp id-proxy','')
+        def run(args,**kwargs):
+            return subprocess.CompletedProcess([],0,json.dumps(inspected) if args[1]=='inspect' else stats,'')
+        with patch.object(self.controller,'compose',side_effect=discover),\
+             patch.object(self.controller,'run',side_effect=run),patch.object(sampler,'host_fields',side_effect=host),\
+             patch('tools.rehearsal101_capacity.app_disk',side_effect=disk),\
+             patch('tools.rehearsal101_capacity.request',return_value=(200,{},b'')):
+            sampler._sample('baseline',0,None,ImmediatePool())
+        self.assertEqual(events,['discover','probe'])
 
     def test_fixture_relay_cannot_select_upstream_from_request_authority(self):
         calls=[]

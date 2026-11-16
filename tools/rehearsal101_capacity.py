@@ -305,11 +305,6 @@ class Sampler:
         row={'phase':phase,'elapsed_seconds':round(elapsed,3),'timestamp_unix':time.time(),
              'services':{},'aggregate_cpu_percent':0,'aggregate_memory_bytes':0}
         self.host_fields(row,times)
-        for stack in self.stacks:
-            measured={}
-            app_probes.append((stack['name'],measured,pool.submit(app_disk,r,stack,measured)))
-        obs_times={}
-        obs_probe=pool.submit(disk,r,obs,phase=='outage',obs_times) if obs else None
         r.record['sampler_stage']='owned-container-inspection'
         if new_phase:
             ids=[]
@@ -318,6 +313,13 @@ class Sampler:
             require(bool(ids),'sampler-no-containers')
             self.phase_ids=ids
         ids=self.phase_ids
+        # An outage disk probe creates an ephemeral Compose run container.
+        # Cache the stable phase IDs before any probe can create that helper.
+        for stack in self.stacks:
+            measured={}
+            app_probes.append((stack['name'],measured,pool.submit(app_disk,r,stack,measured)))
+        obs_times={}
+        obs_probe=pool.submit(disk,r,obs,phase=='outage',obs_times) if obs else None
         inspected=json.loads(r.run(['docker','inspect',*ids],timeout=8).stdout)
         expected={(stack['project'],service) for stack in self.stacks for service in ('app','db','smtp','proxy')}
         if obs:expected|={(obs['project'],service) for service in ('collector','prometheus','grafana','control')}
