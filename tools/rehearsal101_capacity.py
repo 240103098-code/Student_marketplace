@@ -278,24 +278,46 @@ class Sampler:
             self.r.record['sampler_failure']={'phase':phase,'field':max(gaps,key=gaps.get),'actual_gap_seconds':row['field_max_gap_seconds']}
             raise Failure('sampler-actual-field-gap')
 
+    def host_fields(self,row,times):
+        free=shutil.disk_usage(self.r.private)
+        row['disk_free_bytes']=free.free
+        stamp(times,['disk_free_bytes'])
+        require(free.free>=max(4*1024**3,free.total*.2),'disk-stop')
+        current=host_cpu();total=current[0]-self.previous_cpu[0];idle=current[1]-self.previous_cpu[1]
+        row['runner_cpu_percent']=100*os.cpu_count()*(1-idle/total) if total else 0
+        stamp(times,['runner_cpu_percent'])
+        self.previous_cpu=current
+        memory=Path('/proc/meminfo').read_text()
+        row['runner_used_memory_bytes']=(int(re.search(r'MemTotal:\s+(\d+)',memory)[1])-int(re.search(r'MemAvailable:\s+(\d+)',memory)[1]))*1024
+        stamp(times,['runner_used_memory_bytes'])
+        row['runner_load1']=os.getloadavg()[0]
+        stamp(times,['runner_load1'])
+
     def sample(self,phase,elapsed,obs=None):
         with ThreadPoolExecutor(max_workers=3) as pool:
             return self._sample(phase,elapsed,obs,pool)
 
     def _sample(self,phase,elapsed,obs,pool):
         r=self.r
-        if phase!=self.field_phase:self.previous_fields={};self.field_phase=phase
+        new_phase=phase!=self.field_phase
+        if new_phase:self.previous_fields={};self.field_phase=phase
         times={};app_probes=[]
+        row={'phase':phase,'elapsed_seconds':round(elapsed,3),'timestamp_unix':time.time(),
+             'services':{},'aggregate_cpu_percent':0,'aggregate_memory_bytes':0}
+        self.host_fields(row,times)
         for stack in self.stacks:
             measured={}
             app_probes.append((stack['name'],measured,pool.submit(app_disk,r,stack,measured)))
         obs_times={}
         obs_probe=pool.submit(disk,r,obs,phase=='outage',obs_times) if obs else None
-        ids=[]
         r.record['sampler_stage']='owned-container-inspection'
-        for stack in self.stacks:ids+=r.compose(stack,'ps','-aq').stdout.split()
-        if obs:ids+=r.compose(obs,'ps','-aq').stdout.split()
-        require(bool(ids),'sampler-no-containers')
+        if new_phase:
+            ids=[]
+            for stack in self.stacks:ids+=r.compose(stack,'ps','-aq').stdout.split()
+            if obs:ids+=r.compose(obs,'ps','-aq').stdout.split()
+            require(bool(ids),'sampler-no-containers')
+            self.phase_ids=ids
+        ids=self.phase_ids
         inspected=json.loads(r.run(['docker','inspect',*ids],timeout=8).stdout)
         expected={(stack['project'],service) for stack in self.stacks for service in ('app','db','smtp','proxy')}
         if obs:expected|={(obs['project'],service) for service in ('collector','prometheus','grafana','control')}
@@ -318,8 +340,6 @@ class Sampler:
         stats=r.run(['docker','stats','--no-stream','--format','{{json .}}',*running],timeout=8)
         stats_time=(time.monotonic(),time.time())
         byname={c['Name'].lstrip('/'):c for c in inspected}
-        row={'phase':phase,'elapsed_seconds':round(elapsed,3),'timestamp_unix':time.time(),
-             'services':{},'aggregate_cpu_percent':0,'aggregate_memory_bytes':0}
         for line in stats.stdout.splitlines():
             value=json.loads(line);info=byname[value['Name']]
             service=info['Config']['Labels']['com.docker.compose.service']
@@ -333,17 +353,6 @@ class Sampler:
             row['aggregate_cpu_percent']+=cpu;row['aggregate_memory_bytes']+=used
         self.sustained('aggregate-cpu-stop',row['aggregate_cpu_percent']>os.cpu_count()*100*.8)
         times['aggregate_cpu_percent']=stats_time;times['aggregate_memory_bytes']=stats_time
-        free=shutil.disk_usage(r.private)
-        require(free.free>=max(4*1024**3,free.total*.2),'disk-stop')
-        row['disk_free_bytes']=free.free
-        stamp(times,['disk_free_bytes'])
-        current=host_cpu();total=current[0]-self.previous_cpu[0];idle=current[1]-self.previous_cpu[1]
-        row['runner_cpu_percent']=100*os.cpu_count()*(1-idle/total) if total else 0
-        self.previous_cpu=current
-        memory=Path('/proc/meminfo').read_text()
-        row['runner_used_memory_bytes']=(int(re.search(r'MemTotal:\s+(\d+)',memory)[1])-int(re.search(r'MemAvailable:\s+(\d+)',memory)[1]))*1024
-        row['runner_load1']=os.getloadavg()[0]
-        stamp(times,['runner_cpu_percent','runner_used_memory_bytes','runner_load1'])
         row['app_storage']={}
         for name,measured,future in app_probes:
             row['app_storage'][name]=future.result(timeout=8);times.update(measured)
@@ -485,11 +494,14 @@ def phase(r,sampler,stacks,name,seconds,obs):
             if now>=next_sample:
                 gap=now-last_sample;max_sample_gap=max(max_sample_gap,gap)
                 require(gap<=5,'sampler-cadence-deadline')
-                if sample_futures:
-                    require(sample_futures[-1].done(),'sampler-cadence-deadline')
-                    sample_futures[-1].result()
-                sample_futures.append(sampler_pool.submit(sampler.sample,name,now-started,obs))
-                last_sample=now;next_sample+=4
+                if sample_futures and not sample_futures[-1].done():
+                    # Never overlap/queue snapshots. A slow call can use the
+                    # remaining strict5s budget; actual field gaps still decide.
+                    next_sample=now+.02
+                else:
+                    if sample_futures:sample_futures[-1].result()
+                    sample_futures.append(sampler_pool.submit(sampler.sample,name,now-started,obs))
+                    last_sample=now;next_sample=now+3
             time.sleep(.02)
         duration=time.monotonic()-started
         phase_end_wall=time.time()

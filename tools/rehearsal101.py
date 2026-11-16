@@ -473,7 +473,7 @@ class Rehearsal:
         self.record['caps_cpu_memory_mib']=CAPS
         self.record['cpu_normalization']='100 percent = one logical CPU; x64 vCPU is not Oracle ARM OCPU'
         self.record['declared_cpu_budget']=os.cpu_count()
-        self.record['sampler_seconds']=4
+        self.record['sampler_seconds']=3
         self.record['sampler_actual_field_max_seconds']=5
 
     def images(self):

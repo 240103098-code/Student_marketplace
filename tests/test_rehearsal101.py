@@ -31,6 +31,28 @@ class RehearsalSafety(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.controller.private)
 
+    def sampled_fixture(self):
+        stack={'name':'dev','project':self.controller.owner+'-dev'}
+        inspected=[];statistics=[]
+        for service in ('app','db','smtp','proxy'):
+            networks={stack['project']+'_default':{}}
+            if service=='proxy':networks[stack['project']+'_ingress']={}
+            inspected.append({'Id':'id-'+service,'Name':'/'+service,'Config':{'Labels':{
+                harness.LABEL:self.controller.owner,'com.docker.compose.project':stack['project'],
+                'com.docker.compose.service':service}},'State':{'Running':True,'OOMKilled':False,'ExitCode':0},
+                'RestartCount':0,'NetworkSettings':{'Networks':networks}})
+            statistics.append(json.dumps({'Name':service,'MemUsage':'1MiB / 256MiB','CPUPerc':'0.00%'}))
+        sampler=capacity.Sampler.__new__(capacity.Sampler)
+        sampler.r=self.controller;sampler.stacks=(stack,);sampler.bad={};sampler.previous_fields={};sampler.field_phase=None
+        def host(row,times):
+            row.update(disk_free_bytes=10*1024**3,runner_cpu_percent=0,runner_used_memory_bytes=0,runner_load1=0)
+            capacity.stamp(times,['disk_free_bytes','runner_cpu_percent','runner_used_memory_bytes','runner_load1'])
+        def disk(r,stack,times=None):
+            value={'pgdata_bytes_including_wal':1024,'pg_wal_bytes_subset':512,'uploads_allocated_bytes':512}
+            capacity.stamp(times,[stack['name']+'/'+key for key in value])
+            return value
+        return stack,sampler,inspected,'\n'.join(statistics),host,disk
+
     def test_wrong_label_refuses_project_deletion_before_compose_down(self):
         stack={'project':self.controller.owner+'-dev'}
         calls=[]
@@ -310,6 +332,48 @@ class RehearsalSafety(unittest.TestCase):
                 capacity.candidate_counter_ready(self.controller,{'endpoints':{'prometheus':'http://127.0.0.1:1'}},limit=.5)
         self.assertIsNone(self.controller.record['candidate_counter_readiness']['appended_counter_value'])
         self.assertEqual(self.controller.record['candidate_counter_readiness']['duration_seconds'],.5)
+
+    def test_cached_ids_still_detect_live_restart_or_replacement(self):
+        for failure in ('restart','replacement'):
+            stack,sampler,inspected,stats,host,disk=self.sampled_fixture()
+            reads=[0]
+            def run(args,**kwargs):
+                if args[1]=='inspect':
+                    reads[0]+=1
+                    if reads[0]>1:
+                        if failure=='replacement':raise harness.Failure('subprocess-status')
+                        inspected[0]['RestartCount']=1
+                    return subprocess.CompletedProcess([],0,json.dumps(inspected),'')
+                return subprocess.CompletedProcess([],0,stats,'')
+            with self.subTest(failure=failure),patch.object(self.controller,'compose',return_value=subprocess.CompletedProcess([],0,'id-app id-db id-smtp id-proxy','')) as discover,\
+                 patch.object(self.controller,'run',side_effect=run),patch.object(sampler,'host_fields',side_effect=host),\
+                 patch('tools.rehearsal101_capacity.app_disk',side_effect=disk),\
+                 patch('tools.rehearsal101_capacity.request',return_value=(200,{},b'')):
+                sampler.sample('baseline',0)
+                with self.assertRaises(harness.Failure):sampler.sample('baseline',1)
+            self.assertEqual(discover.call_count,1)
+            self.assertEqual(reads[0],2)
+
+    def test_actual_stats_jitter_has_headroom_and_does_not_delay_host_measurement(self):
+        stack,sampler,inspected,stats,host,disk=self.sampled_fixture()
+        samples=[0]
+        def run(args,**kwargs):
+            if args[1]=='inspect':return subprocess.CompletedProcess([],0,json.dumps(inspected),'')
+            samples[0]+=1
+            time.sleep(3.05 if samples[0]==1 else 1.1 if samples[0]==2 else .02)
+            return subprocess.CompletedProcess([],0,stats,'')
+        with patch.object(self.controller,'compose',return_value=subprocess.CompletedProcess([],0,'id-app id-db id-smtp id-proxy','')),\
+             patch.object(self.controller,'run',side_effect=run),patch.object(sampler,'host_fields',side_effect=host),\
+             patch('tools.rehearsal101_capacity.app_disk',side_effect=disk),\
+             patch('tools.rehearsal101_capacity.normal_login'),\
+             patch('tools.rehearsal101_capacity.request',return_value=(200,{},b'')):
+            result=capacity.phase(self.controller,sampler,(stack,),'baseline',6.2,None)
+        actual=[row for row in self.controller.record['samples'] if row['phase']=='baseline']
+        self.assertEqual(len(actual),3)
+        self.assertLessEqual(result['actual_field_gap_seconds']['peak'],5)
+        slow=actual[1]['field_timestamps_unix']
+        self.assertGreater(slow['aggregate_cpu_percent']-slow['runner_cpu_percent'],1)
+        self.assertLess(max(row['field_gaps_seconds'].get('runner_cpu_percent',0) for row in actual),3.5)
 
     def test_fixture_relay_cannot_select_upstream_from_request_authority(self):
         calls=[]
