@@ -618,6 +618,7 @@ def reconcile(r,obs):
         catalog=counter_catalog(metrics(raw.decode()))
         require(all(item['observed'] for item in catalog.values()),'required-collector-counter-unavailable')
         stored=scalar(obs,expression,at=end)
+        require(time.monotonic()<=deadline,'metric-settlement-deadline')
         current=(catalog['exporter_sent']['value'],stored,catalog['queue_size']['value'])
         stable=stable+1 if current==previous and current[2]==0 else 0
         previous=current
