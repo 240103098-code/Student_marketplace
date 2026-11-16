@@ -13,6 +13,38 @@ import urllib.parse
 from tools.rehearsal101 import (CAPS, LABEL, PHASES, Failure, metrics, percentile,
                                 port, request, require, resources)
 
+COUNTER_FAMILIES={
+    'receiver_accepted':'otelcol_receiver_accepted_metric_points',
+    'receiver_refused':'otelcol_receiver_refused_metric_points',
+    'exporter_sent':'otelcol_exporter_sent_metric_points',
+    'exporter_failed_attempt_points':'otelcol_exporter_send_failed_metric_points',
+    'exporter_enqueue_failed_points':'otelcol_exporter_enqueue_failed_metric_points',
+    'queue_size':'otelcol_exporter_queue_size','queue_capacity':'otelcol_exporter_queue_capacity'}
+
+
+def counter_catalog(values):
+    result={}
+    for family,base in COUNTER_FAMILIES.items():
+        names=[name for name in (base,base+'_total') if name in values]
+        require(len(names)<=1,'ambiguous-counter-family')
+        result[family]={'observed':bool(names),'value':values[names[0]] if names else None,
+                        'metric':names[0] if names else None}
+    return result
+
+
+def prometheus_counter(raw,family):
+    # Prometheus 3.9 partitions appended samples by type. Retain only the sum,
+    # never labels; absence is None, including when another metric has a value.
+    pattern=rb'^'+re.escape(family.encode())+rb'(?:\{[^\n{}]*\})?\s+([0-9.eE+\-]+)(?:\s+\d+)?\s*$'
+    values=[float(value) for value in re.findall(pattern,raw,re.M)]
+    require(all(math.isfinite(value) and value>=0 for value in values),'prometheus-counter-value')
+    return sum(values) if values else None
+
+
+def recovery_observation(obs,source_timestamp,observed_monotonic):
+    if source_timestamp<obs['restart_complete_unix']:return None
+    return observed_monotonic-obs['restart_complete_monotonic']
+
 
 def candidate(r):
     directory=r.private/'obs';directory.mkdir()
@@ -92,8 +124,10 @@ def candidate(r):
     return stack
 
 
-def query(obs,expression):
-    status,_,body=request(obs['endpoints']['prometheus'],'/api/v1/query?'+urllib.parse.urlencode({'query':expression,'timeout':'4s'}))
+def query(obs,expression,at=None):
+    params={'query':expression,'timeout':'4s'}
+    if at is not None:params['time']=str(at)
+    status,_,body=request(obs['endpoints']['prometheus'],'/api/v1/query?'+urllib.parse.urlencode(params))
     require(status==200,'prometheus-query')
     value=json.loads(body)
     require(value['status']=='success','prometheus-query-result')
@@ -109,8 +143,8 @@ def http_shape(status,headers,body):
             'media':media if media in ('text/plain','application/openmetrics-text','application/json') else 'other'}
 
 
-def scalar(obs,expression):
-    values=query(obs,expression)
+def scalar(obs,expression,at=None):
+    values=query(obs,expression,at=at)
     return sum(float(v['value'][1]) for v in values)
 
 
@@ -298,6 +332,7 @@ class Sampler:
             require(status==200,'collector-self-metrics')
             r.record['sampler_stage']='collector-self-parse'
             allmetrics=metrics(body.decode())
+            row['counter_catalog']=counter_catalog(allmetrics)
             # Explicit safe numeric catalog, with version-defined queue instrumentation required.
             row['collector']={k:v for k,v in allmetrics.items() if any(s in k for s in (
                 'queue_size','queue_capacity','accepted_metric_points','refused_metric_points',
@@ -312,6 +347,10 @@ class Sampler:
             if phase=='recovery':
                 try:row['newest_stored_synthetic_timestamp']=scalar(obs,'max(timestamp(rehearsal_capacity_value))')
                 except Exception:row['newest_stored_synthetic_timestamp']=0
+                row['recovery_query_observed_monotonic']=time.monotonic()
+                row['recovery_query_observed_unix']=time.time()
+                observed=recovery_observation(obs,row['newest_stored_synthetic_timestamp'],row['recovery_query_observed_monotonic'])
+                if observed is not None:row['fresh_ingestion_observed_seconds_after_restart']=observed
         self.field_timing(phase,row,times)
         r.record['sampler_stage']='snapshot-complete'
         return row
@@ -357,10 +396,13 @@ def phase(r,sampler,stacks,name,seconds,obs):
     r.record['active_stage']='capacity-'+name+'-storage-start'
     start_storage=disk(r,obs,outage=name=='outage') if obs else None
     app_storage_start={stack['name']:app_disk(r,stack) for stack in stacks}
-    def counters():
+    counter_times={}
+    def counters(label):
         if not obs:return {}
+        observed={}
         r.record['active_stage']='capacity-'+name+'-collector-counters'
         status,headers,raw=request(obs['endpoints']['self'],'/metrics')
+        observed['collector_observed_unix']=time.time()
         r.record.setdefault('capacity_http_shapes',{})['collector-counters']=http_shape(status,headers,raw)
         require(status==200,'phase-collector-counters')
         values=metrics(raw.decode())
@@ -368,16 +410,21 @@ def phase(r,sampler,stacks,name,seconds,obs):
         if name!='outage':
             r.record['active_stage']='capacity-'+name+'-prometheus-counters'
             status,headers,raw=request(obs['endpoints']['prometheus'],'/metrics')
+            observed['prometheus_observed_unix']=time.time()
             r.record.setdefault('capacity_http_shapes',{})['prometheus-counters']=http_shape(status,headers,raw)
             require(status==200,'phase-tsdb-counter')
-            found=re.search(rb'^prometheus_tsdb_head_samples_appended_total\s+([0-9.eE+\-]+)',raw,re.M)
+            found=prometheus_counter(raw,'prometheus_tsdb_head_samples_appended_total')
             require(found is not None,'tsdb-counter-missing')
-            selected['prometheus_tsdb_head_samples_appended_total']=float(found[1])
+            selected['prometheus_tsdb_head_samples_appended_total']=found
+        counter_times[label]=observed
         return selected
-    start_counters=counters()
+    start_counters=counters('start')
     r.record['active_stage']='capacity-'+name+'-sampling'
     # Setup disk/counter snapshots are outside the fixed offered-rate phase clock.
     started=time.monotonic();next_read=next_metric=next_grafana=next_sample=started
+    if name=='recovery' and obs and 'restart_complete_monotonic' in obs:
+        seconds=obs['restart_complete_monotonic']+119-started
+        require(seconds>0,'recovery-setup-deadline')
     start_wall=time.time();max_sample_gap=0;last_sample=started
     try:
         while time.monotonic()-started<seconds:
@@ -418,6 +465,7 @@ def phase(r,sampler,stacks,name,seconds,obs):
                 last_sample=now;next_sample+=4
             time.sleep(.02)
         duration=time.monotonic()-started
+        phase_end_wall=time.time()
         for future in sample_futures:future.result(timeout=10)
         for stack in stacks:
             res=results[stack['name']]
@@ -440,7 +488,8 @@ def phase(r,sampler,stacks,name,seconds,obs):
             try:gpassed+=f.result(timeout=10)
             except Exception:gerrors+=1
         samples=[s for s in r.record['samples'] if s['phase']==name]
-        output={'duration_seconds':duration,'start_unix':start_wall,'end_unix':time.time(),'sample_count':len(samples),
+        output={'duration_seconds':duration,'start_unix':start_wall,'end_unix':phase_end_wall,
+                'postprocessing_finished_unix':time.time(),'sample_count':len(samples),
                 'max_sample_gap_seconds':max_sample_gap,'app_reads':results,
                 'actual_field_gap_seconds':{'peak':max([s.get('field_max_gap_seconds',0) for s in samples],default=0),
                                             'count':sum(len(s.get('field_gaps_seconds',{})) for s in samples)},
@@ -464,9 +513,13 @@ def phase(r,sampler,stacks,name,seconds,obs):
                          for key in app_storage_start[stack['name']]
                          for values in [[s['app_storage'][stack['name']][key] for s in samples]]}}
             for stack in stacks}
-        end_counters=counters()
+        end_counters=counters('end')
+        output['counter_observation_times']=counter_times
         output['counters_start']=start_counters;output['counters_end']=end_counters
-        output['counter_deltas']={k:end_counters.get(k,0)-start_counters.get(k,0) for k in set(start_counters)|set(end_counters)
+        output['counter_catalog_start']=counter_catalog(start_counters)
+        output['counter_catalog_end']=counter_catalog(end_counters)
+        output['counter_deltas']={k:end_counters[k]-start_counters[k] if k in start_counters and k in end_counters else None
+                                  for k in set(start_counters)|set(end_counters)
                                   if 'queue_' not in k}
         for key in ('aggregate_cpu_percent','aggregate_memory_bytes','runner_cpu_percent','runner_used_memory_bytes'):
             values=[s[key] for s in samples]
@@ -484,14 +537,16 @@ def phase(r,sampler,stacks,name,seconds,obs):
                 for values in [[s['storage'][key] for s in samples]]}
         if obs and name!='outage':
             # Raw samples over exact phase window, not a scrape-count proxy for 100 OTLP points/s.
-            expression='sum(count_over_time(rehearsal_capacity_value['+str(int(duration))+'s]))'
-            output['query_visible_synthetic_samples']=scalar(obs,expression)
-            output['query_visible_series']=scalar(obs,'count(rehearsal_capacity_value)')
+            window_ms=math.ceil((phase_end_wall-start_wall)*1000)
+            expression='sum(count_over_time(rehearsal_capacity_value['+str(window_ms)+'ms]))'
+            output['synthetic_query_window']={'start_unix':phase_end_wall-window_ms/1000,'end_unix':phase_end_wall,
+                                             'evaluation_unix':phase_end_wall,'range_milliseconds':window_ms}
+            output['query_visible_synthetic_samples']=scalar(obs,expression,at=phase_end_wall)
+            output['query_visible_series']=scalar(obs,'count(rehearsal_capacity_value)',at=phase_end_wall)
             # TSDB ingestion counters are read from Prometheus /metrics directly, never assumed scraped.
             status,_,raw=request(obs['endpoints']['prometheus'],'/metrics')
             require(status==200,'prometheus-self-metrics')
-            match=re.search(rb'^prometheus_tsdb_head_samples_appended_total\s+([0-9.eE+\-]+)',raw,re.M)
-            output['prometheus_tsdb_samples_appended_total']=float(match[1]) if match else None
+            output['prometheus_tsdb_samples_appended_total']=prometheus_counter(raw,'prometheus_tsdb_head_samples_appended_total')
         r.record['phases'][name]=output
         if active:
             target=seconds*2
@@ -552,6 +607,44 @@ def projection(r):
           'No trace/log storage or application SDK overhead measured. Hosted activation blocked; #103 platform-specific retest required.'}
 
 
+def reconcile(r,obs):
+    loaded=r.record['phases']['load'];recovery=r.record['phases']['recovery']
+    end=recovery['end_unix'];window_ms=math.ceil((end-loaded['start_unix'])*1000)
+    expression='sum(count_over_time(rehearsal_capacity_value['+str(window_ms)+'ms]))'
+    begun=time.monotonic();deadline=begun+15;previous=None;stable=0
+    while time.monotonic()<deadline:
+        status,_,raw=request(obs['endpoints']['self'],'/metrics')
+        require(status==200,'reconciliation-collector-status')
+        catalog=counter_catalog(metrics(raw.decode()))
+        require(all(item['observed'] for item in catalog.values()),'required-collector-counter-unavailable')
+        stored=scalar(obs,expression,at=end)
+        current=(catalog['exporter_sent']['value'],stored,catalog['queue_size']['value'])
+        stable=stable+1 if current==previous and current[2]==0 else 0
+        previous=current
+        if stable>=2 and time.monotonic()-begun>=6:break
+        time.sleep(1)
+    else:raise Failure('metric-settlement-deadline')
+    initial=loaded['counter_catalog_start']
+    deltas={family:catalog[family]['value']-initial[family]['value']
+            if initial[family]['observed'] else None for family in catalog if family not in ('queue_size','queue_capacity')}
+    flows=[r.record['phases'][name] for name in ('load','outage','recovery')]
+    r.record['metric_reconciliation']={
+        'source_window':{'start_unix':end-window_ms/1000,'end_unix':end,'evaluation_unix':end},
+        'observation_unix':time.time(),'settlement_wait_seconds':time.monotonic()-begun,
+        'settlement_rule':'No producer; queue empty and sent/stored stable for >=2 repeated observations after >=6s, deadline15s.',
+        'final_counter_catalog':catalog,'counter_deltas_from_preload':deltas,
+        'http_offered_points':sum(p['otlp_offered_points'] for p in flows),
+        'http_accepted_points':sum(p['otlp_accepted_points'] for p in flows),
+        'http_explicitly_rejected_points':sum(p['otlp_explicitly_rejected_points'] for p in flows),
+        'generator_failed_or_unscheduled_points':sum(p['otlp_failed_or_unscheduled_points'] for p in flows),
+        'query_visible_stored_points':stored,
+        'accepted_not_exported_after_settle_points':deltas['receiver_accepted']-deltas['exporter_sent']
+            if deltas['receiver_accepted'] is not None and deltas['exporter_sent'] is not None else None,
+        'failure_counter_semantics':'Failed send attempt-points can include retries; not a lost-point count. Enqueue failures/refusals are separate; missing baseline delta remains null.'}
+    r.check('metric-flow-reconciled',deltas['receiver_accepted']==sum(p['otlp_accepted_points'] for p in flows)
+            and deltas['exporter_sent']==stored and deltas['receiver_accepted']>=deltas['exporter_sent'])
+
+
 def capacity(r,dev,prod):
     stacks=(dev,prod)
     sampler=Sampler(r,stacks)
@@ -582,15 +675,20 @@ def capacity(r,dev,prod):
     outage_samples=[s for s in r.record['samples'] if s['phase']=='outage']
     r.check('outage-queue-growth',max(s['queue_requests'] for s in outage_samples)>0)
     r.compose(obs,'start','prometheus')
-    recovery_start=time.monotonic()
+    obs['restart_complete_monotonic']=time.monotonic()
+    obs['restart_complete_unix']=time.time()
     recovery=phase(r,sampler,stacks,'recovery',120,obs)
     r.check('recovery-query-visible-ingestion',recovery['query_visible_synthetic_samples']>0)
     # Time of first sampled recovery proof, not total measurement phase runtime.
-    resumed=[s for s in r.record['samples'] if s['phase']=='recovery' and s['queue_requests']==0
-             and s.get('newest_stored_synthetic_timestamp',0)>=recovery['start_unix']]
-    r.record['recovery_seconds_upper_bound']=resumed[0]['elapsed_seconds'] if resumed else 121
+    resumed=[s for s in r.record['samples'] if s['phase']=='recovery'
+             and 'fresh_ingestion_observed_seconds_after_restart' in s]
+    r.record['recovery_restart_complete_unix']=obs['restart_complete_unix']
+    r.record['recovery_seconds_upper_bound']=resumed[0]['fresh_ingestion_observed_seconds_after_restart'] if resumed else 121
     r.check('recovery-within-120s',r.record['recovery_seconds_upper_bound']<=120)
     latest=[s for s in r.record['samples'] if s['phase']=='recovery'][-1]
     r.check('recovery-queue-drained',latest['queue_requests']==0)
-    r.record['controlled_export_loss']={k:v for k,v in latest['collector'].items() if 'failed' in k or 'refused' in k}
+    r.record['controlled_export_failure_attempts']={
+        'semantics':'Cumulative attempt/refusal/enqueue counters; never interpreted as unique lost points.',
+        'observed_counters':{k:v for k,v in latest['collector'].items() if 'failed' in k or 'refused' in k}}
+    reconcile(r,obs)
     projection(r)

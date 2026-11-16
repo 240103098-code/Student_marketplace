@@ -587,5 +587,8 @@ def main():
 
 
 if __name__=='__main__':
-    try:sys.exit(main())
-    except Failure:print('Rehearsal invocation refused');sys.exit(1)
+    # Capacity imports the canonical module; execute that same module's main so
+    # its controlled Failure class cannot diverge from a second __main__ class.
+    from tools.rehearsal101 import main as canonical_main, Failure as CanonicalFailure
+    try:sys.exit(canonical_main())
+    except CanonicalFailure:print('Rehearsal invocation refused');sys.exit(1)

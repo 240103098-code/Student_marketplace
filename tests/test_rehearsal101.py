@@ -13,6 +13,8 @@ import socket
 import tempfile
 import time
 import threading
+import runpy
+import warnings
 import unittest
 from unittest.mock import patch
 
@@ -246,6 +248,44 @@ class RehearsalSafety(unittest.TestCase):
             value=capacity.disk(self.controller,{},outage=True)
         self.assertEqual(compose.call_count,2)
         self.assertEqual(value,{'prometheus_bytes':1024000,'wal_bytes':204800,'chunks_head_bytes':10240,'grafana_bytes':5120})
+
+    def test_absent_counter_is_unavailable_not_a_zero_observation(self):
+        missing=capacity.counter_catalog({})
+        self.assertFalse(missing['receiver_refused']['observed'])
+        self.assertIsNone(missing['receiver_refused']['value'])
+        observed=capacity.counter_catalog({'otelcol_receiver_refused_metric_points_total':0})
+        self.assertTrue(observed['receiver_refused']['observed'])
+        self.assertEqual(observed['receiver_refused']['value'],0)
+
+    def test_recovery_deadline_includes_setup_and_actual_query_observation(self):
+        obs={'restart_complete_monotonic':10,'restart_complete_unix':1000}
+        self.assertEqual(capacity.recovery_observation(obs,1001,131),121)
+        self.assertIsNone(capacity.recovery_observation(obs,999,12))
+
+    def test_prometheus_count_query_uses_explicit_phase_evaluation_time(self):
+        body=json.dumps({'status':'success','data':{'result':[]}}).encode()
+        with patch('tools.rehearsal101_capacity.request',return_value=(200,{},body)) as request:
+            capacity.query({'endpoints':{'prometheus':'http://127.0.0.1:1'}},'count(metric)',at=12345)
+        self.assertIn('time=12345',request.call_args.args[1])
+
+    def test_prometheus_labelled_sample_counter_sums_types_and_preserves_absence(self):
+        family='prometheus_tsdb_head_samples_appended_total'
+        raw=(family+'{type="float",private="DO NOT EXPORT"} 120\n'+family+'{type="histogram"} 3\n').encode()
+        self.assertEqual(capacity.prometheus_counter(raw,family),123)
+        self.assertEqual(capacity.prometheus_counter((family+' 0\n').encode(),family),0)
+        self.assertIsNone(capacity.prometheus_counter(b'unrelated_metric 20\n',family))
+
+    def test_module_cli_dispatches_canonical_main_and_controlled_failure_identity(self):
+        def controlled():
+            self.assertIs(capacity.Failure,harness.Failure)
+            raise capacity.Failure('controlled-safe-stage')
+        with patch.object(harness,'main',side_effect=controlled) as main,\
+             contextlib.redirect_stdout(io.StringIO()) as output,warnings.catch_warnings():
+            warnings.simplefilter('ignore',RuntimeWarning)
+            with self.assertRaises(SystemExit) as exit_code:runpy.run_module('tools.rehearsal101',run_name='__main__')
+        main.assert_called_once()
+        self.assertEqual(exit_code.exception.code,1)
+        self.assertEqual(output.getvalue(),'Rehearsal invocation refused\n')
 
     def test_fixture_relay_cannot_select_upstream_from_request_authority(self):
         calls=[]
