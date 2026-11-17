@@ -270,22 +270,50 @@ assert not hasattr(a.state.telemetry,'sessions')
     def test_borrowed_shared_engine_multiple_apps_concurrent_context_and_restart(self):
         database = Database(settings())
         self.stack.callback(database.dispose)
-        app1, app2 = self.app(database), self.app(database)
-        with TestClient(app1) as one, TestClient(app2) as two:
-            def fetch(pair):
-                client, digit = pair
-                return client.get("/auth/me", headers={"traceparent": "00-" + digit * 32 + "-" + digit * 16 + "-01"}).status_code
-            with ThreadPoolExecutor(max_workers=4) as pool:
-                self.assertTrue(all(value == 401 for value in pool.map(fetch, [(one, "1"), (two, "2")] * 8)))
-            self.assertEqual(len(app1.state.telemetry.listeners), 3)
-            flush(app1)
+        other = Receipt()
+        self.stack.callback(other.close)
+        app1 = self.app(database)
+        app2 = create_app(settings(TELEMETRY_ENABLED=True, TELEMETRY_ENDPOINT=other.endpoint, TELEMETRY_VERSION="2"), database)
+        with TestClient(app2) as two:
+            with TestClient(app1) as one:
+                auth1, auth2 = self.account(app1, one), self.account(app2, two)
+                def fetch(pair):
+                    client, digit, auth = pair
+                    return client.get("/categories", headers={**auth,
+                        "traceparent": "00-" + digit * 32 + "-" + digit * 16 + "-01"}).status_code
+                with ThreadPoolExecutor(max_workers=4) as pool:
+                    self.assertTrue(all(value == 200 for value in pool.map(fetch, [(one, "1", auth1), (two, "2", auth2)] * 8)))
+                self.assertEqual(len(app1.state.telemetry.listeners), 3)
+                flush(app1)
+                flush(app2)
+            self.assertEqual(two.get("/categories", headers=auth2).status_code, 200)
             flush(app2)
+        import base64
+        for receipt, own, forbidden in ((self.receipt, "1", "2"), (other, "2", "1")):
+            spans = receipt.spans()
+            self.assertFalse(any(base64.b64decode(span["traceId"]).hex() == forbidden * 32 for span in spans))
+            matching = [span for span in spans if base64.b64decode(span["traceId"]).hex() == own * 32]
+            parents = {span["spanId"] for span in matching if span["name"] == "http.request"}
+            children = [span for span in matching if span["name"] == "db.operation"]
+            self.assertTrue(children)
+            self.assertTrue(all(span["parentSpanId"] in parents for span in children))
         self.assertEqual(app1.state.telemetry.listeners, [])
         self.assertEqual(app2.state.telemetry.listeners, [])
         self.assertTrue(database.check_connection())
         with TestClient(app1) as client:
             self.assertEqual(client.get("/categories").status_code, 401)
         self.assertLess(app1.state.telemetry.health["shutdown_seconds"], 10)
+
+    def test_dns_subprocess_is_bounded_without_uninterruptible_resolver_thread(self):
+        from backend.otel_export import Transport
+        actual_run = subprocess.run
+        def stalled(args, **kwargs):
+            return actual_run([sys.executable, "-c", "import time;time.sleep(20)"], **kwargs)
+        with patch("backend.otel_export.subprocess.run", side_effect=stalled):
+            transport = Transport("http://collector:4318", "traces")
+            begin = time.monotonic()
+            self.assertFalse(transport.send(b"", 0))
+            self.assertLess(time.monotonic() - begin, 1.5)
 
     def test_absent_collector_requests_startup_and_shutdown_bounded(self):
         app = create_app(settings(TELEMETRY_ENABLED=True, TELEMETRY_ENDPOINT="http://127.0.0.1:1"))

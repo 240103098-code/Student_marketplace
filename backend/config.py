@@ -82,7 +82,7 @@ class Settings(BaseSettings):
             if (parsed.scheme not in {"http", "https"} or not parsed.hostname
                 or parsed.username or parsed.password or parsed.query or parsed.fragment
                 or parsed.path not in {"", "/"} or parsed.port == 0
-                or (parsed.scheme == "http" and not local)):
+                or not local):
                 raise ValueError()
         except (ValueError, TypeError):
             raise ValueError("TELEMETRY_ENDPOINT requires an explicit safe OTLP origin") from None

@@ -3,6 +3,9 @@
 Telemetry is disabled by default. `TELEMETRY_ENABLED=true` explicitly opts in;
 `TELEMETRY_ENDPOINT` is an OTLP HTTP origin (default loopback4318, fixture
 `http://collector:4318`). This package does not enable anything on Oracle.
+Only collector, localhost or literal loopback origins are accepted, including
+HTTPS. Owned nonloopback production destinations need a separately reviewed
+activation/configuration change.
 `TELEMETRY_SERVICE` permits only `student-marketplace`; `TELEMETRY_VERSION`
 permits a bounded numeric release/hex commit identifier (64 characters maximum).
 Environment is the existing development/test/production enumeration. No global
@@ -67,6 +70,14 @@ Collector downstream queues handle their own finite retries. Absolute1s socket
 read deadline bounds trickled response headers/body, response bytes<=4096, no
 response or exception text is logged. Fixed safe local counters report export
 health through app.state.telemetry.snapshot(), independently of app readiness.
+These are attempt/acknowledgement counters, not unique loss: a timed-out or
+partial-success failed batch can already have accepted records downstream.
+Actual receipt reconciliation must deduplicate stored identities.
+Literal loopback addresses avoid DNS. Fixed collector DNS uses an owned stdlib
+subprocess with0.3s timeout (killed/reaped on timeout), shared app-local60s positive/
+1s negative cache; no uninterruptible resolver thread. TCP connect is<=0.2s and
+all subsequent socket reads share the remaining1s total budget. Controlled stalled
+resolver subprocess testing verifies the timeout/cleanup boundary.
 Resource detectors remain off. The pinned
 SDK public BatchSpan/Log processor shutdown ignores export_timeout_millis;
 small documented subclasses use its shared internal shutdown(timeout_millis=2500)
@@ -87,11 +98,13 @@ Windows native RSS uses explicit HANDLE/function signatures; failed native reads
 omit observations and set fixed memory_collection=unavailable health. No fabricated
 zero or SDK callback traceback is emitted (#117).
 
-Current verification: eleven focused tests pass on Windows, including actual
+Current verification: twelve focused tests pass on Windows, including actual
 SDK HTTP protobuf receipt, normal registration/verification/login and DB child
 spans, controlled parent/log correlation, canaries in query/path/body/SQL/error/
 extras, actual received metric exemplars, disabled subprocess absence of SDK/workers/
-export sessions, shared-engine apps/repeated lifespan, absent Collector shutdown,
+export sessions, authenticated concurrent shared-engine DB spans with distinct
+controlled traces in independently owned destinations, repeated lifespan,
+absent Collector shutdown,
 ambient malformed headers/certs/config with independently owned app destinations,
 actual redirect/failure/oversized response recovery, positive actual native RSS,
 normal periodic/shutdown collection and controlled unavailable omission without

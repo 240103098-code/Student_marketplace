@@ -7,7 +7,13 @@ compatibility; responses/exceptions are never interpolated into diagnostics.
 """
 import http.client
 import io
+import ipaddress
+import json
+import os
+import socket
 import ssl
+import subprocess
+import sys
 import threading
 import time
 from urllib.parse import urlsplit
@@ -36,9 +42,10 @@ class DeadlineSocket:
 
 
 class Transport:
-    def __init__(self, endpoint, signal):
+    def __init__(self, endpoint, signal, resolver=None):
         self.origin = urlsplit(endpoint)
         self.signal = signal
+        self.resolver = resolver or Resolver(self.origin.hostname)
         self.closed = False
         self.lock = threading.Lock()
         self.counters = dict(batches_attempted=0, records_attempted=0, records_accepted=0,
@@ -57,12 +64,16 @@ class Transport:
         try:
             deadline = time.monotonic() + 1
             parsed = self.origin
-            if parsed.scheme == "https":
-                # Default verified system trust only; never OTEL cert/key env.
-                connection = http.client.HTTPSConnection(parsed.hostname, parsed.port, timeout=.2,
-                    context=ssl.create_default_context())
-            else:
-                connection = http.client.HTTPConnection(parsed.hostname, parsed.port, timeout=.2)
+            address = self.resolver.resolve(deadline)
+            family = socket.AF_INET6 if ":" in address else socket.AF_INET
+            class Connection(http.client.HTTPConnection):
+                def connect(inner):
+                    inner.sock = socket.socket(family, socket.SOCK_STREAM)
+                    inner.sock.settimeout(min(.2, max(.001, deadline - time.monotonic())))
+                    inner.sock.connect((address, parsed.port or (443 if parsed.scheme == "https" else 80)))
+                    if parsed.scheme == "https":
+                        inner.sock = ssl.create_default_context().wrap_socket(inner.sock, server_hostname=parsed.hostname)
+            connection = Connection(parsed.hostname, parsed.port, timeout=.2)
             connection.connect()
             connection.sock = DeadlineSocket(connection.sock, deadline)
             connection.request("POST", "/v1/" + self.signal, payload,
@@ -98,6 +109,42 @@ class Transport:
         self.closed = True
 
 
+class Resolver:
+    """One bounded app-owned cached DNS lookup; no uninterruptible DNS worker."""
+    def __init__(self, hostname):
+        self.hostname = hostname
+        self.lock = threading.Lock()
+        self.value, self.expires = None, 0
+    def resolve(self, deadline):
+        try:
+            return str(ipaddress.ip_address(self.hostname))
+        except ValueError:
+            pass
+        if self.hostname == "localhost":
+            return "127.0.0.1"
+        if not self.lock.acquire(timeout=max(.001, deadline - time.monotonic())):
+            raise TimeoutError()
+        try:
+            if time.monotonic() < self.expires:
+                if self.value is None:
+                    raise TimeoutError()
+                return self.value
+            # Only fixed collector is a nonliteral hostname permitted by config.
+            script = "import socket,json;print(json.dumps([v[4][0] for v in socket.getaddrinfo('collector',None,socket.AF_INET,socket.SOCK_STREAM)]))"
+            env = {key: os.environ[key] for key in ("SYSTEMROOT", "WINDIR", "LANG") if key in os.environ}
+            self.value, self.expires = None, time.monotonic() + 1
+            value = subprocess.run([sys.executable, "-c", script], capture_output=True, env=env,
+                timeout=min(.3, max(.001, deadline - time.monotonic())), check=True)
+            addresses = json.loads(value.stdout[:4096])
+            address = ipaddress.ip_address(addresses[0])
+            if not address.is_private:
+                raise ValueError()
+            self.value, self.expires = str(address), time.monotonic() + 60
+            return self.value
+        finally:
+            self.lock.release()
+
+
 def exporters(endpoint):
     from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
     from opentelemetry.sdk._logs.export import LogRecordExporter, LogRecordExportResult
@@ -105,16 +152,17 @@ def exporters(endpoint):
     from opentelemetry.exporter.otlp.proto.common.trace_encoder import encode_spans
     from opentelemetry.exporter.otlp.proto.common._log_encoder import encode_logs
     from opentelemetry.exporter.otlp.proto.common.metrics_encoder import encode_metrics
+    resolver = Resolver(urlsplit(endpoint).hostname)
     class Spans(SpanExporter):
         def __init__(self):
-            self.transport = Transport(endpoint, "traces")
+            self.transport = Transport(endpoint, "traces", resolver)
         def export(self, batch):
             return SpanExportResult.SUCCESS if self.transport.send(encode_spans(batch).SerializeToString(), len(batch)) else SpanExportResult.FAILURE
         def shutdown(self):
             self.transport.shutdown()
     class Logs(LogRecordExporter):
         def __init__(self):
-            self.transport = Transport(endpoint, "logs")
+            self.transport = Transport(endpoint, "logs", resolver)
         def export(self, batch):
             return LogRecordExportResult.SUCCESS if self.transport.send(encode_logs(batch).SerializeToString(), len(batch)) else LogRecordExportResult.FAILURE
         def shutdown(self):
@@ -124,7 +172,7 @@ def exporters(endpoint):
     class Metrics(MetricExporter):
         def __init__(self):
             super().__init__()
-            self.transport = Transport(endpoint, "metrics")
+            self.transport = Transport(endpoint, "metrics", resolver)
         def export(self, data, timeout_millis=10000, **kwargs):
             count = sum(len(metric.data.data_points) for resource in data.resource_metrics
                 for scope in resource.scope_metrics for metric in scope.metrics)
