@@ -1,0 +1,50 @@
+name: Disposable three-signal telemetry 103
+on:
+  push:
+    branches: [issue-103-otel]
+  workflow_dispatch:
+    inputs:
+      phase:
+        description: Preflight or full split acceptance phases
+        type: choice
+        default: preflight
+        options: [preflight, full, functional, capacity]
+permissions:
+  contents: read
+concurrency:
+  group: disposable103-${{ github.ref }}-${{ github.event.inputs.phase || 'preflight' }}
+  cancel-in-progress: false
+jobs:
+  rehearsal:
+    if: github.repository == '240103098-code/Student_marketplace' && github.ref == 'refs/heads/issue-103-otel'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        part: ${{ fromJSON(github.event.inputs.phase == 'full' && '["functional","capacity"]' || format('["{0}"]', github.event.inputs.phase || 'preflight')) }}
+    steps:
+      - name: Start explicit job setup budget
+        run: echo "REHEARSAL103_SETUP_STARTED_UNIX=$(date +%s)" >> "$GITHUB_ENV"
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: 3.13.15
+      - name: Install exact isolated tools
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install -r requirements-dev.lock
+      - name: Run actual owned three-signal phase
+        env:
+          REHEARSAL103_PART: ${{ matrix.part }}
+        run: .venv/bin/python -m tools.rehearsal103 --confirm-disposable issue-103-synthetic-only --part "$REHEARSAL103_PART"
+      - name: Publish constructed safe summary only
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: rehearsal103-${{ matrix.part }}-${{ github.sha }}-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: error
+          path: rehearsal103-safe/summary.json

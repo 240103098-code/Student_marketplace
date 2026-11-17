@@ -113,4 +113,5 @@ actual redirect/failure/oversized response recovery, positive actual native RSS,
 normal periodic/shutdown collection and controlled unavailable omission without
 callback diagnostic payloads, and receiver/config bounds.
 These focused tests are not the required actual Collector/Linux capacity evidence.
-The Linux phase design and measured evidence will be added before QA handoff.
+The [bounded Linux phase design](telemetry103-rehearsal.md) is staged separately;
+actual measured evidence remains required before final QA handoff.

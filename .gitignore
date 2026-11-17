@@ -22,6 +22,7 @@ e2e/test-results/
 e2e/playwright-report/
 ci-safe/
 rehearsal101-safe/
+rehearsal103-safe/
 compose-verification.json
 compose-desktop.png
 compose-mobile.png

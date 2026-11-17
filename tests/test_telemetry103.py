@@ -355,12 +355,12 @@ assert not hasattr(a.state.telemetry,'sessions')
         with self.assertRaises(ValueError):
             decode("traces", b"x" * (REQUEST_LIMIT + 1))
         with tempfile.TemporaryDirectory() as directory:
-            store = Store(directory, limit=50)
+            store = Store(directory, limit=16384)
             for i in range(10):
-                self.assertTrue(store.append(b"x" * 30, 1))
-            self.assertLessEqual(sum(p.stat().st_size for p in Path(directory).iterdir()), 50)
+                self.assertTrue(store.append(b"x" * 10000, 1))
+            self.assertLessEqual(sum(p.stat().st_size for p in Path(directory).iterdir()), 16384)
             self.assertEqual(store.evicted, 9)
-            self.assertFalse(store.append(b"x" * 51, 1))
+            self.assertFalse(store.append(b"x" * 16385, 1))
 
     def test_endpoint_and_resource_config_reject_arbitrary_identity(self):
         for value in ("person@example.invalid", "host-secret-name", "a" * 100):

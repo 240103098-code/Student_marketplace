@@ -4,8 +4,11 @@ One process/directory per signal permits independent destination failures. No ra
 record is returned over HTTP. Decoded files are private and never CI artifacts.
 """
 import argparse
+from collections import deque
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
+import math
+import os
 from pathlib import Path
 import time
 
@@ -13,7 +16,7 @@ REQUEST_LIMIT = 65536
 STORE_LIMIT = 128 * 1024 * 1024
 RECORD_LIMIT = 2048
 RETENTION_SECONDS = 24 * 3600
-FILE_LIMIT = 4096
+FILE_LIMIT = 16384
 
 
 def decode(signal, payload):
@@ -54,23 +57,33 @@ class Store:
         if self.directory.is_symlink():
             raise ValueError("private-directory")
         self.limit = min(limit, STORE_LIMIT)
+        self.block_size = os.statvfs(self.directory).f_frsize if hasattr(os, "statvfs") else 1
         self.sequence = time.time_ns()
         self.accepted = self.refused = self.evicted = 0
+        self.files = deque()
+        self.bytes = 0
+        for path in sorted(self.directory.glob("*.json")):
+            if path.is_symlink():
+                raise ValueError("private-file")
+            info = path.stat()
+            size = info.st_blocks * 512 if hasattr(info, "st_blocks") else info.st_size
+            self.files.append((path, size, path.stat().st_mtime))
+            self.bytes += size
 
     def append(self, encoded, count):
         now = time.time()
-        files = sorted(self.directory.glob("*.json"))
-        sizes = [(path, path.stat().st_size) for path in files]
-        size = sum(length for path, length in sizes)
-        while sizes and (size + len(encoded) > self.limit or len(sizes) >= FILE_LIMIT
-                         or now - sizes[0][0].stat().st_mtime >= RETENTION_SECONDS):
-            path, length = sizes.pop(0)
+        needed = math.ceil(len(encoded) / self.block_size) * self.block_size
+        directory_info = self.directory.stat()
+        directory_cost = directory_info.st_blocks * 512 if hasattr(directory_info, "st_blocks") else 0
+        while self.files and (self.bytes + needed + directory_cost > self.limit or len(self.files) >= FILE_LIMIT
+                         or now - self.files[0][2] >= RETENTION_SECONDS):
+            path, length, timestamp = self.files.popleft()
             if path.is_symlink() or path.parent != self.directory:
                 raise ValueError("private-file")
             path.unlink()
-            size -= length
+            self.bytes -= length
             self.evicted += 1
-        if len(encoded) > self.limit:
+        if needed + directory_cost > self.limit:
             self.refused += count
             return False
         self.sequence += 1
@@ -78,16 +91,38 @@ class Store:
         with path.open("xb") as target:
             path.chmod(0o600)
             target.write(encoded)
+        info = path.stat()
+        allocated = info.st_blocks * 512 if hasattr(info, "st_blocks") else info.st_size
+        self.files.append((path, allocated, now))
+        self.bytes += allocated
+        directory_info = self.directory.stat()
+        directory_cost = directory_info.st_blocks * 512 if hasattr(directory_info, "st_blocks") else 0
+        while self.files and self.bytes + directory_cost > self.limit:
+            old, size, timestamp = self.files.popleft()
+            old.unlink()
+            self.bytes -= size
+            self.evicted += 1
         self.accepted += count
         return True
 
 
-def server(signal, directory, port=4318):
+def make_server(signal, directory, port=4318, host="0.0.0.0"):
     store = Store(directory)
     class Handler(BaseHTTPRequestHandler):
         timeout = 2
+        def setup(self):
+            from backend.otel_export import DeadlineSocket
+            self.request = DeadlineSocket(self.request, time.monotonic() + 2)
+            super().setup()
         def log_message(self, *args):
             pass
+        def send_error(self, code, *ignored, **kwargs):
+            body = b"Receipt unavailable."
+            self.send_response(code, "Receipt unavailable")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            self.close_connection = True
         def do_GET(self):
             if self.path != "/health":
                 self.send_error(404)
@@ -122,8 +157,13 @@ def server(signal, directory, port=4318):
                 store.refused += 1
                 self.send_error(400)
                 self.close_connection = True
-    instance = HTTPServer(("0.0.0.0", port), Handler)
+    instance = HTTPServer((host, port), Handler)
     instance.timeout = 2
+    return instance
+
+
+def server(signal, directory, port=4318):
+    instance = make_server(signal, directory, port)
     instance.serve_forever(poll_interval=.2)
 
 
