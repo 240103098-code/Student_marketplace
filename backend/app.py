@@ -98,6 +98,6 @@ def create_app(settings: Settings, database: Database | None = None, *, sender=N
     from backend.openapi_contract import install_contract
     install_contract(app)
     from backend.telemetry import Telemetry, TelemetryMiddleware
-    app.state.telemetry = Telemetry(settings, database.engine, app.routes)
+    app.state.telemetry = Telemetry(settings, database.engine if settings.telemetry_enabled else None, app.routes)
     app.add_middleware(TelemetryMiddleware, telemetry=app.state.telemetry)
     return app

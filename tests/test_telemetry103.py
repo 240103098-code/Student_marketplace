@@ -116,6 +116,27 @@ assert not hasattr(a.state.telemetry,'sessions')
         result = subprocess.run([sys.executable, "-c", script], capture_output=True, timeout=15)
         self.assertEqual(result.returncode, 0, result.stderr.decode())
 
+    def test_disabled_serviceless_schema_lifespan_never_reads_engine_or_borrowed_ownership(self):
+        class Borrowed:
+            @property
+            def engine(self):
+                raise AssertionError("Disabled telemetry must not inspect engine")
+            def dispose(self):
+                raise AssertionError("Borrowed infrastructure must not be disposed")
+        from tools.export_openapi import schema
+        expected = schema()
+        for values in ({}, {"TELEMETRY_ENABLED": False}):
+            with self.subTest(values=values), patch("backend.telemetry.resident_bytes", side_effect=AssertionError("No native observer")), \
+                patch("backend.telemetry.Telemetry.install_database", side_effect=AssertionError("No engine events")), \
+                patch("socket.create_connection", side_effect=AssertionError("No exporter connection")):
+                app = create_app(settings(**values), database=Borrowed(), sender=object())
+                self.assertEqual(app.openapi(), expected)
+                with TestClient(app) as client:
+                    self.assertEqual(client.get("/categories").status_code, 401)
+                    self.assertEqual(client.post("/auth/login", json={}).status_code, 422)
+                self.assertIsNone(app.state.telemetry.engine)
+                self.assertFalse(hasattr(app.state.telemetry, "exporters"))
+
     def test_actual_request_db_log_metrics_parent_and_exemplar_correlation(self):
         app = self.app()
         with TestClient(app) as client:

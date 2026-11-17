@@ -98,7 +98,10 @@ Windows native RSS uses explicit HANDLE/function signatures; failed native reads
 omit observations and set fixed memory_collection=unavailable health. No fabricated
 zero or SDK callback traceback is emitted (#117).
 
-Current verification: twelve focused tests pass on Windows, including actual
+Disabled construction never reads a borrowed database engine; the original
+serviceless canonical OpenAPI/export fixtures remain supported (#118).
+
+Current verification: thirteen focused tests pass on Windows, including actual
 SDK HTTP protobuf receipt, normal registration/verification/login and DB child
 spans, controlled parent/log correlation, canaries in query/path/body/SQL/error/
 extras, actual received metric exemplars, disabled subprocess absence of SDK/workers/
