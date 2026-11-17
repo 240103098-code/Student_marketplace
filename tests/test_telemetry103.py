@@ -3,6 +3,9 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
+import io
+import logging
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -11,13 +14,14 @@ import threading
 import time
 import unittest
 import uuid
+from unittest.mock import Mock, patch
 
 from fastapi.testclient import TestClient
 from sqlalchemy import text
 from backend.app import create_app
 from backend.config import Settings
 from backend.database import Database
-from backend.telemetry import parent_context
+from backend.telemetry import parent_context, resident_bytes
 from tools.otel103_receiver import decode, Store, REQUEST_LIMIT
 
 
@@ -30,6 +34,8 @@ class Receipt:
     def __init__(self):
         self.records = {key: [] for key in ("traces", "logs", "metrics")}
         records = self.records
+        self.status, self.response_body, self.location = 200, b"", ""
+        receipt = self
         class Handler(BaseHTTPRequestHandler):
             def log_message(self, *args):
                 pass
@@ -37,9 +43,15 @@ class Receipt:
                 signal = self.path.rsplit("/", 1)[-1]
                 value, count = decode(signal, self.rfile.read(int(self.headers["Content-Length"])))
                 records[signal].append(json.loads(value))
-                self.send_response(200)
-                self.send_header("Content-Length", "0")
+                self.send_response(receipt.status)
+                self.send_header("Content-Length", str(len(receipt.response_body)))
+                if receipt.location:
+                    self.send_header("Location", receipt.location)
                 self.end_headers()
+                try:
+                    self.wfile.write(receipt.response_body)
+                except OSError:
+                    pass
         self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
@@ -125,6 +137,110 @@ assert not hasattr(a.state.telemetry,'sessions')
         names = {metric["name"] for p in self.receipt.records["metrics"] for r in p["resourceMetrics"]
             for scope in r["scopeMetrics"] for metric in scope["metrics"]}
         self.assertTrue({"http.server.requests", "http.server.request.duration", "process.cpu.time", "process.memory.usage"} <= names)
+        exemplars = [exemplar for p in self.receipt.records["metrics"] for r in p["resourceMetrics"]
+            for scope in r["scopeMetrics"] for metric in scope["metrics"]
+            for point in metric.get("histogram", {}).get("dataPoints", []) for exemplar in point.get("exemplars", [])]
+        received = {(span["traceId"], span["spanId"]) for span in spans}
+        self.assertTrue(any((e.get("traceId"), e.get("spanId")) in received for e in exemplars))
+
+    def test_ambient_config_never_parsed_or_forwarded_and_apps_have_separate_destinations(self):
+        canary = "PRIVATE103_" + uuid.uuid4().hex
+        environ = {"OTEL_RESOURCE_ATTRIBUTES": "private=" + canary, "OTEL_SERVICE_NAME": canary,
+            "OTEL_EXPORTER_OTLP_HEADERS": canary, "OTEL_EXPORTER_OTLP_ENDPOINT": "http://127.0.0.1:1",
+            "OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE": canary, "OTEL_EXPORTER_OTLP_CLIENT_KEY": canary,
+            "HTTP_PROXY": "http://127.0.0.1:1", "HTTPS_PROXY": "http://127.0.0.1:1"}
+        for signal in ("TRACES", "LOGS", "METRICS"):
+            for key in ("HEADERS", "CLIENT_CERTIFICATE", "CLIENT_KEY", "CERTIFICATE"):
+                environ["OTEL_EXPORTER_OTLP_" + signal + "_" + key] = canary
+            environ["OTEL_EXPORTER_OTLP_" + signal + "_ENDPOINT"] = "http://127.0.0.1:1"
+            environ["OTEL_PYTHON_EXPORTER_OTLP_HTTP_" + signal + "_CREDENTIAL_PROVIDER"] = canary
+        other = Receipt()
+        self.stack.callback(other.close)
+        stream = io.StringIO()
+        handler = logging.StreamHandler(stream)
+        root = logging.getLogger()
+        original_handlers = list(root.handlers)
+        root.addHandler(handler)
+        try:
+            # The replaced HTTP package is no longer a runtime dependency. A
+            # poison module preserves the original Session.send interception:
+            # neither importing nor invoking an ambient Requests path is needed.
+            poisoned_requests = Mock()
+            poisoned_requests.Session.send.side_effect = AssertionError("ambient transport forbidden")
+            with patch.dict(os.environ, environ), patch.dict(sys.modules, {"requests": poisoned_requests}):
+                one = self.app()
+                two = create_app(settings(TELEMETRY_ENABLED=True, TELEMETRY_ENDPOINT=other.endpoint, TELEMETRY_VERSION="2"))
+                with TestClient(two) as c2:
+                    with TestClient(one) as c1:
+                        self.assertEqual(c1.get("/categories").status_code, 401)
+                        self.assertEqual(c2.get("/categories").status_code, 401)
+                        flush(one)
+                        flush(two)
+                    before = len(other.spans())
+                    self.assertEqual(c2.get("/auth/me").status_code, 401)
+                    flush(two)
+                    self.assertGreater(len(other.spans()), before)
+                poisoned_requests.Session.send.assert_not_called()
+                poisoned_requests.Session.assert_not_called()
+                self.assertEqual(os.environ["OTEL_EXPORTER_OTLP_HEADERS"], canary)
+            self.assertNotIn(canary, stream.getvalue())
+            self.assertNotIn(canary, json.dumps([self.receipt.records, other.records]))
+            self.assertTrue(all(self.receipt.records[signal] and other.records[signal] for signal in ("traces", "logs", "metrics")))
+        finally:
+            root.removeHandler(handler)
+        self.assertEqual(root.handlers, original_handlers)
+
+    def test_actual_resident_memory_periodic_shutdown_and_safe_native_failure(self):
+        for _ in range(20):
+            self.assertGreater(resident_bytes(), 1024 * 1024)
+            self.assertLess(resident_bytes(), 128 * 1024 ** 3)
+        stream = io.StringIO()
+        handler = logging.StreamHandler(stream)
+        logging.getLogger().addHandler(handler)
+        self.stack.callback(logging.getLogger().removeHandler, handler)
+        app = self.app()
+        with TestClient(app) as client:
+            self.assertEqual(client.get("/categories").status_code, 401)
+            time.sleep(1.2)
+            flush(app)
+            self.assertEqual(app.state.telemetry.health["memory_collection"], "available")
+            with patch("backend.telemetry.resident_bytes", side_effect=OSError("PRIVATE_NATIVE_103")):
+                flush(app)
+                self.assertEqual(app.state.telemetry.snapshot()["memory_collection"], "unavailable")
+                self.assertEqual(client.get("/auth/me").status_code, 401)
+        points = [p for document in self.receipt.records["metrics"] for r in document["resourceMetrics"]
+            for scope in r["scopeMetrics"] for metric in scope["metrics"] if metric["name"] == "process.memory.usage"
+            for p in metric["gauge"]["dataPoints"]]
+        self.assertTrue(points)
+        self.assertTrue(all(float(p.get("asInt", p.get("asDouble", 0))) > 0 for p in points))
+        self.assertNotIn("PRIVATE_NATIVE_103", stream.getvalue())
+        self.assertNotIn("Traceback", stream.getvalue())
+
+    def test_actual_redirect_failure_and_oversize_response_are_safe_and_recover(self):
+        other = Receipt()
+        self.stack.callback(other.close)
+        canary = "PRIVATE_RESPONSE_103_" + uuid.uuid4().hex
+        stream = io.StringIO()
+        handler = logging.StreamHandler(stream)
+        logging.getLogger().addHandler(handler)
+        self.stack.callback(logging.getLogger().removeHandler, handler)
+        app = self.app()
+        with TestClient(app) as client:
+            for status, payload in ((302, canary.encode()), (503, canary.encode()), (200, b"x" * 4097)):
+                self.receipt.status = status
+                self.receipt.response_body = payload
+                self.receipt.location = other.endpoint
+                self.assertEqual(client.get("/categories").status_code, 401)
+                flush(app)
+            snapshot = app.state.telemetry.snapshot()
+            self.assertTrue(all(item["records_failed"] > 0 for item in snapshot["exports"].values()))
+            self.assertFalse(any(other.records.values()))
+            self.receipt.status, self.receipt.response_body = 200, b""
+            self.assertEqual(client.get("/auth/me").status_code, 401)
+            flush(app)
+            self.assertTrue(all(item["records_accepted"] > 0 for item in app.state.telemetry.snapshot()["exports"].values()))
+        self.assertNotIn(canary, stream.getvalue())
+        self.assertNotIn("Traceback", stream.getvalue())
 
     def test_private_canaries_absent_from_all_decoded_signals(self):
         canary = "PRIVATE103_" + uuid.uuid4().hex

@@ -1,4 +1,5 @@
 # Contract verification dependencies; runtime pins remain unchanged.
+# Includes the exact SDK/OTLP encoder runtime resolution from requirements.lock.
 -r requirements.lock
 attrs==26.1.0
 jsonschema-specifications==2025.9.1

@@ -40,7 +40,13 @@ def resident_bytes():
             (key, ctypes.c_size_t) for key in ("peak", "rss", "peak_pool", "pool", "peak_nonpool", "nonpool", "page", "peak_page")]
     values = Counters()
     values.cb = ctypes.sizeof(values)
-    ctypes.windll.psapi.GetProcessMemoryInfo(ctypes.windll.kernel32.GetCurrentProcess(), ctypes.byref(values), values.cb)
+    current = ctypes.windll.kernel32.GetCurrentProcess
+    current.restype = wintypes.HANDLE
+    query = ctypes.windll.psapi.GetProcessMemoryInfo
+    query.argtypes = [wintypes.HANDLE, ctypes.POINTER(Counters), wintypes.DWORD]
+    query.restype = wintypes.BOOL
+    if not query(current(), ctypes.byref(values), values.cb):
+        raise OSError("Process memory observation unavailable")
     return values.rss
 
 
@@ -73,26 +79,7 @@ class Telemetry:
         from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
         from opentelemetry.sdk.metrics.view import View
         from opentelemetry.metrics import Observation
-        from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-        from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
-        from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
-        from opentelemetry.exporter.otlp.proto.http import Compression
-        import requests
-
-        class SafeSession(requests.Session):
-            """Supported exporter session hook: no ambient proxy/auth/header capture."""
-            def __init__(self):
-                super().__init__()
-                self.trust_env = False
-            def request(self, method, url, **kwargs):
-                kwargs.update(headers={"Content-Type": "application/x-protobuf"},
-                              timeout=(.2, .5), verify=True, cert=None, allow_redirects=False)
-                response = super().request(method, url, **kwargs)
-                if response.status_code >= 400:
-                    # SDK diagnostics may interpolate response text/reason.
-                    response._content = b""
-                    response.reason = "Telemetry destination unavailable"
-                return response
+        from backend.otel_export import exporters
 
         class BoundedSpans(BatchSpanProcessor):
             def shutdown(self):
@@ -105,30 +92,21 @@ class Telemetry:
         resource = Resource({"service.name": self.settings.telemetry_service,
             "service.version": self.settings.telemetry_version,
             "deployment.environment.name": self.settings.app_env})
-        self.sessions = []
-        self.exporters = []
-        def exporter(cls, signal):
-            session = SafeSession()
-            self.sessions.append(session)
-            value = cls(endpoint=self.settings.telemetry_endpoint + "/v1/" + signal,
-                        headers={}, timeout=1, compression=Compression.NoCompression,
-                        session=session, max_request_size=65536)
-            self.exporters.append(value)
-            return value
+        self.exporters = exporters(self.settings.telemetry_endpoint)
         self.traces = TracerProvider(resource=resource, sampler=ParentBased(TraceIdRatioBased(1)),
             shutdown_on_exit=False, span_limits=SpanLimits(max_attributes=8, max_events=0,
                 max_links=0, max_attribute_length=128))
-        self.span_processor = BoundedSpans(exporter(OTLPSpanExporter, "traces"),
+        self.span_processor = BoundedSpans(self.exporters[0],
             max_queue_size=128, max_export_batch_size=32, schedule_delay_millis=1000,
             export_timeout_millis=1000)
         self.traces.add_span_processor(self.span_processor)
         self.logs = LoggerProvider(resource=resource, shutdown_on_exit=False,
             log_record_limits=LogRecordLimits(max_attributes=8, max_attribute_length=128))
-        self.log_processor = BoundedLogs(exporter(OTLPLogExporter, "logs"),
+        self.log_processor = BoundedLogs(self.exporters[1],
             max_queue_size=128, max_export_batch_size=32, schedule_delay_millis=1000,
             export_timeout_millis=1000)
         self.logs.add_log_record_processor(self.log_processor)
-        self.reader = PeriodicExportingMetricReader(exporter(OTLPMetricExporter, "metrics"),
+        self.reader = PeriodicExportingMetricReader(self.exporters[2],
             export_interval_millis=1000, export_timeout_millis=1000)
         keys = {"http.route", "http.request.method", "http.response.status_class", "outcome"}
         self.metrics = MeterProvider(resource=resource, metric_readers=[self.reader],
@@ -141,8 +119,17 @@ class Telemetry:
         self.duration = meter.create_histogram("http.server.request.duration", unit="s")
         meter.create_observable_counter("process.cpu.time", callbacks=[
             lambda options: [Observation(time.process_time())]], unit="s")
-        meter.create_observable_gauge("process.memory.usage", callbacks=[
-            lambda options: [Observation(resident_bytes())]], unit="By")
+        def memory(options):
+            try:
+                value = resident_bytes()
+                if value <= 0:
+                    raise ValueError()
+                self.health["memory_collection"] = "available"
+                return [Observation(value)]
+            except Exception:
+                self.health["memory_collection"] = "unavailable"
+                return []
+        meter.create_observable_gauge("process.memory.usage", callbacks=[memory], unit="By")
         self.install_database()
         self.running = True
         self.health.update(started=True)
@@ -200,9 +187,17 @@ class Telemetry:
         self.traces.shutdown()
         self.logs.shutdown()
         self.metrics.shutdown(timeout_millis=max(1, int((8 - (time.monotonic() - started)) * 1000)))
-        for session in self.sessions:
-            session.close()
         self.health.update(started=False, shutdown_seconds=time.monotonic() - started)
+
+    def snapshot(self):
+        """Safe local collection health, separate from application readiness."""
+        result = dict(self.health)
+        if self.running:
+            result["exports"] = {signal: dict(value.transport.counters)
+                for signal, value in zip(("traces", "logs", "metrics"), self.exporters)}
+            result["queues"] = {"traces": len(self.span_processor._batch_processor._queue),
+                "logs": len(self.log_processor._batch_processor._queue), "capacity_records_each": 128}
+        return result
 
 
 class TelemetryMiddleware:
