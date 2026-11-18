@@ -423,7 +423,7 @@ section[aria-label="Listing photo gallery"], section[aria-label="Seller contact"
 .chip:hover { background: var(--hover-surface); }
 .chip:active { transform: translateY(1px); }
 .chip[aria-pressed="true"] { border: 2px solid var(--accent); background: var(--accent-soft); color: var(--accent-active); font-weight: 800; padding: 0 calc(var(--space-4) - 1px); }
-.chip[aria-pressed="true"]::before { content: "\2713"; font-weight: 800; }
+.chip[aria-pressed="true"]::before { content: "\2713"; content: "\2713" / ""; font-weight: 800; }
 .catalog-chips__skeletons { display: contents; }
 .chip--skeleton { width: 5.5rem; border-color: transparent; }
 .catalog-chips-error { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
@@ -472,6 +472,8 @@ section[aria-label="Listing photo gallery"], section[aria-label="Seller contact"
 .guest-strip + .preview-note { margin-top: var(--space-4); }
 @keyframes card-in { from { opacity: 0; transform: translateY(8px); } }
 @keyframes panel-in { from { opacity: 0; transform: translateY(-6px); } }
+@keyframes panel-out { to { opacity: 0; transform: translateY(-6px); visibility: hidden; } }
+.catalog-panel--closing { animation: panel-out 200ms var(--ease) forwards; pointer-events: none; }
 @media (max-width: 1100px) { .catalog-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 600px) {
   .catalog-chips { flex-wrap: nowrap; overflow-x: auto; padding: 3px; margin: -3px; scrollbar-width: thin; overscroll-behavior-x: contain; }

@@ -61,6 +61,19 @@ test('Filters toggle exposes aria-expanded/aria-controls, counts applied filters
  fireEvent.click(toggle);expect(toggle.getAttribute('aria-expanded')).toBe('true');expect(panel.hidden).toBe(false);expect(within(panel).getByLabelText('Minimum price (KZT)').getAttribute('inputmode')).toBe('decimal');expect(within(screen.getByRole('form',{name:'Search and filter listings'})).getByRole('button',{name:'Apply filters'})).toBeTruthy();
  change('Condition','new');change('Minimum price (KZT)','5');apply();await waitFor(()=>expect(feedParams()).toEqual({limit:'20',offset:'0',condition:'new',min_price:'5'}));expect(screen.getByRole('button',{name:'Filters (2)'})).toBeTruthy();fireEvent.click(screen.getByRole('button',{name:'Filters (2)'}));expect(screen.getByRole('button',{name:'Filters (2)'}).getAttribute('aria-expanded')).toBe('false');
 });
+test('closing the inline panel animates for 200ms but updates state at once and is inert meanwhile',async()=>{
+ setup(()=>Promise.resolve(res(200,page([card(7)]))));await open();await screen.findByRole('heading',{name:'Campus item 7'});const toggle=screen.getByRole('button',{name:'Filters'});fireEvent.click(toggle);const panel=document.getElementById('catalog-filter-panel');expect(panel.inert).toBe(false);expect(panel.className).not.toContain('closing');
+ fireEvent.click(toggle);expect(toggle.getAttribute('aria-expanded')).toBe('false');expect(panel.hidden).toBe(false);expect(panel.inert).toBe(true);expect(panel.className).toContain('catalog-panel--closing');
+ await waitFor(()=>expect(panel.hidden).toBe(true));expect(panel.className).not.toContain('closing');fireEvent.click(toggle);expect(panel.hidden).toBe(false);expect(panel.inert).toBe(false);
+});
+test('with reduced motion the inline panel closes without a closing state',async()=>{
+ vi.stubGlobal('matchMedia',q=>({matches:q.includes('reduce'),media:q,addEventListener(){},removeEventListener(){}}));
+ setup(()=>Promise.resolve(res(200,page([card(7)]))));await open();await screen.findByRole('heading',{name:'Campus item 7'});const toggle=screen.getByRole('button',{name:'Filters'});fireEvent.click(toggle);fireEvent.click(toggle);expect(document.getElementById('catalog-filter-panel').hidden).toBe(true);
+});
+test('at 768px aria-controls is only present while the sheet is open',async()=>{
+ vi.stubGlobal('matchMedia',q=>({matches:q.includes('768'),media:q,addEventListener(){},removeEventListener(){}}));
+ setup(()=>Promise.resolve(res(200,page([card(7)]))));await open();await screen.findByRole('heading',{name:'Campus item 7'});const toggle=screen.getByRole('button',{name:'Filters'});expect(toggle.hasAttribute('aria-controls')).toBe(false);fireEvent.click(toggle);expect(document.getElementById(toggle.getAttribute('aria-controls'))).toBeTruthy();
+});
 test('an invalid price in a closed panel opens it and sends no request',async()=>{
  setup(()=>Promise.resolve(res(200,page([card(7)]))));await open();await screen.findByRole('heading',{name:'Campus item 7'});const toggle=screen.getByRole('button',{name:'Filters'});change('Minimum price (KZT)','1e2');apply();expect(screen.getByRole('alert').textContent).toContain('Use an unsigned KZT price');expect(toggle.getAttribute('aria-expanded')).toBe('true');expect(feeds()).toHaveLength(1);
 });

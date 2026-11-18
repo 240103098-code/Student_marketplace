@@ -32,11 +32,13 @@ function useSheet(){
 }
 const skeletonCount=8;
 export function Marketplace({navigate}){
- const auth=useAuth(),[categories,setCategories]=useState(null),[categoryError,setCategoryError]=useState(false),[categoryRetry,setCategoryRetry]=useState(0),[draft,setDraft]=useState(empty),[applied,setApplied]=useState(empty),[offset,setOffset]=useState(0),[page,setPage]=useState(null),[loading,setLoading]=useState(true),[error,setError]=useState(false),[validation,setValidation]=useState(''),[retry,setRetry]=useState(0),[open,setOpen]=useState(false),sheet=useSheet(),anchor=useRef(null),conditionRef=useRef(null);
+ const auth=useAuth(),[categories,setCategories]=useState(null),[categoryError,setCategoryError]=useState(false),[categoryRetry,setCategoryRetry]=useState(0),[draft,setDraft]=useState(empty),[applied,setApplied]=useState(empty),[offset,setOffset]=useState(0),[page,setPage]=useState(null),[loading,setLoading]=useState(true),[error,setError]=useState(false),[validation,setValidation]=useState(''),[retry,setRetry]=useState(0),[open,setOpen]=useState(false),[closing,setClosing]=useState(false),closeTimer=useRef(0),sheet=useSheet(),anchor=useRef(null),conditionRef=useRef(null);
  useEffect(()=>{let active=true;setCategories(null);setCategoryError(false);auth.get('/categories').then(result=>{if(result.status!==200)throw new ApiError('response');const data=categoriesValid(result.data);if(active)setCategories(data);}).catch(()=>{if(active)setCategoryError(true);});return()=>{active=false;};},[auth.get,categoryRetry]);
  useEffect(()=>{let active=true;setLoading(true);setPage(null);setError(false);const query=new URLSearchParams({limit:'20',offset:String(offset)});for(const [key,value] of Object.entries(applied)){if(value!=='')query.set(key,value);}
   auth.get(`/listings?${query}`).then(result=>{if(result.status!==200)throw new ApiError('response');const data=pageValid(result.data,offset);if(active)setPage(data);}).catch(()=>{if(active)setError(true);}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;};
  },[auth.get,applied,offset,retry]);
+ useEffect(()=>()=>clearTimeout(closeTimer.current),[]);
+ function toggleFilters(){clearTimeout(closeTimer.current);if(!open){setClosing(false);setOpen(true);return;}setOpen(false);const calm=typeof window.matchMedia==='function'&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;if(sheet||calm){setClosing(false);return;}setClosing(true);closeTimer.current=setTimeout(()=>setClosing(false),200);}
  function change(event){setDraft({...draft,[event.target.name]:event.target.value});}
  function apply(event){event.preventDefault();let message='',filterField=false;const next={...draft,q:draft.q.trim()};
   if(Array.from(draft.q).length>200||/[\u0000-\u001f\u007f-\u009f]/u.test(draft.q))message='Search must be at most 200 characters without control characters.';
@@ -67,8 +69,8 @@ export function Marketplace({navigate}){
    <div className="catalog-search"><label className="sr-only" htmlFor="market-q">Search listings</label><input id="market-q" name="q" type="text" value={draft.q} onChange={change} aria-describedby="market-help" placeholder="Search listings"/><Button variant="primary" type="submit">Search</Button></div>
    <p id="market-help" className="field-help catalog-help">Search title or description. Prices include both bounds. Results show newest published items first.</p>
    <CategoryChips categories={categories} error={categoryError} value={draft.category_id} onSelect={pick} onRetry={()=>setCategoryRetry(n=>n+1)}/>
-   <div className="catalog-toolbar"><Button className="catalog-filters-toggle" aria-expanded={open} aria-controls="catalog-filter-panel" onClick={()=>setOpen(o=>!o)}>Filters{filterCount?` (${filterCount})`:''}</Button>{resetInBar&&<Button variant="ghost" onClick={reset}>Reset filters</Button>}</div>
-   {!sheet&&<div id="catalog-filter-panel" className="catalog-panel" hidden={!open}>{fields}</div>}
+   <div className="catalog-toolbar"><Button className="catalog-filters-toggle" aria-expanded={open} aria-controls={!sheet||open?"catalog-filter-panel":undefined} onClick={toggleFilters}>Filters{filterCount?` (${filterCount})`:''}</Button>{resetInBar&&<Button variant="ghost" onClick={reset}>Reset filters</Button>}</div>
+   {!sheet&&<div id="catalog-filter-panel" className={open?"catalog-panel":closing?"catalog-panel catalog-panel--closing":"catalog-panel"} hidden={!open&&!closing} inert={!open&&closing}>{fields}</div>}
    {!sheetOpen&&alert}
   </form>
   {sheet&&<Dialog open={open} onClose={()=>setOpen(false)} title="Filters" closeLabel="Close filters" initialFocusRef={conditionRef}><form id="catalog-filter-panel" className="catalog-sheet" aria-label="Search and filter listings" onSubmit={apply} noValidate>{fields}{alert}</form></Dialog>}
