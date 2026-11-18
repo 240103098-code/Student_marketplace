@@ -28,7 +28,7 @@ const MockPanel=import.meta.env.DEV&&isMockMode?lazy(()=>import('./MockPanel.jsx
 const views = {
   '/': {
     title: 'Your campus marketplace',
-    description: 'A simple place for students to discover useful things and connect with sellers. Buy, sell and pass useful things on within your university community.',
+    description: 'Buy, sell and pass useful things on within your university community.',
   },
   '/login': {
     title: 'Sign in',
@@ -172,9 +172,12 @@ function AppShell() {
         }} />}
         {path === '/verify' && <VerificationForm initialEmail={verification.email} cooldowns={verification.cooldowns} navigate={navigate} onCooldown={(email, deadline) => setVerification(previous => ({ email, cooldowns: { ...previous.cooldowns, [email]: deadline } }))} />}
         {path === '/' && (
-          <div className="actions">
-            <Button variant="primary" size="large" href="/marketplace" onClick={navigate}>Explore marketplace</Button>
-            <Button variant="secondary" size="large" href="/register" onClick={navigate}>Create an account</Button>
+          <div className="guest-strip" role="group" aria-label="Sign in for university students">
+            <p>For verified <strong>@sdu.edu.kz</strong> students. Sign in to browse listings.</p>
+            <div className="guest-strip__actions">
+              <Button variant="primary" href="/login" onClick={navigate}>Sign in</Button>
+              <Button variant="secondary" href="/register" onClick={navigate}>Create an account</Button>
+            </div>
           </div>
         )}
         <aside className="preview-note" aria-label="Preview information">

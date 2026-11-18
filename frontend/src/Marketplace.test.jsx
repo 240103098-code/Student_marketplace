@@ -1,5 +1,5 @@
 import React from 'react';
-import {act,fireEvent,render,screen,waitFor} from '@testing-library/react';
+import {act,fireEvent,render,screen,waitFor,within} from '@testing-library/react';
 import {beforeEach,afterEach,test,expect,vi} from 'vitest';
 import {App} from './App.jsx';
 let mock,create,revoke;
@@ -41,4 +41,54 @@ test('revoked photo authorization removes marketplace, anonymous visitors fetch 
 });
 test('photo transport errors retain honest cards and server order without leaking details',async()=>{
  setup(()=>Promise.resolve(res(200,page([card(7,photo),card(8)]))),undefined,()=>Promise.resolve(res(500,{detail:'PRIVATE_DRIVER'})));await open();await screen.findByText('Photo is unavailable.');expect(screen.getAllByRole('heading',{level:2}).map(h=>h.textContent)).toEqual(['Campus item 7','Campus item 8']);expect(screen.getByText('No photo.')).toBeTruthy();expect(screen.queryByText('PRIVATE_DRIVER')).toBeNull();expect(screen.queryByRole('img')).toBeNull();
+});
+
+const feedParams=()=>Object.fromEntries(new URL(feeds().at(-1)[0]).searchParams);
+test('category chips mirror the server categories, send category_id at offset 0 and stay in sync with the select',async()=>{
+ setup(p=>Promise.resolve(res(200,page([card(7)],21,Number(p.get('offset'))))));await open();await screen.findByRole('heading',{name:'Campus item 7'});await waitFor(()=>expect(screen.getByLabelText('Category').disabled).toBe(false));
+ const group=screen.getByRole('group',{name:'Filter by category'});expect(within(group).getAllByRole('button').map(b=>b.textContent)).toEqual(['All','Electronics','Clothing','Books','Furniture','Other']);expect(within(group).getByRole('button',{name:'All'}).getAttribute('aria-pressed')).toBe('true');
+ fireEvent.click(screen.getByRole('button',{name:'Next page'}));await waitFor(()=>expect(feedParams().offset).toBe('20'));await screen.findByRole('heading',{name:'Campus item 7'});
+ fireEvent.click(within(group).getByRole('button',{name:'Books'}));await waitFor(()=>expect(feedParams()).toEqual({limit:'20',offset:'0',category_id:'3'}));expect(screen.getByLabelText('Category').value).toBe('3');expect(within(group).getByRole('button',{name:'Books'}).getAttribute('aria-pressed')).toBe('true');expect(within(group).getByRole('button',{name:'All'}).getAttribute('aria-pressed')).toBe('false');
+ change('Category','2');expect(within(group).getByRole('button',{name:'Clothing'}).getAttribute('aria-pressed')).toBe('true');
+ await screen.findByRole('heading',{name:'Campus item 7'});fireEvent.click(within(group).getByRole('button',{name:'All'}));await waitFor(()=>expect(feedParams()).toEqual({limit:'20',offset:'0'}));
+});
+test('chips show skeletons while loading and a retry when categories fail; the feed still renders',async()=>{
+ let cat;setup(()=>Promise.resolve(res(200,page([card(7)]))),()=>cat?Promise.resolve(res(500,{})):new Promise(r=>{cat=r;}));const {container}=await open();expect(container.querySelectorAll('.chip--skeleton').length).toBeGreaterThan(0);expect(screen.queryByRole('group',{name:'Filter by category'})).toBeNull();expect(screen.getByLabelText('Category').disabled).toBe(true);
+ await act(async()=>{cat(res(500,{}));});expect(screen.getByRole('alert').textContent).toBe('Categories could not be loaded.');expect(screen.getByRole('button',{name:'Retry categories'})).toBeTruthy();await screen.findByRole('heading',{name:'Campus item 7'});expect(screen.getByText(/Category unavailable/)).toBeTruthy();
+});
+test('Filters toggle exposes aria-expanded/aria-controls, counts applied filters and keeps the form name',async()=>{
+ setup(()=>Promise.resolve(res(200,page([card(7)]))));await open();await screen.findByRole('heading',{name:'Campus item 7'});const toggle=screen.getByRole('button',{name:'Filters'});expect(toggle.getAttribute('aria-expanded')).toBe('false');const panel=document.getElementById(toggle.getAttribute('aria-controls'));expect(panel.hidden).toBe(true);
+ fireEvent.click(toggle);expect(toggle.getAttribute('aria-expanded')).toBe('true');expect(panel.hidden).toBe(false);expect(within(panel).getByLabelText('Minimum price (KZT)').getAttribute('inputmode')).toBe('decimal');expect(within(screen.getByRole('form',{name:'Search and filter listings'})).getByRole('button',{name:'Apply filters'})).toBeTruthy();
+ change('Condition','new');change('Minimum price (KZT)','5');apply();await waitFor(()=>expect(feedParams()).toEqual({limit:'20',offset:'0',condition:'new',min_price:'5'}));expect(screen.getByRole('button',{name:'Filters (2)'})).toBeTruthy();fireEvent.click(screen.getByRole('button',{name:'Filters (2)'}));expect(screen.getByRole('button',{name:'Filters (2)'}).getAttribute('aria-expanded')).toBe('false');
+});
+test('an invalid price in a closed panel opens it and sends no request',async()=>{
+ setup(()=>Promise.resolve(res(200,page([card(7)]))));await open();await screen.findByRole('heading',{name:'Campus item 7'});const toggle=screen.getByRole('button',{name:'Filters'});change('Minimum price (KZT)','1e2');apply();expect(screen.getByRole('alert').textContent).toContain('Use an unsigned KZT price');expect(toggle.getAttribute('aria-expanded')).toBe('true');expect(feeds()).toHaveLength(1);
+});
+test('page indicator and first/last page buttons follow total and offset',async()=>{
+ setup(p=>Promise.resolve(res(200,page(Number(p.get('offset'))?[card(8)]:[card(7)],21,Number(p.get('offset'))))));await open();await screen.findByRole('heading',{name:'Campus item 7'});expect(screen.getByText('Page 1 of 2')).toBeTruthy();expect(screen.getByRole('button',{name:'Previous page'}).disabled).toBe(true);expect(screen.getByRole('button',{name:'Next page'}).disabled).toBe(false);
+ fireEvent.click(screen.getByRole('button',{name:'Next page'}));await screen.findByRole('heading',{name:'Campus item 8'});expect(screen.getByText('Page 2 of 2')).toBeTruthy();expect(screen.getAllByRole('heading',{level:2})).toHaveLength(1);expect(screen.getByRole('button',{name:'Next page'}).disabled).toBe(true);expect(screen.getByRole('button',{name:'Previous page'}).disabled).toBe(false);
+});
+test('exactly 20 results is one page with both buttons disabled',async()=>{
+ setup(()=>Promise.resolve(res(200,page(Array.from({length:20},(_,i)=>card(i+1)),20))));const {container}=await open();await screen.findByRole('heading',{name:'Campus item 20'});expect(screen.getByText('Page 1 of 1')).toBeTruthy();expect(screen.queryByText(/Page 2/)).toBeNull();expect(screen.getByRole('button',{name:'Next page'}).disabled).toBe(true);expect(screen.getByRole('button',{name:'Previous page'}).disabled).toBe(true);
+ const delays=[...container.querySelectorAll('.catalog-card')].map(li=>Number(li.style.getPropertyValue('--i')));expect(delays).toHaveLength(20);expect(Math.max(...delays)).toBe(8);expect(delays.slice(0,3)).toEqual([0,1,2]);
+});
+test('cards are photo-first with one link, full price text, metadata and a 4:3 media box',async()=>{
+ setup(()=>Promise.resolve(res(200,page([card(7,photo),card(8)]))));const {container}=await open();await screen.findByRole('img');const cards=[...container.querySelectorAll('li.catalog-card')];expect(cards).toHaveLength(2);
+ for(const li of cards){expect(li.querySelectorAll('a')).toHaveLength(1);expect(li.firstElementChild.className).toBe('catalog-card__media');}
+ const link=within(cards[0]).getByRole('link',{name:'Campus item 7'});expect(link.getAttribute('href')).toBe('/listings/7');expect(link.getAttribute('title')).toBe('Campus item 7');expect(within(cards[0]).getByText('12.34 KZT')).toBeTruthy();expect(within(cards[0]).getByText(/Electronics · Used/)).toBeTruthy();expect(cards[0].querySelector('time').getAttribute('datetime')).toBe('2026-10-13T00:00:00Z');expect(within(cards[0]).getByRole('img').getAttribute('alt')).toBe('Campus item 7');expect(within(cards[1]).getByText('No photo.')).toBeTruthy();
+});
+test('empty results offer Reset filters only when a filter is applied; an empty page offers a way back',async()=>{
+ setup(p=>Promise.resolve(res(200,p.get('offset')==='40'?page([],21,40):page([]))));await open();await screen.findByText('No matching listings. Try different filters.');expect(screen.queryByRole('button',{name:'Reset filters'})).toBeNull();
+ change('Search listings','zzz');apply();await waitFor(()=>expect(feedParams().q).toBe('zzz'));await screen.findByText('No matching listings. Try different filters.');const reset=screen.getAllByRole('button',{name:'Reset filters'});expect(reset).toHaveLength(1);fireEvent.click(reset[0]);await waitFor(()=>expect(feedParams()).toEqual({limit:'20',offset:'0'}));expect((screen.getByLabelText('Search listings')).value).toBe('');
+});
+test('an empty page beyond the end links back to the first page',async()=>{
+ setup(p=>Promise.resolve(res(200,Number(p.get('offset'))>=20?page([],21,Number(p.get('offset'))):page([card(7)],21,0))));await open();await screen.findByRole('heading',{name:'Campus item 7'});fireEvent.click(screen.getByRole('button',{name:'Next page'}));await screen.findByText('No listings on this page.');fireEvent.click(screen.getByRole('button',{name:'Back to first page'}));await screen.findByRole('heading',{name:'Campus item 7'});expect(feedParams().offset).toBe('0');
+});
+test('at 768px and narrower filters open in the shared dialog: named form, Esc closes, focus returns, invalid input stays open',async()=>{
+ vi.stubGlobal('matchMedia',q=>({matches:true,media:q,addEventListener(){},removeEventListener(){}}));
+ setup(()=>Promise.resolve(res(200,page([card(7)]))));await open();await screen.findByRole('heading',{name:'Campus item 7'});const toggle=screen.getByRole('button',{name:'Filters'});expect(screen.queryByRole('dialog')).toBeNull();toggle.focus();fireEvent.click(toggle);
+ const dialog=screen.getByRole('dialog',{name:'Filters'});expect(toggle.getAttribute('aria-expanded')).toBe('true');expect(document.body.style.overflow).toBe('hidden');expect(within(dialog).getByRole('form',{name:'Search and filter listings'})).toBeTruthy();
+ fireEvent.change(within(dialog).getByLabelText('Maximum price (KZT)'),{target:{value:'abc'}});fireEvent.submit(within(dialog).getByRole('form',{name:'Search and filter listings'}));expect(within(dialog).getByRole('alert').textContent).toContain('Use an unsigned KZT price');expect(feeds()).toHaveLength(1);
+ fireEvent.keyDown(document,{key:'Escape'});expect(screen.queryByRole('dialog')).toBeNull();await waitFor(()=>expect(document.activeElement).toBe(toggle));expect(document.body.style.overflow).not.toBe('hidden');
+ fireEvent.click(toggle);fireEvent.change(screen.getByLabelText('Maximum price (KZT)'),{target:{value:'9'}});fireEvent.submit(within(screen.getByRole('dialog')).getByRole('form',{name:'Search and filter listings'}));await waitFor(()=>expect(feedParams().max_price).toBe('9'));expect(screen.queryByRole('dialog')).toBeNull();
 });
