@@ -122,3 +122,32 @@ with native symlink permission unavailable; Linux CI must execute that guard.
 Official pinned source references: [OTLP HTTP factory/maturity](https://github.com/open-telemetry/opentelemetry-collector/blob/v0.145.0/exporter/otlphttpexporter/factory.go),
 [queue sizing/batching](https://github.com/open-telemetry/opentelemetry-collector/blob/v0.145.0/exporter/exporterhelper/internal/queuebatch/config.go),
 [Prometheus remote write maturity](https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/v0.145.0/exporter/prometheusremotewriteexporter/metadata.yaml).
+
+At059169a, actual preflight44363055329 reached all three receiver handlers and
+eight complete samples (maximum observed field gap3.592s). Last sampled receipt
+counters were421 spans,115 logs and1580 metric datapoint observations, with zero
+refusals/evictions. The final decoded privacy/correlation audit did not run:
+settle exceeded its12s allowance (12.353s), because an active8s workload/sampler
+phase actually took9.347s before the additional3s sleep. Both actual SDK shutdowns
+took about0.0022s and left zero workers; verified owned cleanup took52.220s.
+This is partial wire progress, not a three-signal audit or capacity PASS.
+
+The corrected final drain stops and joins workload/sampler first, then verifies
+both real SDK shutdowns. It makes only Collector/receiver observations afterward,
+with a shared absolute12s deadline including every connect/read/poll. There is
+no active settle workload or blind sleep. Four explicit queue observations and
+the actual accepted/sent/failed/refused/received counters must remain unchanged
+with empty queues for8s. Missing supported counters fail; lazy failure counters
+remain absent/unknown until observed, never fabricated zero. Counter resets,
+unexpected refusal/eviction, late observation or insufficient quiet time fail.
+Failure retains prior safe polls; final offline raw audit still reconciles unique
+identities and proves privacy/correlation. The original total ledger is unchanged.
+
+The8s quiet horizon conservatively rounds up processor batch1s + queue batch0.1s
++ retry start deadline5s + final HTTP attempt1s. Pinned0.145
+[retry sender](https://github.com/open-telemetry/opentelemetry-collector/blob/v0.145.0/exporter/exporterhelper/internal/retry_sender.go)
+checks whether the next retry starts before its elapsed bound; the
+[timeout sender](https://github.com/open-telemetry/opentelemetry-collector/blob/v0.145.0/exporter/exporterhelper/internal/timeout_sender.go)
+applies timeout to each attempt. Empty queue size alone cannot exclude in-flight
+work. Late counter changes restart the entire quiet window within the same12s;
+the controller fails instead of extending its deadline or claiming a drain.

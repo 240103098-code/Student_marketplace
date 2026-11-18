@@ -424,9 +424,10 @@ print(json.dumps(r))'''
         except Exception:
             return False, time.monotonic() - begin
 
-    def collector_metrics(self):
+    def collector_metrics(self, deadline=None):
         try:
-            status, _, body = request(self.obs["endpoints"]["self"], "/metrics", timeout=1)
+            status, _, body = (request(self.obs["endpoints"]["self"], "/metrics", timeout=1) if deadline is None
+                else self.drain_request(self.obs["endpoints"]["self"], "/metrics", deadline))
             if status != 200:
                 return None
             result = metrics(body.decode())
@@ -440,6 +441,76 @@ print(json.dumps(r))'''
             return result
         except Exception:
             return None
+
+    @staticmethod
+    def drain_request(origin, path, deadline):
+        import http.client
+        from backend.otel_export import DeadlineSocket
+        remaining = deadline - time.monotonic()
+        require(remaining > 0, "drain-observation-deadline")
+        parsed = urllib.parse.urlsplit(origin)
+        require(parsed.scheme == "http" and parsed.hostname == "127.0.0.1" and path in {"/metrics", "/health"},
+            "fixed-drain-observer-endpoint")
+        connection = http.client.HTTPConnection("127.0.0.1", parsed.port, timeout=min(.5, remaining))
+        try:
+            connection.connect()
+            connection.sock = DeadlineSocket(connection.sock, deadline)
+            connection.request("GET", path)
+            # Keep the owned socket alive until its bounded reader is finished,
+            # including the stdlib fixture's HTTP/1.0 close-delimited response.
+            response = http.client.HTTPResponse(connection.sock)
+            try:
+                response.begin()
+                return response.status, {}, response.read(4 * 1024 * 1024)
+            finally:
+                response.close()
+        finally:
+            connection.close()
+
+    def drain_after_shutdown(self):
+        from tools.rehearsal103_drain import COMPONENTS, SIGNALS, wait_for_drain
+        require({value["environment"] for value in self.record["app_shutdowns"][-2:]} == {"dev", "prod"}
+            and all(value["sdk_workers_alive_after_shutdown"] == 0 for value in self.record["app_shutdowns"][-2:]),
+            "all-sdk-producers-stopped-before-drain")
+        def observe(deadline):
+            collector = self.collector_metrics(deadline)
+            require(collector is not None, "drain-collector-unavailable")
+            queues = {}
+            counters = {}
+            for component in COMPONENTS:
+                keys = {name: "otelcol_exporter_queue_" + name + "|" + component for name in ("capacity", "size")}
+                require(all(key in collector for key in keys.values()), "drain-queue-missing")
+                queues[component] = {name: collector[key] for name, key in keys.items()}
+                unit = "spans" if component.endswith("traces") else "log_records" if component.endswith("logs") else "metric_points"
+                for prefix in ("sent_", "send_failed_"):
+                    key = "otelcol_exporter_" + prefix + unit + "_total|" + component
+                    require(key in collector, "drain-export-counter-missing")
+                    counters[key] = collector[key]
+                # Lazy enqueue failures may be absent before their first event;
+                # retain absence rather than manufacture zero.
+                key = "otelcol_exporter_enqueue_failed_" + unit + "_total|" + component
+                if key in collector:
+                    counters[key] = collector[key]
+            for unit in ("spans", "log_records", "metric_points"):
+                for prefix in ("accepted_", "refused_"):
+                    key = "otelcol_receiver_" + prefix + unit + "_total"
+                    require(key in collector, "drain-receiver-counter-missing")
+                    counters[key] = collector[key]
+            receivers = {}
+            for signal in SIGNALS:
+                status, _, raw = self.drain_request(self.obs["endpoints"][signal], "/health", deadline)
+                require(status == 200, "drain-receiver-health-" + signal)
+                receivers[signal] = json.loads(raw)
+            return {"queues": queues, "collector_counters": counters, "receiver_counters": receivers}
+        began = time.monotonic()
+        maximum = min(12, self.deadline - began)
+        progress = {"result": "FAIL", "polls": [], "maximum_seconds": maximum}
+        self.record["post_stop_drain"] = progress
+        try:
+            progress.update(wait_for_drain(observe, maximum=maximum, polls=progress["polls"]))
+            progress["result"] = "PASS"
+        finally:
+            progress["actual_seconds"] = time.monotonic() - began
 
     def grafana_query(self):
         value = {"queries": [{"refId": "A", "datasource": {"type": "prometheus", "uid": "capacity101"},
@@ -842,14 +913,12 @@ print(json.dumps(r))'''
                         # Exact queue labels/version names must be observed, never
                         # replace absent counters with an invented zero.
                         self.check("actual-downstream-queue-saturated-" + target, bool(sizes) and max(sizes) >= 2)
-        self.phase("settle", 8)
         with self.ledger.stage("final_shutdown"):
             for stack in self.stacks:
                 self.collect_shutdown(stack)
-        # Final SDK flush must traverse Collector before offline unique counts.
+        # No workload or readiness probe may create records while draining.
         with self.ledger.stage("settle"):
-            require(self.deadline - time.monotonic() >= 3, "final-settle-budget")
-            time.sleep(3)
+            self.drain_after_shutdown()
         with self.ledger.stage("audit_projection"):
             self.audit()
             self.reconcile()
