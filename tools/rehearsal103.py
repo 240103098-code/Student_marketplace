@@ -15,6 +15,7 @@ from pathlib import Path
 import re
 import shutil
 import sys
+import threading
 import time
 import urllib.parse
 import urllib.request
@@ -127,6 +128,19 @@ class Controller(Rehearsal):
         self.canaries = ["PRIVATE103_" + uuid.uuid4().hex + "+/=:@" for _ in range(12)]
         self.stacks = []
         self.transition_seconds = 0
+        self.sampler_cancel = threading.Event()
+        self.failed_sampler_join_seconds = 0
+        self.cleaning = False
+        self.cleanup_outer_deadline = None
+
+    def run(self, args, **kwargs):
+        if self.sampler_cancel.is_set() and not self.cleaning:
+            raise Failure("sampler-cancelled")
+        if self.cleanup_outer_deadline is not None:
+            remaining = self.cleanup_outer_deadline - time.monotonic()
+            require(remaining > 0, "remaining-cleanup-budget")
+            kwargs["timeout"] = min(kwargs.get("timeout", 30), remaining)
+        return super().run(args, **kwargs)
 
     def api(self, stack, path, **kwargs):
         # Inherited helper's8s timeout is not used: every actual request<=5s.
@@ -383,44 +397,55 @@ print(json.dumps(r))'''
         outcomes = {s["name"]: [] for s in self.stacks}
         targets = {s["name"]: 0 for s in self.stacks}
         next_read = started
-        next_sample = started
         self.sampler.begin(name)
         initial = self.collector_metrics()
         initial_store = stored_counts(self.obs["directory"])
-        sample_future = None
         graph_futures = []
         next_graph = started + 2
-        with ThreadPoolExecutor(max_workers=8) as pool, ThreadPoolExecutor(max_workers=1) as sample_pool, ThreadPoolExecutor(max_workers=1) as graph_pool:
-            while time.monotonic() - started < seconds:
-                require(time.monotonic() < self.deadline, "outer-work-deadline")
-                now = time.monotonic()
-                if now >= next_read:
-                    for stack in self.stacks:
-                        namekey = stack["name"]
-                        completed = [f for f in pending[namekey] if f.done()]
-                        outcomes[namekey].extend(f.result() for f in completed)
-                        pending[namekey] = [f for f in pending[namekey] if not f.done()]
-                        require(len(pending[namekey]) < 4, "load-concurrency-bound")
-                        pending[namekey].append(pool.submit(self.read, stack))
-                        targets[namekey] += 1
-                    next_read += 1 / rate
-                    require(now - next_read < .5, "load-generator-target-gap")
-                if now >= next_sample:
-                    if sample_future is not None:
-                        require(sample_future.done(), "sampler-overlap")
-                        sample_future.result()
-                    sample_future = sample_pool.submit(self.sampler.sample, name, now - started, stopped)
-                    next_sample += 3
-                if stopped != "prometheus" and now >= next_graph:
-                    require(not graph_futures or graph_futures[-1].done(), "grafana-query-concurrency-bound")
-                    graph_futures.append(graph_pool.submit(self.grafana_query))
-                    next_graph += 10
-                time.sleep(.005)
-            for key in pending:
-                outcomes[key].extend(f.result(timeout=5) for f in pending[key])
-            if sample_future is not None:
-                sample_future.result(timeout=5)
-            graph_values = [future.result(timeout=3) for future in graph_futures]
+        from tools.rehearsal103_sampling import SnapshotPump
+        sample_pool = ThreadPoolExecutor(max_workers=1)
+        pump = SnapshotPump(sample_pool, self.sampler.sample, cancel=self.sampler_cancel)
+        cause = None
+        with ThreadPoolExecutor(max_workers=8) as pool, ThreadPoolExecutor(max_workers=1) as graph_pool:
+            try:
+                while time.monotonic() - started < seconds:
+                    require(time.monotonic() < self.deadline, "outer-work-deadline")
+                    now = time.monotonic()
+                    if now >= next_read:
+                        for stack in self.stacks:
+                            namekey = stack["name"]
+                            completed = [f for f in pending[namekey] if f.done()]
+                            outcomes[namekey].extend(f.result() for f in completed)
+                            pending[namekey] = [f for f in pending[namekey] if not f.done()]
+                            require(len(pending[namekey]) < 4, "load-concurrency-bound")
+                            pending[namekey].append(pool.submit(self.read, stack))
+                            targets[namekey] += 1
+                        next_read += 1 / rate
+                        require(now - next_read < .5, "load-generator-target-gap")
+                    pump.tick(name, now - started, stopped)
+                    if stopped != "prometheus" and now >= next_graph:
+                        require(not graph_futures or graph_futures[-1].done(), "grafana-query-concurrency-bound")
+                        graph_futures.append(graph_pool.submit(self.grafana_query))
+                        next_graph += 10
+                    time.sleep(.005)
+                for key in pending:
+                    outcomes[key].extend(f.result(timeout=5) for f in pending[key])
+                graph_values = [future.result(timeout=3) for future in graph_futures]
+            except BaseException as error:
+                cause = error
+                raise
+            finally:
+                join_started = time.monotonic()
+                failed = cause is not None
+                try:
+                    pump.close(cause)
+                except BaseException:
+                    failed = True
+                    raise
+                finally:
+                    if failed:
+                        self.failed_sampler_join_seconds += time.monotonic() - join_started
+                        self.record["failed_sampler_join_seconds"] = self.failed_sampler_join_seconds
         elapsed = time.monotonic() - started
         summary = {"duration_seconds": elapsed, "target_seconds": seconds, "target_requests_per_second_per_environment": rate,
             "started_unix": started_unix, "finished_unix": time.time(),
@@ -762,11 +787,13 @@ print(json.dumps(r))'''
         self.record["result"] = "PASS"
 
     def cleanup(self):
-        work = time.monotonic() - self.controller_started
+        work = time.monotonic() - self.controller_started - self.failed_sampler_join_seconds
         self.record["controller_work_seconds"] = work
         began = time.monotonic()
+        self.cleaning = True
+        self.cleanup_outer_deadline = began + max(0, 90 - self.failed_sampler_join_seconds)
         super().cleanup()
-        elapsed = time.monotonic() - began
+        elapsed = time.monotonic() - began + self.failed_sampler_join_seconds
         self.record["verified_cleanup_seconds"] = elapsed
         if work > 1520 or elapsed > 90:
             self.record["result"] = "FAIL"
@@ -870,8 +897,35 @@ print(json.dumps(r))'''
         return value, (time.monotonic(), time.time())
 
     def sample(self, phase, elapsed, stopped):
+        self.current_times = {}
+        self.stage_name = "start"
+        self.stage_started = time.monotonic()
+        self.stage_durations = {}
+        began = time.monotonic()
+        try:
+            return self._sample(phase, elapsed, stopped)
+        except BaseException as error:
+            value = {"phase": phase, "stage": self.stage_name,
+                "collection_seconds": time.monotonic() - began,
+                "field_timestamps_unix": {key: instant[1] for key, instant in self.current_times.items()}}
+            value.update(failure_metadata(error))
+            if isinstance(error, Failure):
+                value["failure_stage"] = str(error)
+            self.r.record["sampler_failure"] = value
+            raise
+        finally:
+            self.stage_durations[self.stage_name] = self.stage_durations.get(self.stage_name, 0) + time.monotonic() - self.stage_started
+            self.r.record["last_sampler_stage_durations_seconds"] = dict(self.stage_durations)
+
+    def mark(self, name):
+        now = time.monotonic()
+        self.stage_durations[self.stage_name] = self.stage_durations.get(self.stage_name, 0) + now - self.stage_started
+        self.stage_name, self.stage_started = name, now
+        require(not self.r.sampler_cancel.is_set(), "sampler-cancelled")
+
+    def _sample(self, phase, elapsed, stopped):
         r = self.r
-        times = {}
+        times = self.current_times
         row = {"phase": phase, "elapsed_seconds": elapsed, "timestamp_unix": time.time(), "services": {}}
         begin = time.monotonic()
         def stamp(*keys):
@@ -879,6 +933,7 @@ print(json.dumps(r))'''
             for key in keys:
                 times[key] = instant
         with ThreadPoolExecutor(max_workers=10) as pool:
+            self.mark("starting-bounded-probes")
             storage = pool.submit(self.storage)
             app_times = {s["name"]: {} for s in r.stacks}
             app_futures = {s["name"]: pool.submit(app_disk, r, s, app_times[s["name"]]) for s in r.stacks}
@@ -886,8 +941,10 @@ print(json.dumps(r))'''
             receiver_futures = {signal: pool.submit(self.receiver_health, signal) for signal in SIGNALS if signal != stopped}
             generator_memory = pool.submit(self.generator_memory)
             ids = []
+            self.mark("owned-container-inventory")
             for stack in [*r.stacks, r.obs]:
                 ids.extend(r.compose(stack, "ps", "-aq").stdout.split())
+            self.mark("owned-container-inspection")
             values = json.loads(r.run(["docker", "inspect", *ids], timeout=3).stdout)
             logs = pool.submit(self.log_storage, values)
             running = []
@@ -913,7 +970,9 @@ print(json.dumps(r))'''
                 if value["State"]["Running"]:
                     running.append(value["Id"])
                     byname[value["Name"].lstrip("/")] = value
+            self.mark("container-cpu-memory")
             raw = r.run(["docker", "stats", "--no-stream", "--format", "{{json .}}", *running], timeout=3).stdout
+            self.mark("container-stats-parse")
             for line in raw.splitlines():
                 value = json.loads(line)
                 info = byname[value["Name"]]
@@ -930,6 +989,7 @@ print(json.dumps(r))'''
             row["aggregate_memory_bytes"] = sum(v["memory_bytes"] for v in row["services"].values())
             stamp("aggregate_cpu_percent", "aggregate_memory_bytes")
             self.sustained("aggregate-cpu-stop", row["aggregate_cpu_percent"] > os.cpu_count() * 80)
+            self.mark("bounded-probe-results")
             row["storage"], row["telemetry_storage_subsets"], instant = storage.result(timeout=3)
             for name in row["storage"]:
                 times["disk/" + name] = instant
@@ -950,10 +1010,12 @@ print(json.dumps(r))'''
             for signal, future in receiver_futures.items():
                 row["receiver_health"][signal], instant = future.result(timeout=1)
                 times[signal + "/receiver-health"] = instant
+        self.mark("collector-self-metrics")
         row["collector"] = r.collector_metrics() if stopped != "collector" else None
         if stopped != "collector":
             require(row["collector"] is not None, "collector-self-metrics")
             row["collector"] = {key: value for key, value in row["collector"].items() if any(word in key for word in ("queue", "accepted", "refused", "sent_", "send_failed", "enqueue_failed"))}
+            r.record["last_collector_queue_values"] = dict(row["collector"])
             for component in ("otlp_http/traces", "otlp_http/logs", "otlp_http/metrics", "prometheusremotewrite"):
                 capacities = [value for key, value in row["collector"].items() if key.endswith("queue_capacity|" + component)]
                 sizes = [value for key, value in row["collector"].items() if key.endswith("queue_size|" + component)]
@@ -961,11 +1023,13 @@ print(json.dumps(r))'''
             stamp("collector-queues-counters")
         else:
             row["collector"] = {}
+        self.mark("application-readiness")
         for stack in r.stacks:
-            healthy = request(stack["origin"], "/health/ready", context=r.context, timeout=5)[0] == 200
+            healthy = request(stack["origin"], "/health/ready", context=r.context, timeout=1)[0] == 200
             row[stack["name"] + "_ready"] = healthy
             self.sustained("app-unhealthy-" + stack["name"], not healthy)
         stamp("readiness")
+        self.mark("host-generator-fields")
         disk = shutil.disk_usage(r.private)
         row["disk_free_bytes"] = disk.free
         require(disk.free >= max(4 * 1024 ** 3, .2 * disk.total), "disk-stop")
@@ -986,6 +1050,7 @@ print(json.dumps(r))'''
         row["field_max_gap_seconds"] = max(gaps.values(), default=0)
         row["field_gaps_seconds"] = gaps
         row["sample_collection_seconds"] = time.monotonic() - begin
+        self.mark("actual-field-deadline")
         r.record["samples"].append(row)
         require(row["field_max_gap_seconds"] <= 5, "actual-field-sample-gap")
 

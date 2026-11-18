@@ -87,6 +87,23 @@ WAL/backup projections and paired variation reporting. Actual selected child
 manifest/config identity verification is implemented but not yet run on Linux.
 Independent QA must audit the exact candidate before runtime publication.
 
+Initial actual Linux preflight at9bd8de6, run44303541026, failed with
+sampler-overlap after3.054s of its baseline. No complete sample was recorded,
+so this proves neither three-signal receipt nor capacity. Config validation,
+normal guarded journeys and network/auth checks passed; owned image/private files
+were removed and cleanup took55.602s. Ordinary regression CI44303540687 passed
+separately at that source.
+
+The sampler correction keeps its3s target soft while allowing one pending
+snapshot; actual per-field gaps and first snapshot completion remain<=5s. Actual
+inner probe failures are surfaced with fixed stage timings/partial timestamps.
+Each command/read stays bounded, cancellation stops new commands, and snapshot/
+nested workers join before resource cleanup. Failed join time consumes the same
+90s cleanup reserve; it is never hidden behind Future.result(timeout). Five
+focused scheduler tests cover3.2s deferral,>5s failure, inner-error propagation,
+single pending work, actual cooperative thread joining and remaining cleanup.
+An independently approved Linux rerun is still required.
+
 Official pinned source references: [OTLP HTTP factory/maturity](https://github.com/open-telemetry/opentelemetry-collector/blob/v0.145.0/exporter/otlphttpexporter/factory.go),
 [queue sizing/batching](https://github.com/open-telemetry/opentelemetry-collector/blob/v0.145.0/exporter/exporterhelper/internal/queuebatch/config.go),
 [Prometheus remote write maturity](https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/v0.145.0/exporter/prometheusremotewriteexporter/metadata.yaml).
