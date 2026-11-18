@@ -26,14 +26,14 @@ class FreshnessTest(unittest.TestCase):
                 # Newly retried file delivery after boundary, independent of event time.
                 os.utime(path, (20, 20))
             for signal in SIGNALS:
-                for environment in ("dev", "prod"):
+                for environment in ("development", "production"):
                     write(signal, environment, 9_000_000_000)
             self.assertEqual(fresh_record_environments(root, 10), {signal: set() for signal in SIGNALS})
             for signal in SIGNALS:
-                write(signal, "dev", 11_000_000_000)
-            self.assertEqual(fresh_record_environments(root, 10), {signal: {"dev"} for signal in SIGNALS})
+                write(signal, "development", 11_000_000_000)
+            self.assertEqual(fresh_record_environments(root, 10), {signal: {"development"} for signal in SIGNALS})
             for signal in SIGNALS:
-                write(signal, "prod", 12_000_000_000)
-            self.assertEqual(fresh_record_environments(root, 10), {signal: {"dev", "prod"} for signal in SIGNALS})
-            write("logs", "prod", 10_000_000_000)
-            self.assertEqual(fresh_record_environments(root, 10)["logs"], {"dev"})
+                write(signal, "production", 12_000_000_000)
+            self.assertEqual(fresh_record_environments(root, 10), {signal: {"development", "production"} for signal in SIGNALS})
+            write("logs", "production", 10_000_000_000)
+            self.assertEqual(fresh_record_environments(root, 10)["logs"], {"development"})

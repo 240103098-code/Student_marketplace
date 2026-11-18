@@ -162,9 +162,9 @@ def fresh_record_environments(directory, since):
                         for point in record.get(kind, {}).get("dataPoints", [])]
                 else:
                     timestamps = [record.get("startTimeUnixNano" if signal == "traces" else "timeUnixNano", "0")]
-                if environment in {"dev", "prod"} and any(int(value) > boundary for value in timestamps):
+                if environment in {"development", "production"} and any(int(value) > boundary for value in timestamps):
                     result[signal].add(environment)
-            if result[signal] == {"dev", "prod"}:
+            if result[signal] == {"development", "production"}:
                 break
     return result
 
@@ -542,7 +542,7 @@ print(json.dumps(r))'''
         return summary
 
     def fresh(self, since):
-        return all(value == {"dev", "prod"} for value in fresh_record_environments(self.obs["directory"], since).values())
+        return all(value == {"development", "production"} for value in fresh_record_environments(self.obs["directory"], since).values())
 
     def recovery(self, target):
         began = time.monotonic()
@@ -1134,8 +1134,6 @@ print(json.dumps(r))'''
                 sizes = [value for key, value in row["collector"].items() if key.endswith("queue_size|" + component)]
                 require(len(capacities) == len(sizes) == 1 and capacities[0] == 2 and 0 <= sizes[0] <= capacities[0], "actual-exporter-queue-bound")
             stamp("collector-queues-counters")
-        else:
-            row["collector"] = {}
         self.mark("application-readiness")
         for stack in r.stacks:
             healthy = request(stack["origin"], "/health/ready", context=r.context, timeout=1)[0] == 200
