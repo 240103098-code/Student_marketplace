@@ -73,6 +73,15 @@ def validate_http_attributes(attrs, routes):
         and attrs["outcome"] in {"success", "error"}, "outcome-status-allowlist")
 
 
+def validate_store_mounts(info, project, owner):
+    labels = info["Config"]["Labels"]
+    require(labels.get(LABEL) == owner and labels.get("com.docker.compose.project") == project, "storage-observer-ownership")
+    for destination, volume in (("/metrics", "metrics"), ("/grafana", "grafana")):
+        matches = [mount for mount in info["Mounts"] if mount["Destination"] == destination]
+        require(len(matches) == 1 and matches[0]["Type"] == "volume" and matches[0]["RW"] is False
+            and matches[0]["Name"] == project + "_" + volume, "owned-readonly-storage-mount")
+
+
 def decoded(directory, signal):
     """Read only exact-owned decoded receiver files, bounded by receiver limits."""
     for path in sorted((directory / signal).glob("*.json")):
@@ -211,7 +220,9 @@ class Controller(Rehearsal):
         control["command"] = ["python", "/control.py"]
         control["networks"] = ["default", "ingress", "devtelemetry", "prodtelemetry"]
         control["volumes"] = [str(ROOT / "ops/rehearsal103/control.py") + ":/control.py:ro",
-            str(ROOT / "ops/rehearsal101/proxy.py") + ":/proxy101.py:ro", "metrics:/metrics:ro", "grafana:/grafana:ro"]
+            str(ROOT / "ops/rehearsal101/proxy.py") + ":/proxy101.py:ro",
+            str(ROOT / "ops/rehearsal103/storage_probe.py") + ":/storage_probe.py:ro",
+            "metrics:/metrics:ro", "grafana:/grafana:ro"]
         for signal, internal in zip(SIGNALS, (14321, 14322, 14323)):
             selected = port()
             obs["endpoints"][signal] = "http://127.0.0.1:" + str(selected)
@@ -330,6 +341,20 @@ print(json.dumps(r))'''
             futures = {stack["name"]: pool.submit(probe, stack) for stack in self.stacks}
             self.record["network_isolation"] = {key: future.result(timeout=6) for key, future in futures.items()}
         self.record["network_isolation_ip_values_exported"] = False
+
+    def storage_observer_setup(self):
+        container = self.compose(self.obs, "ps", "-q", "control").stdout.strip()
+        info = json.loads(self.run(["docker", "inspect", container]).stdout)[0]
+        validate_store_mounts(info, self.obs["project"], self.owner)
+        self.store_owners = {}
+        for role in ("prometheus", "grafana"):
+            values = [self.compose(self.obs, "exec", "-T", role, "id", option, timeout=2).stdout.strip()
+                for option in ("-u", "-g")]
+            require(all(value.isascii() and value.isdigit() and int(value) <= 2 ** 32 - 1 for value in values)
+                and int(values[0]) > 0, "nonroot-runtime-store-owner")
+            self.store_owners[role] = tuple(int(value) for value in values)
+        self.record["store_observer_mounts_readonly_owned"] = True
+        self.record["store_runtime_owners_nonroot_verified"] = True
 
     def login(self, stack):
         status, _, body = self.api(stack, "/auth/login", method="POST",
@@ -697,6 +722,7 @@ print(json.dumps(r))'''
         self.certificates()
         self.images()
         self.observability()
+        self.storage_observer_setup()
         self.stacks = [self.stack(name) for name in ("dev", "prod")]
         for stack in self.stacks:
             enabled = self.part != "capacity"
@@ -821,17 +847,46 @@ class Sampler:
             require(now - self.bad[key] < 30, key)
 
     def storage(self):
-        script = '''import os,json
-def fail(error):raise error
-def total(path):
- if not os.path.isdir(path):return 0
- return sum(os.stat(os.path.join(r,f)).st_blocks*512 for r,d,fs in os.walk(path,onerror=fail) for f in fs)+sum(os.stat(r).st_blocks*512 for r,d,fs in os.walk(path,onerror=fail))
-print(json.dumps({'totals':{p:total(p) for p in ['/metrics','/grafana']},'subsets':{p:total(p) for p in ['/metrics/wal','/metrics/chunks_head']}}))'''
-        values = json.loads(self.r.compose(self.r.obs, "exec", "-T", "control", "python", "-c", script, timeout=3).stdout)
-        result = dict(values["totals"])
-        for signal, value in stored_counts(self.r.obs["directory"]).items():
+        r = self.r
+        if not hasattr(self, "store_access_checked"):
+            response = r.compose(r.obs, "exec", "-T", "control", "python", "/storage_probe.py", "access", timeout=2, okay=True)
+            value = json.loads(response.stdout)
+            require(response.returncode == 0 and value.get("status") == "ok" and set(value["roles"]) == {"prometheus", "grafana"}, "fixed-store-access-probe")
+            diagnostics = {}
+            for role, entry in value["roles"].items():
+                require(set(entry) == {"owner_uid", "owner_gid", "legacy_category"}
+                    and type(entry["owner_uid"]) is int and type(entry["owner_gid"]) is int
+                    and (entry["owner_uid"], entry["owner_gid"]) == r.store_owners[role], "store-owner-runtime-match")
+                require(entry["legacy_category"] in {"readable", "permission-denied"}, "store-access-unexpected-category")
+                diagnostics[role] = {"legacy_access": entry["legacy_category"], "runtime_owner_matches": True}
+            r.record["store_access_diagnostics"] = diagnostics
+            self.store_access_checked = True
+        result, subsets, present = {}, {}, {}
+        for role, destination in (("prometheus", "/metrics"), ("grafana", "/grafana")):
+            uid, gid = r.store_owners[role]
+            response = r.compose(r.obs, "exec", "-T", "--user", str(uid) + ":" + str(gid), "control",
+                "python", "/storage_probe.py", "measure", role, timeout=2, okay=True)
+            value = json.loads(response.stdout)
+            if response.returncode != 0 or value.get("status") != "ok":
+                kind = value.get("category")
+                require(kind in {"permission-denied", "not-found", "other", "symlink", "unexpected-device", "not-directory", "invalid-role"}, "store-probe-error-schema")
+                r.record["storage_probe_failure"] = {"role": role, "category": kind, "exit_code": response.returncode}
+                raise Failure("owned-store-measurement")
+            require(set(value) == {"status", "role", "allocated_bytes", "subsets", "subset_present"}
+                and value["role"] == role and type(value["allocated_bytes"]) is int and value["allocated_bytes"] >= 0,
+                "store-probe-value-schema")
+            result[destination] = value["allocated_bytes"]
+            if role == "prometheus":
+                require(set(value["subsets"]) == set(value["subset_present"]) == {"wal", "chunks_head"}
+                    and all(type(v) is int and v >= 0 for v in value["subsets"].values())
+                    and all(type(v) is bool for v in value["subset_present"].values()), "store-probe-subsets")
+                subsets = {"/metrics/" + key: size for key, size in value["subsets"].items()}
+                present = {"/metrics/" + key: exists for key, exists in value["subset_present"].items()}
+            r.record["store_access_diagnostics"][role]["owner_measurement"] = "ok"
+        for signal, value in stored_counts(r.obs["directory"]).items():
             result[signal] = value["allocated_bytes"]
-        return result, values["subsets"], (time.monotonic(), time.time())
+        self.last_storage_subset_presence = present
+        return result, subsets, (time.monotonic(), time.time())
 
     def log_storage(self, inspected):
         paths = {}
@@ -991,6 +1046,7 @@ print(json.dumps(r))'''
             self.sustained("aggregate-cpu-stop", row["aggregate_cpu_percent"] > os.cpu_count() * 80)
             self.mark("bounded-probe-results")
             row["storage"], row["telemetry_storage_subsets"], instant = storage.result(timeout=3)
+            row["telemetry_storage_subset_presence"] = dict(self.last_storage_subset_presence)
             for name in row["storage"]:
                 times["disk/" + name] = instant
             for name in row["telemetry_storage_subsets"]:

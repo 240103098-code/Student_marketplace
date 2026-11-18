@@ -104,6 +104,21 @@ focused scheduler tests cover3.2s deferral,>5s failure, inner-error propagation,
 single pending work, actual cooperative thread joining and remaining cleanup.
 An independently approved Linux rerun is still required.
 
+The6ee6d92 rerun44306867668 surfaced the underlying storage-probe subprocess
+failure instead of masking it as overlap. It recorded no complete sample; native
+paths/error text were not published. Docker CPU collection took2.562s; verified
+cleanup took54.308s. There is still no three-signal receipt or capacity PASS.
+
+Store observation now validates exact owned read-only volume mounts and each
+store's actual nonroot runtime UID/GID. A stat-only legacy-access probe publishes
+only fixed role/category diagnostics; measurement executes as that verified
+store owner inside the existing read-only observer. Relay identity/caps and data
+permissions never change. Unknown owners/mounts/errors, symlinks and unexpected
+devices fail rather than produce zeros; absent optional WAL/head directories
+are explicitly marked absent. Linux preflight must show the actual access
+category and positive same-owner measurements. Windows local guard tests pass
+with native symlink permission unavailable; Linux CI must execute that guard.
+
 Official pinned source references: [OTLP HTTP factory/maturity](https://github.com/open-telemetry/opentelemetry-collector/blob/v0.145.0/exporter/otlphttpexporter/factory.go),
 [queue sizing/batching](https://github.com/open-telemetry/opentelemetry-collector/blob/v0.145.0/exporter/exporterhelper/internal/queuebatch/config.go),
 [Prometheus remote write maturity](https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/v0.145.0/exporter/prometheusremotewriteexporter/metadata.yaml).
