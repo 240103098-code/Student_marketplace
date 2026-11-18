@@ -91,7 +91,7 @@ boundary. Actual end-to-end shutdown remains a required<=10s measurement.
 
 The private rehearsal receiver is one independent process/directory per signal.
 It accepts only uncompressed protobuf,<=64KiB/request,<=2048 records/request,
-<=512KiB decoded file,<=4096 files and<=128MiB per signal. Oldest files evict
+<=512KiB decoded file,<=16384 files and<=128MiB per signal. Oldest files evict
 at capacity/24h; oversized records refuse. Single-threaded HTTP and2s I/O timeout
 bound concurrency/slow clients. Private directories/files use0700/0600. No raw
 records are available through HTTP or artifact upload. Offline audit reconciles
@@ -119,3 +119,20 @@ callback diagnostic payloads, and receiver/config bounds.
 These focused tests are not the required actual Collector/Linux capacity evidence.
 The [bounded Linux phase design](telemetry103-rehearsal.md) is staged separately;
 actual measured evidence remains required before final QA handoff.
+
+Capacity postprocessing requires the same job's three paired120s runs and300s
+healthy enabled window. CPU uses100%=one logical CPU. Per-pair app, dependency,
+telemetry, generator and host CPU/RAM distributions and latency deltas retain
+variation across all three pairs. Growth uses healthy enabled windows only and
+keeps negative measured deltas visible; maximum nonnegative component rates use
+2x projection safety. Actual Docker daemon image/cache totals are a conservative
+host upper bound, not a deduplicated image-layer sum. Private fixture allocation,
+WAL/head subsets, backups, rotation, receiver metadata and explicit Oracle reserves
+remain visible. A stopped Collector's missing resource observations are explicitly
+unavailable and require matching inspected stop state; healthy observations cannot
+omit it. These algorithms require actual Linux measurements before any fit claim.
+
+Recovery requires decoded event timestamps after destination restart completed,
+for both application environments in all three signals. A newly delivered file
+containing a retried old record does not establish recovery. Prometheus and Grafana
+must also return positive stored application metric values, beyond HTTP readiness.

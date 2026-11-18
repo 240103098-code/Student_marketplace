@@ -16,6 +16,7 @@ import re
 import shutil
 import sys
 import threading
+import tempfile
 import time
 import urllib.parse
 import urllib.request
@@ -82,6 +83,28 @@ def validate_store_mounts(info, project, owner):
             and matches[0]["Name"] == project + "_" + volume, "owned-readonly-storage-mount")
 
 
+def private_fixture_allocated(root, owner):
+    root = Path(root)
+    require(not root.is_symlink() and root.name.startswith(owner + "-")
+        and root.resolve().parent == Path(tempfile.gettempdir()).resolve(), "owned-fixture-stat-root")
+    excluded = {root / "obs" / signal for signal in SIGNALS}
+    total = 0
+    def fail(error):
+        raise error
+    for directory, dirs, files in os.walk(root, followlinks=False, onerror=fail):
+        directory = Path(directory)
+        require(not directory.is_symlink(), "fixture-stat-symlink")
+        total += directory.stat().st_blocks * 512
+        for name in dirs:
+            require(not (directory / name).is_symlink(), "fixture-stat-symlink")
+        dirs[:] = [name for name in dirs if directory / name not in excluded]
+        for name in files:
+            path = directory / name
+            require(not path.is_symlink(), "fixture-stat-symlink")
+            total += path.stat().st_blocks * 512
+    return total
+
+
 def decoded(directory, signal):
     """Read only exact-owned decoded receiver files, bounded by receiver limits."""
     for path in sorted((directory / signal).glob("*.json")):
@@ -119,6 +142,30 @@ def stored_counts(directory):
         result[signal] = {"files": len(infos), "bytes": sum(v.st_size for v in infos),
             "allocated_bytes": sum(v.st_blocks * 512 for v in [*infos, *metadata]),
             "newest_unix": max((v.st_mtime for v in infos), default=0)}
+    return result
+
+
+def fresh_record_environments(directory, since):
+    """New file delivery is insufficient: inspect actual post-restart event time."""
+    result = {signal: set() for signal in SIGNALS}
+    boundary = int(since * 1_000_000_000)
+    for signal in SIGNALS:
+        for path in sorted((directory / signal).glob("*.json"), reverse=True):
+            require(not path.is_symlink() and path.stat().st_size <= 524288, "decoded-file-bound")
+            if path.stat().st_mtime <= since:
+                continue
+            for resource, scope, record in records(json.loads(path.read_bytes()), signal):
+                attributes = attribute_map(resource.get("resource", {}).get("attributes", []))
+                environment = attributes.get("deployment.environment.name")
+                if signal == "metrics":
+                    timestamps = [point.get("timeUnixNano", "0") for kind in ("sum", "gauge", "histogram", "exponentialHistogram", "summary")
+                        for point in record.get(kind, {}).get("dataPoints", [])]
+                else:
+                    timestamps = [record.get("startTimeUnixNano" if signal == "traces" else "timeUnixNano", "0")]
+                if environment in {"dev", "prod"} and any(int(value) > boundary for value in timestamps):
+                    result[signal].add(environment)
+            if result[signal] == {"dev", "prod"}:
+                break
     return result
 
 
@@ -495,13 +542,13 @@ print(json.dumps(r))'''
         return summary
 
     def fresh(self, since):
-        counts = stored_counts(self.obs["directory"])
-        return all(counts[s]["newest_unix"] > since for s in SIGNALS)
+        return all(value == {"dev", "prod"} for value in fresh_record_environments(self.obs["directory"], since).values())
 
     def recovery(self, target):
-        since, began = time.time(), time.monotonic()
+        began = time.monotonic()
         self.compose(self.obs, "start", target, timeout=30)
         require(time.monotonic() - began <= 30, "destination-start-deadline")
+        since = time.time()
         # Keep real application requests flowing and sample actual fields; stop
         # as soon as all three fresh receipts and actual Prom query have returned.
         index = 0
@@ -552,6 +599,12 @@ print(json.dumps(r))'''
 
     def audit(self):
         self.record["active_stage"] = "private-decoded-three-signal-audit"
+        self.check("actual-grafana-stored-application-metric", any(
+            value["grafana"]["queries_with_actual_stored_value"] > 0 for name, value in self.record["phases"].items()
+            if name == "enabled-load" or name == "outage-job-healthy-baseline"))
+        stored = query(self.obs, "sum(http_server_requests)", request_timeout=2)
+        self.check("actual-prometheus-stored-application-metric", bool(stored)
+            and all(math.isfinite(float(value["value"][1])) and float(value["value"][1]) > 0 for value in stored))
         result = {}
         self.record["receiver_audit_counters"] = {}
         for signal in SIGNALS:
@@ -689,26 +742,8 @@ print(json.dumps(r))'''
         self.record["reconciliation"] = totals
 
     def projection(self):
-        samples = self.record["samples"]
-        seconds = max(1, samples[-1]["timestamp_unix"] - samples[0]["timestamp_unix"])
-        first, last = samples[0]["storage"], samples[-1]["storage"]
-        growth = max(0, sum(last.values()) - sum(first.values()))
-        fixed = 1024 ** 3
-        capacity = {"measurement_seconds": seconds, "total_observed_growth_bytes": growth,
-            "conservative_daily_growth_bytes": math.ceil(growth / seconds * 86400 * 2),
-            "fixed_WAL_compaction_and_backup_reserve_bytes": fixed,
-            "daily_growth_safety_factor": 2, "oracle_memory_reserve_bytes": int(1.5 * 1024 ** 3),
-            "oracle_cpu_reserve_fraction": .2, "arm_ocpu_fit": "unproven", "hosted_activation": "blocked",
-            "limitations": "Short local ephemeral receipt; no production query or retention soak, no ARM/OCPU fit proof."}
-        capacity["seven_day_projected_storage_bytes"] = capacity["conservative_daily_growth_bytes"] * 7 + fixed
-        capacity["daily_projected_storage_bytes"] = capacity["conservative_daily_growth_bytes"] + fixed
-        capacity["peak_service_memory_bytes"] = {name: max(row["services"].get(name, {}).get("memory_bytes", 0) for row in samples)
-            for name in {key for row in samples for key in row["services"]}}
-        capacity["peak_total_cpu_percent"] = max(row["aggregate_cpu_percent"] for row in samples)
-        capacity["peak_total_memory_bytes"] = max(row["aggregate_memory_bytes"] for row in samples)
-        capacity["peak_queues"] = {name: max(row.get("collector", {}).get(name, 0) for row in samples)
-            for name in {key for row in samples for key in row.get("collector", {}) if "queue" in key}}
-        self.record["capacity"] = capacity
+        from tools.rehearsal103_report import build_report
+        self.record.update(build_report(self.record))
 
     def prepare(self):
         require(os.environ.get("DOCKER_HOST", "") in {"", "unix:///var/run/docker.sock"}, "local-docker-required")
@@ -999,7 +1034,8 @@ print(json.dumps(r))'''
     def _sample(self, phase, elapsed, stopped):
         r = self.r
         times = self.current_times
-        row = {"phase": phase, "elapsed_seconds": elapsed, "timestamp_unix": time.time(), "services": {}}
+        row = {"phase": phase, "elapsed_seconds": elapsed, "timestamp_unix": time.time(), "services": {},
+            "stopped_destination": stopped, "service_availability": {}}
         begin = time.monotonic()
         def stamp(*keys):
             instant = (time.monotonic(), time.time())
@@ -1032,6 +1068,9 @@ print(json.dumps(r))'''
                     require(value["State"]["ExitCode"] == 0, "one-shot-state")
                     continue
                 require(value["State"]["Running"] or service == stopped, "unexpected-service-exit")
+                observed_name = project.rsplit("-", 1)[-1] + "/" + service
+                row["service_availability"][observed_name] = {"running": value["State"]["Running"],
+                    "paused": value["State"].get("Paused", False)}
                 expected_networks = {project + "_default"}
                 if service in {"proxy", "control"}:
                     expected_networks.add(project + "_ingress")
@@ -1118,6 +1157,9 @@ print(json.dumps(r))'''
         self.previous_generator = generator
         row["generator_memory_bytes"] = row["generator_memory"]["combined_rss_bytes"]
         stamp("host-cpu", "host-memory", "generator-cpu", "free-disk")
+        self.mark("private-fixture-storage")
+        row["private_fixture_other_bytes"] = private_fixture_allocated(r.private, r.owner)
+        stamp("private-fixture-storage")
         gaps = {key: instant[0] - self.previous[key] for key, instant in times.items() if key in self.previous}
         self.previous.update({key: instant[0] for key, instant in times.items()})
         row["field_timestamps_unix"] = {key: instant[1] for key, instant in times.items()}
