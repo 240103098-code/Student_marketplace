@@ -11,6 +11,7 @@ import math
 import os
 from pathlib import Path
 import time
+import sys
 
 REQUEST_LIMIT = 65536
 STORE_LIMIT = 128 * 1024 * 1024
@@ -201,14 +202,26 @@ def make_server(signal, directory, port=4318, host="0.0.0.0"):
                 self.close_connection = True
     class Server(HTTPServer):
         def handle_error(self, *ignored):
-            pass
+            error = sys.exception()
+            kind = ("dependency-import" if isinstance(error, ImportError) else "timeout" if isinstance(error, TimeoutError)
+                else "connection" if isinstance(error, ConnectionError) else "io" if isinstance(error, OSError) else "other")
+            if kind not in self.safe_failure_counts:
+                self.safe_failure_counts[kind] = 0
+            self.safe_failure_counts[kind] += 1
+            if self.safe_failure_counts[kind] == 1:
+                print("RECEIVER103_DIAGNOSTIC " + json.dumps({"category": kind, "count": 1}), flush=True)
+            try:
+                store.refuse()
+            except Exception:
+                pass
     instance = Server((host, port), Handler)
+    instance.safe_failure_counts = {}
     instance.timeout = 2
     return instance
 
 
-def server(signal, directory, port=4318):
-    instance = make_server(signal, directory, port)
+def server(signal, directory, port=4318, host="0.0.0.0"):
+    instance = make_server(signal, directory, port, host)
     instance.serve_forever(poll_interval=.2)
 
 
@@ -217,5 +230,6 @@ if __name__ == "__main__":
     parser.add_argument("--signal", choices=["traces", "logs", "metrics"], required=True)
     parser.add_argument("--private-directory", required=True)
     parser.add_argument("--port", type=int, default=4318)
+    parser.add_argument("--host", choices=["0.0.0.0", "127.0.0.1"], default="0.0.0.0")
     args = parser.parse_args()
-    server(args.signal, args.private_directory, args.port)
+    server(args.signal, args.private_directory, args.port, args.host)

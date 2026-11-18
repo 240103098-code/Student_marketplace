@@ -210,8 +210,8 @@ class Controller(Rehearsal):
             directory = obs["directory"] / signal
             directory.mkdir(mode=0o700)
             config["services"][signal] = {"image": self.image, "pull_policy": "never", "user": self.fixture_user,
-                "command": ["python", "/receiver.py", "--signal", signal, "--private-directory", "/private"],
-                "volumes": [str(ROOT / "tools/otel103_receiver.py") + ":/receiver.py:ro", str(directory) + ":/private"],
+                "command": ["python", "/app/receiver103.py", "--signal", signal, "--private-directory", "/private"],
+                "volumes": [str(ROOT / "tools/otel103_receiver.py") + ":/app/receiver103.py:ro", str(directory) + ":/private"],
                 "read_only": True, "cpus": .25, "mem_limit": "128m", "pids_limit": 32,
                 "labels": {LABEL: self.owner}, "restart": "no", "cap_drop": ["ALL"],
                 "security_opt": ["no-new-privileges:true"],
@@ -723,6 +723,19 @@ print(json.dumps(r))'''
         self.images()
         self.observability()
         self.storage_observer_setup()
+        self.record["receiver_startup_health"] = {}
+        # Probe every actual handler before expensive snapshots; a listener alone
+        # cannot establish that its absolute-entry dependency imports work.
+        for signal in SIGNALS:
+            began = time.monotonic()
+            try:
+                value, instant = Sampler(self).receiver_health(signal)
+                self.record["receiver_startup_health"][signal] = {"ready": True,
+                    "elapsed_seconds": time.monotonic() - began, "timestamp_unix": instant[1]}
+            except Exception as error:
+                self.record["receiver_startup_health"][signal] = {"ready": False,
+                    "elapsed_seconds": time.monotonic() - began, **failure_metadata(error)}
+                raise Failure("receiver-startup-" + signal) from None
         self.stacks = [self.stack(name) for name in ("dev", "prod")]
         for stack in self.stacks:
             enabled = self.part != "capacity"
@@ -944,8 +957,13 @@ print(json.dumps(r))'''
         return json.loads(raw), (time.monotonic(), time.time())
 
     def receiver_health(self, signal):
-        status, _, raw = request(self.r.obs["endpoints"][signal], "/health", timeout=1)
-        require(status == 200, "local-receiver-health")
+        try:
+            status, _, raw = request(self.r.obs["endpoints"][signal], "/health", timeout=1)
+        except Exception as error:
+            self.r.record.setdefault("receiver_probe_failures", []).append({"role": signal,
+                **failure_metadata(error)})
+            raise Failure("receiver-health-" + signal) from None
+        require(status == 200, "local-receiver-health-" + signal)
         value = json.loads(raw)
         require(set(value) == {"accepted", "refused_requests", "refused_records", "unknown_refused_requests", "evicted_files"}
             and all(isinstance(v, int) and v >= 0 for v in value.values()), "receiver-health-schema")
