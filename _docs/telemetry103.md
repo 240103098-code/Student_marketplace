@@ -17,6 +17,18 @@ SDK providers, handlers, instrumentors or resource detectors are installed.
 Providers/workers/sessions/listeners are created in lifespan only; borrowed
 engines retain ownership and callbacks are removed individually on exit.
 
+Each application lifespan owns its providers, exporter state and SDK workers.
+Repeated lifespans create fresh request instruments/accumulators; request counters
+and histogram accumulation therefore reset with that provider. Process CPU is
+the operating system's cumulative CPU time for the current process, while RSS
+is an instantaneous whole-process observation. Two apps in one process can have
+independent resources/destinations while observing the same CPU/RSS; those values
+must not be summed as independent process costs. This rehearsal uses one ASGI
+worker per app container and measures the container separately. It establishes
+no deployment-wide aggregation or multi-worker reset handling. Multiple workers
+sharing the same three-field resource identity can produce overlapping metric
+streams; that deployment requires a separately tested aggregation design.
+
 The installed candidate is API/SDK/OTLP protobuf encoder1.45.1, Python>=3.10 (application
 requires>=3.11). Minimal direct dependencies are API, SDK and OTLP proto-common;
 resolved runtime additions are SDK, proto-common/proto1.45.1,
