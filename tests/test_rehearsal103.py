@@ -8,13 +8,47 @@ import sys
 import tempfile
 import threading
 import unittest
+from unittest.mock import patch
 
 from tools.rehearsal101 import Failure
-from tools.rehearsal103 import PLANS, attribute_map, decoded, identity, validate_http_attributes
+from tools.rehearsal103 import BudgetLedger, PLANS, attribute_map, decoded, identity, validate_http_attributes
 from tools.otel103_receiver import make_server
 
 
 class RehearsalSafetyTest(unittest.TestCase):
+    def test_nested_budget_charges_supporting_work_once_and_rejects_overrun(self):
+        clock = [0]
+        ledger = BudgetLedger("capacity", lambda: clock[0])
+        with ledger.stage("measurement"):
+            clock[0] += 5
+            with ledger.stage("transitions"):
+                clock[0] += 7
+            clock[0] += 3
+        self.assertEqual(ledger.elapsed["measurement"], 8)
+        self.assertEqual(ledger.elapsed["transitions"], 7)
+        with self.assertRaises(Failure):
+            with ledger.stage("measurement"):
+                clock[0] += ledger.limits["measurement"]
+        self.assertEqual(sum(ledger.limits.values()) + 120 + 90 + 60 + 10, 1800)
+
+    def test_controller_deadline_failure_still_cleans_and_writes_only_failure_summary(self):
+        import tools.rehearsal103 as module
+        class Controller:
+            def __init__(self, part):
+                self.record = {"result": "FAIL", "cleanup": False}
+            def main(self):
+                raise Failure("budget-measurement")
+            def cleanup(self):
+                self.record["cleanup"] = True
+        with tempfile.TemporaryDirectory() as directory, patch.object(module, "ROOT", Path(directory)), \
+            patch.object(module, "Controller", Controller), patch.object(module.sys, "platform", "linux"), \
+            patch.object(module.sys, "argv", ["rehearsal103", "--confirm-disposable", "issue-103-synthetic-only"]):
+            self.assertEqual(module.main(), 1)
+            value = json.loads((Path(directory) / "rehearsal103-safe/summary.json").read_text())
+            self.assertTrue(value["cleanup"])
+            self.assertEqual(value["result"], "FAIL")
+            self.assertEqual(value["failure_stage"], "budget-measurement")
+
     def test_http_privacy_audit_rejects_raw_paths_identity_fields_and_unbounded_values(self):
         values = {"http.route": "/listings/{listing_id}", "http.request.method": "GET",
             "http.response.status_class": "2xx", "outcome": "success"}

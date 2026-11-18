@@ -64,7 +64,7 @@ class Settings(BaseSettings):
     @field_validator("telemetry_version")
     @classmethod
     def telemetry_safe_version(cls, value):
-        if not re.fullmatch(r"[0-9][0-9a-f.\-]{0,63}", value):
+        if len(value) > 64 or not re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64}|[0-9]+(?:\.[0-9]+){0,3}(?:-[0-9a-f]{1,16})?)", value):
             raise ValueError("TELEMETRY_VERSION requires a bounded release or commit identifier")
         return value
 

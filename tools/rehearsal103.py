@@ -5,6 +5,7 @@ cleanup without changing its source/evidence. All decoded storage stays private.
 """
 import argparse
 import base64
+from contextlib import contextmanager
 from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
@@ -16,6 +17,7 @@ import shutil
 import sys
 import time
 import urllib.parse
+import urllib.request
 import uuid
 
 from tools.rehearsal101 import (Rehearsal, Failure, ROOT, LABEL, CAPS, require,
@@ -30,6 +32,31 @@ PLANS = {
     "functional": {"baseline_seconds": 15, "sdk_backpressure_seconds": 12,
         "outages": ["collector", "traces", "logs", "metrics", "prometheus"],
         "outage_seconds": 60, "recovery_max_seconds": 120}}
+
+
+class BudgetLedger:
+    """Charge nested operations once; every stage includes its supporting I/O."""
+    def __init__(self, part, clock=time.monotonic):
+        self.clock = clock
+        self.limits = {"preparation": 210, "transitions": 40,
+            "measurement": 1200 if part == "capacity" else 1190,
+            "privacy": 10 if part == "capacity" else 20, "settle": 12,
+            "final_shutdown": 30, "audit_projection": 18}
+        self.elapsed = {key: 0 for key in self.limits}
+        self.stack = []
+    @contextmanager
+    def stage(self, name):
+        item = [name, self.clock(), 0]
+        self.stack.append(item)
+        try:
+            yield
+        finally:
+            total = self.clock() - item[1]
+            self.stack.pop()
+            self.elapsed[name] += max(0, total - item[2])
+            if self.stack:
+                self.stack[-1][2] += total
+            require(self.elapsed[name] <= self.limits[name], "budget-" + name)
 
 
 def attribute_map(values):
@@ -73,19 +100,30 @@ def identity(signal, resource, record):
 def stored_counts(directory):
     result = {}
     for signal in SIGNALS:
-        files = list((directory / signal).glob("*.json"))
-        result[signal] = {"files": len(files), "bytes": sum(p.stat().st_size for p in files),
-                          "newest_unix": max((p.stat().st_mtime for p in files), default=0)}
+        root = directory / signal
+        infos = [p.stat() for p in root.glob("*.json")]
+        metadata = [root.stat()]
+        stats = root / ".receipt-stats"
+        if stats.exists():
+            metadata.append(stats.stat())
+        result[signal] = {"files": len(infos), "bytes": sum(v.st_size for v in infos),
+            "allocated_bytes": sum(v.st_blocks * 512 for v in [*infos, *metadata]),
+            "newest_unix": max((v.st_mtime for v in infos), default=0)}
     return result
 
 
 class Controller(Rehearsal):
     def __init__(self, part):
         super().__init__()
+        self.controller_started = time.monotonic()
         self.part = part
-        self.deadline = time.monotonic() + 1570
+        self.deadline = time.monotonic() + 1520
+        self.ledger = BudgetLedger(part)
         self.record.update(issue=103, part=part, phases={}, samples=[],
             future_overhead="Measured only by this #103 run; production capacity remains unproven.")
+        self.record.update(budget_limits_seconds=self.ledger.limits, budget_elapsed_seconds=self.ledger.elapsed,
+            reserved_ci_setup_seconds=120, reserved_cleanup_seconds=90, reserved_upload_seconds=60,
+            reserved_platform_handoff_seconds=10)
         self.canaries = ["PRIVATE103_" + uuid.uuid4().hex + "+/=:@" for _ in range(12)]
         self.stacks = []
         self.transition_seconds = 0
@@ -106,6 +144,19 @@ class Controller(Rehearsal):
         require(not kwargs, "api-fixture-arguments")
         return request(stack["origin"], "/api" + path, method=method, body=body,
                        headers=headers, context=self.context, timeout=5)
+
+    def wait_https(self, stack):
+        deadline = time.monotonic() + 15
+        while time.monotonic() < deadline:
+            try:
+                if request(stack["origin"], "/health/ready", context=self.context,
+                    timeout=min(5, max(.001, deadline - time.monotonic())))[0] == 200:
+                    self.proxy_diagnostics(stack, "verified-http-200")
+                    return
+            except Exception:
+                pass
+            time.sleep(.1)
+        raise Failure("verified-https-readiness")
 
     def observability(self):
         obs = candidate(self)
@@ -170,38 +221,60 @@ class Controller(Rehearsal):
             receiver_memory_mib_each=128, receiver_cpu_each=.25)
         return obs
 
+    def images(self):
+        super().images()
+        for name, pin in self.pins.items():
+            info = json.loads(self.run(["docker", "image", "inspect", pin]).stdout)[0]
+            repository = pin.split(":", 1)[0]
+            child = self.record["images"][name]["platforms"]["linux/" + info["Architecture"]]
+            token_url = "https://auth.docker.io/token?service=registry.docker.io&scope=repository:" + repository + ":pull"
+            with urllib.request.urlopen(token_url, timeout=5) as response:
+                token = json.loads(response.read(65536))["token"]
+            req = urllib.request.Request("https://registry-1.docker.io/v2/" + repository + "/manifests/" + child,
+                headers={"Authorization": "Bearer " + token,
+                    "Accept": "application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json"})
+            with urllib.request.urlopen(req, timeout=5) as response:
+                payload = response.read(1024 * 1024)
+            require("sha256:" + digest(payload) == child, "actual-platform-child-manifest")
+            require(json.loads(payload)["config"]["digest"] == info["Id"], "actual-platform-config-image-identity")
+            self.record["images"][name].update(actual_platform_child_digest=child,
+                actual_image_config_digest=info["Id"], expanded_image_bytes=info["Size"])
+
+    def configure(self, stack, enabled):
+        environment = stack["environment"]
+        environment.update(TELEMETRY_ENABLED="true" if enabled else "false",
+            TELEMETRY_ENDPOINT="http://collector:4318", TELEMETRY_VERSION=self.record["source"])
+        environment.update(OTEL_RESOURCE_ATTRIBUTES="private=" + self.canaries[8], OTEL_SERVICE_NAME=self.canaries[9],
+            OTEL_EXPORTER_OTLP_HEADERS=self.canaries[10], OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE=self.canaries[11],
+            OTEL_EXPORTER_OTLP_CLIENT_KEY=self.canaries[11])
+        config = stack["config"]
+        config["networks"]["telemetry"] = {"external": True,
+            "name": self.obs["project"] + "_" + stack["name"] + "telemetry"}
+        app = config["services"]["app"]
+        app["networks"] = {"default": {}, "telemetry": {"aliases": [stack["name"] + "-app"]}}
+        app["command"] = ["python", "-m", "uvicorn", "runtime103:create_app", "--factory",
+            "--host", "0.0.0.0", "--port", "8000", "--no-proxy-headers", "--no-access-log"]
+        if not any("runtime103.py" in value for value in app["volumes"]):
+            app["volumes"].append(str(ROOT / "ops/rehearsal103/runtime.py") + ":/app/runtime103.py:ro")
+        probe = stack["directory"] / "canary-probe.json"
+        probe.write_text(json.dumps(self.canaries))
+        probe.chmod(0o644)
+        if not any("canary-probe.json" in value for value in app["volumes"]):
+            app["volumes"].append(str(probe) + ":/canary-probe.json:ro")
+        self.save(stack)
+
     def telemetry(self, enabled):
-        transition_started = time.monotonic()
-        for stack in self.stacks:
-            if stack.get("fixture_installed"):
+        with self.ledger.stage("transitions"):
+            for stack in self.stacks:
+                if stack.get("telemetry_mode") == enabled:
+                    continue
                 self.collect_shutdown(stack)
-            environment = stack["environment"]
-            environment.update(TELEMETRY_ENABLED="true" if enabled else "false",
-                TELEMETRY_ENDPOINT="http://collector:4318", TELEMETRY_VERSION=self.record["source"])
-            environment.update(OTEL_RESOURCE_ATTRIBUTES="private=" + self.canaries[8], OTEL_SERVICE_NAME=self.canaries[9],
-                OTEL_EXPORTER_OTLP_HEADERS=self.canaries[10], OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE=self.canaries[11],
-                OTEL_EXPORTER_OTLP_CLIENT_KEY=self.canaries[11])
-            config = stack["config"]
-            config["networks"]["telemetry"] = {"external": True,
-                "name": self.obs["project"] + "_" + stack["name"] + "telemetry"}
-            config["services"]["app"]["networks"] = {"default": {}, "telemetry": {"aliases": [stack["name"] + "-app"]}}
-            config["services"]["app"]["command"] = ["python", "-m", "uvicorn", "runtime103:create_app", "--factory",
-                "--host", "0.0.0.0", "--port", "8000", "--no-proxy-headers", "--no-access-log"]
-            config["services"]["app"]["volumes"].append(str(ROOT / "ops/rehearsal103/runtime.py") + ":/app/runtime103.py:ro") if not any("runtime103.py" in v for v in config["services"]["app"]["volumes"]) else None
-            probe = stack["directory"] / "canary-probe.json"
-            probe.write_text(json.dumps(self.canaries))
-            probe.chmod(0o644)
-            if not any("canary-probe.json" in v for v in config["services"]["app"]["volumes"]):
-                config["services"]["app"]["volumes"].append(str(probe) + ":/canary-probe.json:ro")
-            self.save(stack)
-            self.recreate_app(stack)
-            stack["fixture_installed"] = True
-            status, _, body = self.api(stack, "/auth/login", method="POST",
-                value={"email": stack["email"], "password": stack["password"]})
-            require(status == 200, "phase-normal-login")
-            stack["token"] = json.loads(body)["access_token"]
-        self.transition_seconds += time.monotonic() - transition_started
-        require(self.transition_seconds <= 90, "app-transition-budget")
+                self.configure(stack, enabled)
+                # Existing proxy/TLS and database remain unchanged.
+                self.compose(stack, "up", "-d", "--no-deps", "--force-recreate", "--wait", "--wait-timeout", "30", "app", timeout=35)
+                self.wait_https(stack)
+                stack["telemetry_mode"] = enabled
+                self.login(stack)
 
     def collect_shutdown(self, stack):
         started = time.monotonic()
@@ -217,12 +290,45 @@ class Controller(Rehearsal):
         value.update(environment=stack["name"], docker_stop_seconds=elapsed)
         self.record.setdefault("app_shutdowns", []).append(value)
 
-    def refresh(self):
+    def network_isolation(self):
+        addresses = {}
         for stack in self.stacks:
-            status, _, body = self.api(stack, "/auth/login", method="POST",
-                value={"email": stack["email"], "password": stack["password"]})
-            require(status == 200, "phase-login")
-            stack["token"] = json.loads(body)["access_token"]
+            addresses[stack["name"]] = {}
+            for service in ("app", "db"):
+                container = self.compose(stack, "ps", "-q", service).stdout.strip()
+                value = json.loads(self.run(["docker", "inspect", container]).stdout)[0]
+                require(value["Config"]["Labels"].get(LABEL) == self.owner, "network-probe-ownership")
+                network = self.obs["project"] + "_" + stack["name"] + "telemetry" if service == "app" else stack["project"] + "_default"
+                addresses[stack["name"]][service] = value["NetworkSettings"]["Networks"][network]["IPAddress"]
+        script = '''import socket,json,sys
+v=json.loads(sys.argv[1]);r={}
+for key,host,port in [('own_app','127.0.0.1',8000),('own_db','db',5432),('cross_app',v['app'],8000),('cross_db',v['db'],5432)]:
+ try:s=socket.create_connection((host,port),1);s.close();r[key]=True
+ except OSError:r[key]=False
+print(json.dumps(r))'''
+        def probe(stack):
+            other = "prod" if stack["name"] == "dev" else "dev"
+            result = self.compose(stack, "exec", "-T", "app", "python", "-c", script, json.dumps(addresses[other]), timeout=5)
+            value = json.loads(result.stdout)
+            require(value == {"own_app": True, "own_db": True, "cross_app": False, "cross_db": False}, "actual-app-db-network-isolation")
+            return value
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            futures = {stack["name"]: pool.submit(probe, stack) for stack in self.stacks}
+            self.record["network_isolation"] = {key: future.result(timeout=6) for key, future in futures.items()}
+        self.record["network_isolation_ip_values_exported"] = False
+
+    def login(self, stack):
+        status, _, body = self.api(stack, "/auth/login", method="POST",
+            value={"email": stack["email"], "password": stack["password"]})
+        require(status == 200, "phase-normal-login")
+        stack["token"] = json.loads(body)["access_token"]
+        stack["token_issued_monotonic"] = time.monotonic()
+
+    def refresh_if_needed(self, seconds):
+        # Normal15min token, enough for requested300s phase plus60s safety.
+        for stack in self.stacks:
+            if time.monotonic() - stack["token_issued_monotonic"] + seconds + 60 >= 900:
+                self.login(stack)
 
     def read(self, stack):
         begin = time.monotonic()
@@ -265,8 +371,12 @@ class Controller(Rehearsal):
         return any(number > 0 for number in values)
 
     def phase(self, name, seconds, rate=2, stopped=None):
+        with self.ledger.stage("settle" if name == "settle" else "measurement"):
+            return self._phase(name, seconds, rate, stopped)
+
+    def _phase(self, name, seconds, rate=2, stopped=None):
         self.record["active_stage"] = name
-        self.refresh()
+        self.refresh_if_needed(seconds)
         started = time.monotonic()
         started_unix = time.time()
         pending = {s["name"]: [] for s in self.stacks}
@@ -360,7 +470,7 @@ class Controller(Rehearsal):
             index += 1
         raise Failure("fresh-three-signal-recovery-deadline")
 
-    def privacy_requests(self):
+    def correlation_requests(self):
         trace = uuid.uuid4().hex
         parent = uuid.uuid4().hex[:16]
         self.controlled = (trace, parent)
@@ -368,6 +478,10 @@ class Controller(Rehearsal):
             self.check(stack["name"] + "-controlled-parent-request", self.api(stack, "/categories", token=stack["token"],
                 headers={"traceparent": "00-" + trace + "-" + parent + "-01",
                     "baggage": "private=" + self.canaries[0], "tracestate": "private=" + self.canaries[1]})[0] == 200)
+
+    def privacy_requests(self):
+        self.correlation_requests()
+        for stack in self.stacks:
             self.check(stack["name"] + "-path-canary", self.api(stack, "/" + urllib.parse.quote(self.canaries[2], safe="") + "?private=" + urllib.parse.quote(self.canaries[3], safe=""),
                 headers={"Authorization": self.canaries[4], "Cookie": self.canaries[5]})[0] == 404)
             self.check(stack["name"] + "-body-canary", self.api(stack, "/auth/login", method="POST",
@@ -389,6 +503,15 @@ class Controller(Rehearsal):
     def audit(self):
         self.record["active_stage"] = "private-decoded-three-signal-audit"
         result = {}
+        self.record["receiver_audit_counters"] = {}
+        for signal in SIGNALS:
+            path = self.obs["directory"] / signal / ".receipt-stats"
+            require(path.exists() and not path.is_symlink() and path.stat().st_size <= 4096, "persistent-receiver-counters")
+            value = json.loads(path.read_bytes())
+            require(set(value) == {"accepted", "refused_requests", "refused_records", "unknown_refused_requests", "evicted_files"}
+                and all(isinstance(number, int) and number >= 0 for number in value.values()), "persistent-receiver-counter-schema")
+            require(value["refused_requests"] == 0 and value["evicted_files"] == 0, "complete-private-audit-window")
+            self.record["receiver_audit_counters"][signal] = value
         spans, span_environments, logs, exemplars = {}, {}, [], []
         routes = set(json.loads((ROOT / "openapi.yml").read_text())["paths"]) | {
             "unmatched", "/openapi.json", "/docs", "/docs/oauth2-redirect", "/redoc"}
@@ -471,6 +594,7 @@ class Controller(Rehearsal):
         controlled, parent = self.controlled
         matches = [span for (trace, _), span in spans.items() if base64.b64decode(trace).hex() == controlled and span["name"] == "http.request"]
         self.check("actual-propagated-parent", bool(matches) and all(base64.b64decode(span["parentSpanId"]).hex() == parent for span in matches))
+        self.check("actual-templated-controlled-route", all(attribute_map(span.get("attributes", []))["http.route"] == "/categories" for span in matches))
         self.check("actual-propagated-db-child", any(span["name"] == "db.operation" and any(span.get("parentSpanId") == match["spanId"] for match in matches) for span in spans.values()))
         resolved = sum((item.get("traceId"), item.get("spanId")) in spans for item in exemplars)
         self.check("actual-stored-metric-exemplar-correlation", resolved > 0)
@@ -536,11 +660,10 @@ class Controller(Rehearsal):
             for name in {key for row in samples for key in row.get("collector", {}) if "queue" in key}}
         self.record["capacity"] = capacity
 
-    def main(self):
-        setup = time.time() - float(os.environ.get("REHEARSAL103_SETUP_STARTED_UNIX", time.time()))
-        self.record["ci_setup_seconds"] = setup
-        require(0 <= setup <= 120, "ci-setup-budget")
-        preparation_started = time.monotonic()
+    def prepare(self):
+        require(os.environ.get("DOCKER_HOST", "") in {"", "unix:///var/run/docker.sock"}, "local-docker-required")
+        context = json.loads(self.run(["docker", "context", "inspect"]).stdout)[0]
+        require(context["Endpoints"]["docker"]["Host"] == "unix:///var/run/docker.sock", "local-docker-context-required")
         self.record["active_stage"] = "provenance"
         self.provenance()
         self.record["input_sha256"].update({str(p.relative_to(ROOT)).replace("\\", "/"): digest(p.read_bytes())
@@ -551,14 +674,35 @@ class Controller(Rehearsal):
         self.observability()
         self.stacks = [self.stack(name) for name in ("dev", "prod")]
         for stack in self.stacks:
+            enabled = self.part != "capacity"
+            self.configure(stack, enabled)
             self.up(stack)
+            stack["telemetry_mode"] = enabled
             self.journey(stack)
-        self.record["preparation_seconds"] = time.monotonic() - preparation_started
-        require(self.record["preparation_seconds"] <= 240, "preparation-budget")
+            stack["token_issued_monotonic"] = time.monotonic()
+        self.check("actual-cross-environment-auth-denial", self.api(self.stacks[1], "/auth/me", token=self.stacks[0]["token"])[0] == 401)
+        self.network_isolation()
+        image_roles = {"application": self.image, "postgresql": self.stacks[0]["config"]["services"]["db"]["image"], **self.pins}
+        self.record["expanded_image_bytes_by_role"] = {role: int(self.run(["docker", "image", "inspect", pin,
+            "--format", "{{.Size}}"]).stdout.strip()) for role, pin in image_roles.items()}
+        raw = self.run(["docker", "system", "df", "--format", "{{json .}}"], timeout=5).stdout
+        self.record["docker_disk_accounting"] = {}
+        for line in raw.splitlines():
+            value = json.loads(line)
+            require(value["Type"] in {"Images", "Containers", "Local Volumes", "Build Cache"}, "docker-disk-type")
+            self.record["docker_disk_accounting"][value["Type"]] = {"bytes": bytes_value(value["Size"].replace("kB", "KB")),
+                "objects": int(value["TotalCount"])}
         self.record["phase_plan"] = PLANS[self.part]
         self.record["phase_plan_sha256"] = digest(json.dumps(PLANS[self.part], sort_keys=True).encode())
         self.record["phase_host_fingerprint"] = digest(json.dumps(self.record["host"], sort_keys=True).encode())
         self.record["observer_cost"] = "Same fixture wrapper enabled/disabled; sampling/observation overhead included, not separately subtracted. Never combine CPU/RAM observations across jobs."
+
+    def main(self):
+        setup = time.time() - float(os.environ["REHEARSAL103_SETUP_STARTED_UNIX"]) if "REHEARSAL103_SETUP_STARTED_UNIX" in os.environ else 0
+        self.record["ci_setup_seconds"] = setup
+        require(0 <= setup <= 120, "ci-setup-budget")
+        with self.ledger.stage("preparation"):
+            self.prepare()
         self.sampler = Sampler(self)
         if self.part == "capacity":
             for pair in range(3):
@@ -570,41 +714,62 @@ class Controller(Rehearsal):
         else:
             self.telemetry(True)
             self.phase("outage-job-healthy-baseline", 15)
-        privacy_started = time.monotonic()
-        self.privacy_requests()
-        require(time.monotonic() - privacy_started <= 20, "privacy-fixture-budget")
-        if self.part == "functional":
-            self.compose(self.obs, "pause", "collector", timeout=10)
-            self.phase("sdk-backpressure-collector-paused", 12, rate=64, stopped="collector")
-            self.compose(self.obs, "unpause", "collector", timeout=10)
-            saturation = [row for row in self.record["samples"] if row["phase"] == "sdk-backpressure-collector-paused"]
-            self.check("actual-sdk-queue-saturation", any(v["processor_observations"][s]["queue_dropped"] > 0
-                for row in saturation for v in row["sdk_health"].values() for s in ("traces", "logs")))
-        if self.part in {"functional", "capacity"}:
-            for target in PLANS[self.part]["outages"]:
-                before = self.collector_metrics()
-                self.compose(self.obs, "stop", "--timeout", "3", target, timeout=10)
-                phase = self.phase("outage-" + target, 60, rate=32 if target != "prometheus" else 8, stopped=target)
-                self.recovery(target)
-                after = self.collector_metrics()
-                self.record.setdefault("outages", {})[target] = {"seconds": 60, "before": before, "after": after,
-                    "requests_successful": all(v["errors"] == 0 for v in phase["environments"].values())}
-                if target != "collector":
-                    component = "prometheusremotewrite" if target == "prometheus" else "otlp_http/" + target
-                    snapshots = [row["collector"] for row in self.record["samples"] if row["phase"] == "outage-" + target]
-                    sizes = [value for row in snapshots for key, value in row.items() if "queue_size|" + component == key.removeprefix("otelcol_exporter_")]
-                    # Exact queue labels/version names must be observed, never
-                    # replace absent counters with an invented zero.
-                    self.check("actual-downstream-queue-saturated-" + target, bool(sizes) and max(sizes) >= 2)
+        with self.ledger.stage("privacy"):
+            if self.part == "capacity":
+                self.correlation_requests()
+            else:
+                self.privacy_requests()
+        with self.ledger.stage("measurement"):
+            if self.part == "functional":
+                self.compose(self.obs, "pause", "collector", timeout=10)
+                self.phase("sdk-backpressure-collector-paused", 12, rate=64, stopped="collector")
+                self.compose(self.obs, "unpause", "collector", timeout=10)
+                saturation = [row for row in self.record["samples"] if row["phase"] == "sdk-backpressure-collector-paused"]
+                self.check("actual-sdk-queue-saturation", any(v["processor_observations"][s]["queue_dropped"] > 0
+                    for row in saturation for v in row["sdk_health"].values() for s in ("traces", "logs")))
+            if self.part in {"functional", "capacity"}:
+                for target in PLANS[self.part]["outages"]:
+                    before = self.collector_metrics()
+                    self.compose(self.obs, "stop", "--timeout", "3", target, timeout=10)
+                    phase = self.phase("outage-" + target, 60, rate=32 if target != "prometheus" else 8, stopped=target)
+                    self.recovery(target)
+                    after = self.collector_metrics()
+                    self.record.setdefault("outages", {})[target] = {"seconds": 60, "before": before, "after": after,
+                        "requests_successful": all(v["errors"] == 0 for v in phase["environments"].values())}
+                    if target != "collector":
+                        component = "prometheusremotewrite" if target == "prometheus" else "otlp_http/" + target
+                        snapshots = [row["collector"] for row in self.record["samples"] if row["phase"] == "outage-" + target]
+                        sizes = [value for row in snapshots for key, value in row.items() if "queue_size|" + component == key.removeprefix("otelcol_exporter_")]
+                        # Exact queue labels/version names must be observed, never
+                        # replace absent counters with an invented zero.
+                        self.check("actual-downstream-queue-saturated-" + target, bool(sizes) and max(sizes) >= 2)
         self.phase("settle", 8)
-        for stack in self.stacks:
-            self.collect_shutdown(stack)
+        with self.ledger.stage("final_shutdown"):
+            for stack in self.stacks:
+                self.collect_shutdown(stack)
         # Final SDK flush must traverse Collector before offline unique counts.
-        time.sleep(3)
-        self.audit()
-        self.reconcile()
-        self.projection()
+        with self.ledger.stage("settle"):
+            require(self.deadline - time.monotonic() >= 3, "final-settle-budget")
+            time.sleep(3)
+        with self.ledger.stage("audit_projection"):
+            self.audit()
+            self.reconcile()
+            if self.part == "capacity":
+                self.projection()
+            else:
+                self.record["capacity_acceptance"] = False
+                self.record["capacity_evidence_required_from"] = "same-source separate capacity job"
         self.record["result"] = "PASS"
+
+    def cleanup(self):
+        work = time.monotonic() - self.controller_started
+        self.record["controller_work_seconds"] = work
+        began = time.monotonic()
+        super().cleanup()
+        elapsed = time.monotonic() - began
+        self.record["verified_cleanup_seconds"] = elapsed
+        if work > 1520 or elapsed > 90:
+            self.record["result"] = "FAIL"
 
 
 class Sampler:
@@ -629,13 +794,67 @@ class Sampler:
             require(now - self.bad[key] < 30, key)
 
     def storage(self):
-        result = {}
-        script = "import os,json;print(json.dumps({p:sum(os.stat(os.path.join(r,f)).st_size for r,d,fs in os.walk(p) for f in fs) for p in ['/metrics','/grafana']}))"
+        script = '''import os,json
+def fail(error):raise error
+def total(path):
+ if not os.path.isdir(path):return 0
+ return sum(os.stat(os.path.join(r,f)).st_blocks*512 for r,d,fs in os.walk(path,onerror=fail) for f in fs)+sum(os.stat(r).st_blocks*512 for r,d,fs in os.walk(path,onerror=fail))
+print(json.dumps({'totals':{p:total(p) for p in ['/metrics','/grafana']},'subsets':{p:total(p) for p in ['/metrics/wal','/metrics/chunks_head']}}))'''
         values = json.loads(self.r.compose(self.r.obs, "exec", "-T", "control", "python", "-c", script, timeout=3).stdout)
-        result.update({name: value for name, value in values.items()})
+        result = dict(values["totals"])
         for signal, value in stored_counts(self.r.obs["directory"]).items():
-            result[signal] = value["bytes"]
-        return result, (time.monotonic(), time.time())
+            result[signal] = value["allocated_bytes"]
+        return result, values["subsets"], (time.monotonic(), time.time())
+
+    def log_storage(self, inspected):
+        paths = {}
+        for value in inspected:
+            path = value.get("LogPath")
+            if not path:
+                continue
+            require(Path(path).name == value["Id"] + "-json.log" and Path(path).parent.name == value["Id"], "owned-log-path")
+            labels = value["Config"]["Labels"]
+            key = labels["com.docker.compose.project"].rsplit("-", 1)[-1] + "/" + labels["com.docker.compose.service"]
+            paths[key] = path
+        script = '''import json,os,sys
+r={}
+for key,path in json.loads(sys.argv[1]).items():
+ total=0
+ for p in [path,path+'.1',path+'.1.gz']:
+  try:total+=os.stat(p).st_blocks*512
+  except FileNotFoundError:pass
+ r[key]=total
+print(json.dumps(r))'''
+        value = self.r.run(["sudo", "-n", sys.executable, "-c", script, json.dumps(paths)], timeout=3)
+        return json.loads(value.stdout), (time.monotonic(), time.time())
+
+    def generator_memory(self):
+        # Sample while bounded Docker CLI observers are active. Read only RSS,
+        # never process args, identities or environment, and publish no PIDs.
+        time.sleep(.4)
+        from backend.telemetry import resident_bytes
+        own = resident_bytes()
+        children, seen = [], set()
+        for source in Path("/proc/self/task").glob("*/children"):
+            try:
+                children.extend(source.read_text().split())
+            except FileNotFoundError:
+                pass
+        memory = 0
+        while children and len(seen) < 64:
+            pid = children.pop()
+            if pid in seen or not pid.isdigit():
+                continue
+            seen.add(pid)
+            try:
+                status = Path("/proc") / pid / "status"
+                match = re.search(r"^VmRSS:\s+(\d+)\s+kB$", status.read_text(), re.M)
+                if match:
+                    memory += int(match[1]) * 1024
+                children.extend((Path("/proc") / pid / "task" / pid / "children").read_text().split())
+            except (FileNotFoundError, ProcessLookupError):
+                pass
+        return {"controller_rss_bytes": own, "cli_children_rss_bytes": memory, "combined_rss_bytes": own + memory}, (time.monotonic(), time.time())
 
     def sdk_health(self, name):
         status, _, raw = request(self.r.obs["endpoints"][name + "-sdk"], "/health", timeout=1)
@@ -646,7 +865,7 @@ class Sampler:
         status, _, raw = request(self.r.obs["endpoints"][signal], "/health", timeout=1)
         require(status == 200, "local-receiver-health")
         value = json.loads(raw)
-        require(set(value) == {"accepted", "refused", "evicted_files"}
+        require(set(value) == {"accepted", "refused_requests", "refused_records", "unknown_refused_requests", "evicted_files"}
             and all(isinstance(v, int) and v >= 0 for v in value.values()), "receiver-health-schema")
         return value, (time.monotonic(), time.time())
 
@@ -659,16 +878,18 @@ class Sampler:
             instant = (time.monotonic(), time.time())
             for key in keys:
                 times[key] = instant
-        with ThreadPoolExecutor(max_workers=8) as pool:
+        with ThreadPoolExecutor(max_workers=10) as pool:
             storage = pool.submit(self.storage)
             app_times = {s["name"]: {} for s in r.stacks}
             app_futures = {s["name"]: pool.submit(app_disk, r, s, app_times[s["name"]]) for s in r.stacks}
             sdk_futures = {s["name"]: pool.submit(self.sdk_health, s["name"]) for s in r.stacks}
             receiver_futures = {signal: pool.submit(self.receiver_health, signal) for signal in SIGNALS if signal != stopped}
+            generator_memory = pool.submit(self.generator_memory)
             ids = []
             for stack in [*r.stacks, r.obs]:
                 ids.extend(r.compose(stack, "ps", "-aq").stdout.split())
             values = json.loads(r.run(["docker", "inspect", *ids], timeout=3).stdout)
+            logs = pool.submit(self.log_storage, values)
             running = []
             byname = {}
             for value in values:
@@ -709,12 +930,18 @@ class Sampler:
             row["aggregate_memory_bytes"] = sum(v["memory_bytes"] for v in row["services"].values())
             stamp("aggregate_cpu_percent", "aggregate_memory_bytes")
             self.sustained("aggregate-cpu-stop", row["aggregate_cpu_percent"] > os.cpu_count() * 80)
-            row["storage"], instant = storage.result(timeout=3)
+            row["storage"], row["telemetry_storage_subsets"], instant = storage.result(timeout=3)
             for name in row["storage"]:
                 times["disk/" + name] = instant
+            for name in row["telemetry_storage_subsets"]:
+                times["disk-subset/" + name] = instant
             row["app_storage"] = {name: future.result(timeout=3) for name, future in app_futures.items()}
             for value in app_times.values():
                 times.update(value)
+            row["container_log_bytes"], instant = logs.result(timeout=3)
+            times["owned-container-logs"] = instant
+            row["generator_memory"], instant = generator_memory.result(timeout=1)
+            times["generator-memory"] = instant
             row["sdk_health"] = {}
             for name, future in sdk_futures.items():
                 row["sdk_health"][name], instant = future.result(timeout=1)
@@ -751,13 +978,13 @@ class Sampler:
         generator = (time.monotonic(), time.process_time() + os.times().children_user + os.times().children_system)
         row["generator_cpu_percent"] = 100 * (generator[1] - self.previous_generator[1]) / max(.001, generator[0] - self.previous_generator[0])
         self.previous_generator = generator
-        from backend.telemetry import resident_bytes
-        row["generator_memory_bytes"] = resident_bytes()
-        stamp("host-cpu", "host-memory", "generator-cpu", "generator-memory", "free-disk")
+        row["generator_memory_bytes"] = row["generator_memory"]["combined_rss_bytes"]
+        stamp("host-cpu", "host-memory", "generator-cpu", "free-disk")
         gaps = {key: instant[0] - self.previous[key] for key, instant in times.items() if key in self.previous}
         self.previous.update({key: instant[0] for key, instant in times.items()})
         row["field_timestamps_unix"] = {key: instant[1] for key, instant in times.items()}
         row["field_max_gap_seconds"] = max(gaps.values(), default=0)
+        row["field_gaps_seconds"] = gaps
         row["sample_collection_seconds"] = time.monotonic() - begin
         r.record["samples"].append(row)
         require(row["field_max_gap_seconds"] <= 5, "actual-field-sample-gap")

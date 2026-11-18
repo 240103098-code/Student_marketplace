@@ -59,7 +59,20 @@ class Store:
         self.limit = min(limit, STORE_LIMIT)
         self.block_size = os.statvfs(self.directory).f_frsize if hasattr(os, "statvfs") else 1
         self.sequence = time.time_ns()
-        self.accepted = self.refused = self.evicted = 0
+        self.accepted = self.refused_requests = self.refused_records = self.unknown_refused_requests = self.evicted = 0
+        stats = self.directory / ".receipt-stats"
+        if stats.exists():
+            if stats.is_symlink() or stats.stat().st_size > 4096:
+                raise ValueError("stats-bound")
+            value = json.loads(stats.read_bytes())
+            if set(value) != {"accepted", "refused_requests", "refused_records", "unknown_refused_requests", "evicted_files"} or not all(
+                isinstance(v, int) and v >= 0 for v in value.values()):
+                raise ValueError("stats-schema")
+            self.accepted = value["accepted"]
+            self.refused_requests = value["refused_requests"]
+            self.refused_records = value["refused_records"]
+            self.unknown_refused_requests = value["unknown_refused_requests"]
+            self.evicted = value["evicted_files"]
         self.files = deque()
         self.bytes = 0
         for path in sorted(self.directory.glob("*.json")):
@@ -70,11 +83,36 @@ class Store:
             self.files.append((path, size, path.stat().st_mtime))
             self.bytes += size
 
+    def counters(self):
+        return {"accepted": self.accepted, "refused_requests": self.refused_requests,
+            "refused_records": self.refused_records, "unknown_refused_requests": self.unknown_refused_requests,
+            "evicted_files": self.evicted}
+
+    def persist(self):
+        path, temporary = self.directory / ".receipt-stats", self.directory / ".receipt-stats.tmp"
+        if path.is_symlink() or temporary.is_symlink():
+            raise ValueError("stats-path")
+        with temporary.open("w") as target:
+            temporary.chmod(0o600)
+            target.write(json.dumps(self.counters()))
+        temporary.replace(path)
+
+    def refuse(self, count=None):
+        self.refused_requests += 1
+        if count is None:
+            self.unknown_refused_requests += 1
+        else:
+            self.refused_records += count
+        self.persist()
+
     def append(self, encoded, count):
         now = time.time()
         needed = math.ceil(len(encoded) / self.block_size) * self.block_size
         directory_info = self.directory.stat()
         directory_cost = directory_info.st_blocks * 512 if hasattr(directory_info, "st_blocks") else 0
+        if needed + directory_cost > self.limit:
+            self.refuse(count)
+            return False
         while self.files and (self.bytes + needed + directory_cost > self.limit or len(self.files) >= FILE_LIMIT
                          or now - self.files[0][2] >= RETENTION_SECONDS):
             path, length, timestamp = self.files.popleft()
@@ -83,9 +121,6 @@ class Store:
             path.unlink()
             self.bytes -= length
             self.evicted += 1
-        if needed + directory_cost > self.limit:
-            self.refused += count
-            return False
         self.sequence += 1
         path = self.directory / (str(self.sequence) + ".json")
         with path.open("xb") as target:
@@ -103,11 +138,13 @@ class Store:
             self.bytes -= size
             self.evicted += 1
         self.accepted += count
+        self.persist()
         return True
 
 
 def make_server(signal, directory, port=4318, host="0.0.0.0"):
-    store = Store(directory)
+    # Reserve an atomic stats replacement's old+new blocks within128MiB.
+    store = Store(directory, STORE_LIMIT - 8192)
     class Handler(BaseHTTPRequestHandler):
         timeout = 2
         def setup(self):
@@ -117,6 +154,9 @@ def make_server(signal, directory, port=4318, host="0.0.0.0"):
         def log_message(self, *args):
             pass
         def send_error(self, code, *ignored, **kwargs):
+            if not getattr(self, "_refusal_recorded", False):
+                store.refuse()
+                self._refusal_recorded = True
             body = b"Receipt unavailable."
             self.send_response(code, "Receipt unavailable")
             self.send_header("Content-Length", str(len(body)))
@@ -127,7 +167,7 @@ def make_server(signal, directory, port=4318, host="0.0.0.0"):
             if self.path != "/health":
                 self.send_error(404)
                 return
-            body = json.dumps({"accepted": store.accepted, "refused": store.refused, "evicted_files": store.evicted}).encode()
+            body = json.dumps(store.counters()).encode()
             self.send_response(200)
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
@@ -146,6 +186,7 @@ def make_server(signal, directory, port=4318, host="0.0.0.0"):
                     raise ValueError("incomplete-request")
                 encoded, count = decode(signal, payload)
                 if not store.append(encoded, count):
+                    self._refusal_recorded = True
                     self.send_error(507)
                     return
                 self.send_response(200)
@@ -154,10 +195,14 @@ def make_server(signal, directory, port=4318, host="0.0.0.0"):
                 self.end_headers()
             except Exception:
                 # No diagnostic may expose untrusted text/decoding exceptions.
-                store.refused += 1
+                store.refuse()
+                self._refusal_recorded = True
                 self.send_error(400)
                 self.close_connection = True
-    instance = HTTPServer((host, port), Handler)
+    class Server(HTTPServer):
+        def handle_error(self, *ignored):
+            pass
+    instance = Server((host, port), Handler)
     instance.timeout = 2
     return instance
 

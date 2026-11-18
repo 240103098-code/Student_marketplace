@@ -86,9 +86,20 @@ def create_app():
                             "db.system.name": "postgresql", "db.operation.name": "SELECT"},
                             record_exception=False, set_status_on_exception=False) as span:
                             try:
-                                with app.api.state.database.session() as session:
-                                    session.execute(text("SELECT :private"), {"private": canaries[0]})
-                                    session.execute(text('SELECT * FROM "' + canaries[1] + '"'))
+                                with owner.tracer.start_as_current_span("db.operation", attributes={
+                                    "db.system.name": "postgresql", "db.operation.name": "SELECT"},
+                                    record_exception=False, set_status_on_exception=False) as dependency:
+                                    try:
+                                        with app.api.state.database.session() as session:
+                                            session.execute(text("SELECT :private"), {"private": canaries[0]})
+                                            session.execute(text("SELECT 1/0"))
+                                    except Exception:
+                                        dependency.set_status(StatusCode.ERROR)
+                                        dependency.set_attribute("outcome", "error")
+                                        # Actual failed PG work with a private
+                                        # dependency wrapper exception crossing
+                                        # SDK scope; native PG error is generic.
+                                        raise RuntimeError(canaries[1]) from None
                             except Exception as error:
                                 span.set_status(StatusCode.ERROR)
                                 span.set_attribute("outcome", "error")

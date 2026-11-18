@@ -369,3 +369,30 @@ assert not hasattr(a.state.telemetry,'sessions')
         for value in ("http://external.example", "http://user:password@localhost", "http://localhost/path?secret=value"):
             with self.assertRaises(ValueError):
                 settings(TELEMETRY_ENDPOINT=value)
+
+    def test_all_hex_commit_prefixes_and_actual_source_version_in_all_three_signals(self):
+        for length in (40, 64):
+            for prefix in "0123456789abcdef":
+                value = prefix + "a" * (length - 1)
+                self.assertEqual(settings(TELEMETRY_VERSION=value).telemetry_version, value)
+        for value in ("0.1.0", "1.2.3", "2026.11.17", "1.2.3-abcdef"):
+            self.assertEqual(settings(TELEMETRY_VERSION=value).telemetry_version, value)
+        for value in ("", "a" * 39, "a" * 41, "A" * 40, "g" * 40, "1" + "a" * 38,
+            "private@example.invalid", "https://private.invalid/source", "/private/source", "PRIVATE_103\n", "a" * 65):
+            with self.assertRaises(ValueError) as raised:
+                settings(TELEMETRY_VERSION=value)
+            if value:
+                self.assertNotIn(value, str(raised.exception))
+        current = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True, timeout=5).stdout.strip()
+        # Real alphabetic-leading source checkpoint, plus the actual checkout SHA.
+        versions = {"dc0d4900d26882a75a14a5977c4dcf308fc12398", current}
+        for version in versions:
+            app = self.app(TELEMETRY_VERSION=version)
+            with TestClient(app) as client:
+                authorization = self.account(app, client)
+                self.assertEqual(client.get("/categories", headers=authorization).status_code, 200)
+                flush(app)
+        for signal, key in (("traces", "resourceSpans"), ("logs", "resourceLogs"), ("metrics", "resourceMetrics")):
+            received = {next(a["value"]["stringValue"] for a in resource["resource"]["attributes"] if a["key"] == "service.version")
+                for payload in self.receipt.records[signal] for resource in payload[key]}
+            self.assertEqual(received, versions)

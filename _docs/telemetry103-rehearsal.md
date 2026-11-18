@@ -19,13 +19,21 @@ hosts are never combined as an instrumentation overhead comparison.
 | capacity | Three alternating-order pairs of120s off/on at2 actual reads/s/environment;300s enabled;60s Collector outage and fresh recovery<=120s; same-host overhead and complete capacity projection |
 | functional |15s baseline;12s actual paused-Collector SDK queue saturation; separately stop Collector, trace sink, log sink, metrics sink and Prometheus for60s each, fresh recovery<=120s each; privacy/correlation and unique receipt reconciliation |
 
-GitHub push runs preflight. Dispatch `phase=full` runs functional/capacity as
-separate bounded jobs at the selected candidate branch. Each has30min job limit,
-<=120s setup,<=1570s controller work and<=90s owned cleanup. Preparation has240s,
-app transitions90s cumulative, privacy fixture20s. Capacity workload worst-case
-1200s plus those budgets/settle remains below the job limit; a missed budget fails
-rather than truncating phases or calling incomplete evidence passing. No `all`
-mode attempts a >30min combined run.
+Trusted push `issue-103-otel-preflight` runs preflight; trusted push
+`issue-103-otel` runs the functional/capacity matrix. Manual dispatch is optional,
+never the prerequisite for candidate-only testing: GitHub documents a default-
+branch workflow requirement. Main does not run these opt-in jobs.
+
+Each30min job has an inclusive ledger: setup120s, controller work1520s,
+verified owned cleanup90s, artifact step60s and platform handoff10s. Work includes
+preparation210s, app transitions40s, measurement/support1200s, capacity correlation10s,
+settle/flush12s, final two-app shutdown30s and audit/projection18s. Functional uses
+measurement1190s and privacy20s instead. Nested charges count once and include
+normal logins, queue drains, final sampler/Grafana calls and network probes.
+Mandatory durations are never shortened; a missed shared cap fails and cleans up.
+This does not promise every individual network timeout maximum fits at once.
+Identical modes are reused; normal tokens renew before the requested phase plus
+60s safety approaches the actual15min TTL.
 
 Collector0.145.0 canonical `otlp_http` exporter is Stable for traces/metrics/logs;
 legacy `otlphttp` is deprecated. Retained Prometheus remote write is Beta.
@@ -38,7 +46,7 @@ labels, separating dev/prod series without collecting new identity data.
 
 Trace/log/metrics each have a separate private protobuf receiver process and
 directory, enabling independent outages. Requests<=64KiB/2048records, decoded
-file<=512KiB, allocated data+directory blocks<=128MiB,<=16384files and24h maximum
+file<=512KiB, allocated data+directory/stats blocks<=128MiB,<=16384files and24h maximum
 age; oldest files evict, oversize refuses. Private files never upload. Per-signal
 filesystem/inode reserves are accounted separately in capacity planning.
 
@@ -46,7 +54,10 @@ Only owned internal networks connect services; dev/prod application storage and
 DB networks remain separate. Fixed loopback control relays are operator access;
 their own ingress bridge has a default route, so there is no claim of enforced
 relay egress denial. Docker administrators are outside this trust boundary.
-Local OTLP is unauthenticated only within these disposable trusted networks.
+Own app/DB reachability and cross-environment app8000/DB5432 denial are probed
+after telemetry joins. Collector/control are privileged trusted fixture peers
+across both telemetry networks. Fixed relays expose only telemetry/health, not
+app8000 or DB5432. Local OTLP is unauthenticated only inside these trusted networks.
 Any broader deployment requires authenticated, verified TLS and separate approval.
 
 The fixture wrapper is identical in both modes. Disabled mode imports no SDK and
@@ -58,6 +69,9 @@ from app readiness; final shutdown requires actual reported duration<=10s and
 zero remaining SDK workers. Safe numeric attempt counters are not unique loss.
 Offline decoded IDs reconcile generated, attempted, acknowledged, duplicated,
 stored and missing records after settle; no dropped-data recovery is claimed.
+Receiver counters persist across destination restarts; refused requests, known
+refused records, unknown-count requests and evicted files have separate units.
+Any unexpected refusal or eviction prevents a complete-window privacy PASS.
 
 The privacy fixture adds actual PostgreSQL parameter/error probes and fixed-log
 extra attempts outside measured phases. Normal HTTP work still uses guarded API
@@ -66,11 +80,12 @@ propagation/ambient configuration. Strict decoded schema and literal/URL/base64/
 hex/JSON searches cover all signals and private diagnostics. Artifact uploads
 allow only the constructed numeric/hash/boolean summary for seven days.
 
-Current local checks: six controller/receiver safety tests pass; thirteen retained
+Current local checks: eight controller/receiver safety tests pass; fourteen retained
 SDK/lifecycle/privacy tests pass. Linux live receipt and complete phase evidence
 are pending. Before publication readiness, finish conservative allocated-storage/
-WAL/backup projections, paired variation reporting and actual platform-child
-manifest validation, then independent QA must audit the exact candidate.
+WAL/backup projections and paired variation reporting. Actual selected child
+manifest/config identity verification is implemented but not yet run on Linux.
+Independent QA must audit the exact candidate before runtime publication.
 
 Official pinned source references: [OTLP HTTP factory/maturity](https://github.com/open-telemetry/opentelemetry-collector/blob/v0.145.0/exporter/otlphttpexporter/factory.go),
 [queue sizing/batching](https://github.com/open-telemetry/opentelemetry-collector/blob/v0.145.0/exporter/exporterhelper/internal/queuebatch/config.go),

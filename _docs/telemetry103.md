@@ -7,7 +7,11 @@ Only collector, localhost or literal loopback origins are accepted, including
 HTTPS. Owned nonloopback production destinations need a separately reviewed
 activation/configuration change.
 `TELEMETRY_SERVICE` permits only `student-marketplace`; `TELEMETRY_VERSION`
-permits a bounded numeric release/hex commit identifier (64 characters maximum).
+permits exact lowercase40/64-character hexadecimal commit identifiers, including
+leading a–f. Numeric releases use one to four decimal components separated by
+dots, optionally a hyphen and1–16 lowercase hexadecimal suffix characters;
+total length is<=64. Examples:0.1.0,1.2.3,2026.11.17,1.2.3-abcdef. Only explicitly
+configured public nonsecret identity is allowed; format cannot prove publicness.
 Environment is the existing development/test/production enumeration. No global
 SDK providers, handlers, instrumentors or resource detectors are installed.
 Providers/workers/sessions/listeners are created in lifespan only; borrowed
@@ -101,7 +105,7 @@ zero or SDK callback traceback is emitted (#117).
 Disabled construction never reads a borrowed database engine; the original
 serviceless canonical OpenAPI/export fixtures remain supported (#118).
 
-Current verification: thirteen focused tests pass on Windows, including actual
+Current verification: fourteen focused tests pass on Windows, including actual
 SDK HTTP protobuf receipt, normal registration/verification/login and DB child
 spans, controlled parent/log correlation, canaries in query/path/body/SQL/error/
 extras, actual received metric exemplars, disabled subprocess absence of SDK/workers/

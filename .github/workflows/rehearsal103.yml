@@ -1,7 +1,7 @@
 name: Disposable three-signal telemetry 103
 on:
   push:
-    branches: [issue-103-otel]
+    branches: [issue-103-otel, issue-103-otel-preflight]
   workflow_dispatch:
     inputs:
       phase:
@@ -12,17 +12,17 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: disposable103-${{ github.ref }}-${{ github.event.inputs.phase || 'preflight' }}
+  group: disposable103-${{ github.ref }}-${{ github.event.inputs.phase || 'push' }}
   cancel-in-progress: false
 jobs:
   rehearsal:
-    if: github.repository == '240103098-code/Student_marketplace' && github.ref == 'refs/heads/issue-103-otel'
+    if: github.repository == '240103098-code/Student_marketplace' && contains(fromJSON('["refs/heads/issue-103-otel","refs/heads/issue-103-otel-preflight"]'), github.ref)
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        part: ${{ fromJSON(github.event.inputs.phase == 'full' && '["functional","capacity"]' || format('["{0}"]', github.event.inputs.phase || 'preflight')) }}
+        part: ${{ fromJSON(github.ref == 'refs/heads/issue-103-otel-preflight' && '["preflight"]' || (github.event_name == 'push' || github.event.inputs.phase == 'full') && '["functional","capacity"]' || format('["{0}"]', github.event.inputs.phase || 'preflight')) }}
     steps:
       - name: Start explicit job setup budget
         run: echo "REHEARSAL103_SETUP_STARTED_UNIX=$(date +%s)" >> "$GITHUB_ENV"
@@ -42,6 +42,7 @@ jobs:
         run: .venv/bin/python -m tools.rehearsal103 --confirm-disposable issue-103-synthetic-only --part "$REHEARSAL103_PART"
       - name: Publish constructed safe summary only
         if: always()
+        timeout-minutes: 1
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: rehearsal103-${{ matrix.part }}-${{ github.sha }}-${{ github.run_attempt }}
