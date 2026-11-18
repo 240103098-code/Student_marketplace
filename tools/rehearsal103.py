@@ -809,8 +809,20 @@ print(json.dumps(r))'''
             value["retry_duplicate_deliveries"] = self.record["decoded_receipt"][signal]["duplicate_records"]
             value["missing_after_settle"] = value["generated"] - value["post_collector_unique_stored"]
             require(value["missing_after_settle"] >= 0, "unique-record-reconciliation")
+            value["missing_unique_records_after_settle"] = value["missing_after_settle"] if signal != "metrics" else None
+            if signal == "metrics":
+                value["missing_datapoint_observations_after_settle"] = value["missing_after_settle"]
+                value["unit"] = "Timestamped datapoint observations, not lost metric increments/requests or unique events"
+            else:
+                value["unit"] = "Individual generated spans or structured log records"
             value["failed_attempts_are_unique_loss"] = False
         self.record["reconciliation"] = totals
+        from collections import defaultdict
+        from tools.rehearsal103_report import phase_signal_accounting
+        byphase = defaultdict(list)
+        for row in self.record["samples"]:
+            byphase[row["phase"]].append(row)
+        self.record["phase_signal_accounting"] = phase_signal_accounting(self.record, byphase)
 
     def projection(self):
         from tools.rehearsal103_report import build_report

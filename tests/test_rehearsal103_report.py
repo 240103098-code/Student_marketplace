@@ -22,7 +22,7 @@ def fixture():
     data = 1000
     accepted = 100
     for name, enabled, seconds in names:
-        record["phases"][name] = {"duration_seconds": seconds, "target_requests_per_second_per_environment": 2,
+        record["phases"][name] = {"duration_seconds": seconds, "collector_before": {}, "collector_after": {}, "target_requests_per_second_per_environment": 2,
             "concurrency_per_environment": 4, "environments": {
             env: {"attempted": seconds * 2, "success": seconds * 2, "errors": 0,
                 "achieved_requests_per_second": 2, "target_coverage": 1, "p50_seconds": .02 if enabled else .01,
@@ -61,6 +61,31 @@ def fixture():
 
 
 class ReportTest(unittest.TestCase):
+    def test_phase_loss_preserves_healthy_enqueue_failure_and_unknown_outage_boundaries(self):
+        record = fixture()
+        key = "otelcol_exporter_enqueue_failed_metric_points_total|otlp_http/metrics"
+        record["phases"]["pair-0-enabled"].update(collector_before={key: 0}, collector_after={key: 16})
+        record["phases"]["outage-collector"] = {"collector_before": None, "collector_after": None}
+        report = build_report(record)["capacity"]["phase_signal_accounting"]
+        cell = report["pair-0-enabled"]["collector_phase_boundary_counters"]["metrics"]["enqueue_failed"]
+        self.assertEqual(cell, {"before": 0, "after": 16, "delta": 16, "status": "observed"})
+        unknown = report["outage-collector"]["collector_phase_boundary_counters"]["metrics"]["enqueue_failed"]
+        self.assertIsNone(unknown["delta"])
+        self.assertEqual(unknown["status"], "absent-unknown")
+        record["phases"]["pair-0-enabled"].update(collector_before={key: 16}, collector_after={key: 0})
+        reset = build_report(record)["capacity"]["phase_signal_accounting"]["pair-0-enabled"]["collector_phase_boundary_counters"]["metrics"]["enqueue_failed"]
+        self.assertIsNone(reset["delta"])
+        self.assertEqual(reset["status"], "reset-unknown")
+
+    def test_final_healthy_burst_loss_survives_outside_phase_windows(self):
+        record = fixture()
+        key = "otelcol_exporter_enqueue_failed_metric_points_total|otlp_http/metrics"
+        record["post_stop_drain"] = {"polls": [{"collector_counters": {key: 16}}]}
+        report = build_report(record)["capacity"]
+        self.assertEqual(report["final_collector_export_observations"]["otlp_http/metrics"]["enqueue_failed"], 16)
+        self.assertIsNone(report["final_collector_export_observations"]["otlp_http/logs"]["enqueue_failed"])
+        self.assertIn("No zero-loss claim", report["loss_boundary_note"])
+
     def test_actual_shaped_stopped_collector_is_explicitly_unavailable_not_zero(self):
         record = fixture()
         row = copy.deepcopy(record["samples"][-1])

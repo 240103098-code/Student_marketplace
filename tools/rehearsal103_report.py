@@ -288,6 +288,17 @@ def _build_report(record):
     capacity["retention_bounded_projection"] = bounded
     capacity["oracle_disk_free_reserve"] = "max(4GiB,20% actual host disk); backing disk capacity required to assess fit"
     capacity["observed_queue_counters"] = queue_observations(record["samples"])
+    capacity["phase_signal_accounting"] = phase_signal_accounting(record, byphase)
+    final = record.get("post_stop_drain", {}).get("polls", [])
+    final = final[-1]["collector_counters"] if final else {}
+    capacity["final_collector_export_observations"] = {component: {kind.rstrip("_"): final.get(
+        "otelcol_exporter_" + kind + ("spans" if component.endswith("traces") else "log_records"
+            if component.endswith("logs") else "metric_points") + "_total|" + component)
+        for kind in ("sent_", "send_failed_", "enqueue_failed_")}
+        for component in ("otlp_http/traces", "otlp_http/logs", "otlp_http/metrics", "prometheusremotewrite")}
+    require(all(value is None or type(value) in (int, float) and math.isfinite(value) and value >= 0
+        for counter in capacity["final_collector_export_observations"].values() for value in counter.values()), "final-collector-counter-invalid")
+    capacity["loss_boundary_note"] = "Final counters include preparation, transition, privacy and shutdown bursts outside measured phase boundaries; phase deltas cannot erase that loss. Missing counters remain unknown. No zero-loss claim."
     capacity["service_observation_availability"] = {name: {
         "observed_samples": sum(name in row["services"] for row in record["samples"]),
         "intentionally_stopped_samples": sum(name not in row["services"] for row in record["samples"]),
@@ -306,6 +317,45 @@ def counter_summary(values):
     return {"observed_samples": len(values), "peak": max(values) if values else None,
         "first": values[0] if values else None, "last": values[-1] if values else None,
         "counter_resets_observed": sum(b < a for a, b in zip(values, values[1:])) if values else None}
+
+
+def counter_delta(before, after):
+    for value in (before, after):
+        if value is not None:
+            number(value)
+    known = before is not None and after is not None
+    reset = known and after < before
+    return {"before": before, "after": after, "delta": after - before if known and not reset else None,
+        "status": "reset-unknown" if reset else "observed" if known else "absent-unknown"}
+
+
+def phase_signal_accounting(record, byphase):
+    result = {}
+    for name, phase in record["phases"].items():
+        require(re.fullmatch(r"pair-[0-2]-(?:enabled|disabled)|enabled-load|outage-job-healthy-baseline|sdk-backpressure-collector-paused|(?:outage|recovery)-(?:collector|traces|logs|metrics|prometheus)(?:-[0-9]{1,2})?", name),
+            "report-phase-not-allowlisted")
+        require("collector_before" in phase and "collector_after" in phase, "phase-counter-boundary-missing")
+        before, after = phase["collector_before"], phase["collector_after"]
+        counters = {}
+        for signal in (*SIGNALS, "prometheusremotewrite"):
+            component = signal if signal == "prometheusremotewrite" else "otlp_http/" + signal
+            unit = "spans" if signal == "traces" else "log_records" if signal == "logs" else "metric_points"
+            counters[signal] = {}
+            for kind in ("sent_", "send_failed_", "enqueue_failed_"):
+                key = "otelcol_exporter_" + kind + unit + "_total|" + component
+                counters[signal][kind.rstrip("_")] = counter_delta(
+                    before.get(key) if before is not None else None, after.get(key) if after is not None else None)
+        windows = {}
+        for signal in SIGNALS:
+            rows = [row for row in byphase[name] if row["receiver_health"].get(signal) is not None]
+            windows[signal] = {"observed_samples": len(rows), "snapshot_window_seconds":
+                rows[-1]["timestamp_unix"] - rows[0]["timestamp_unix"] if len(rows) >= 2 else None,
+                "delivered_records": counter_delta(rows[0]["receiver_health"][signal]["accepted"] if rows else None,
+                    rows[-1]["receiver_health"][signal]["accepted"] if len(rows) >= 2 else None)}
+        result[name] = {"collector_phase_boundary_counters": counters, "receiver_sample_windows": windows,
+            "units": "Spans/log records or timestamped metric datapoint observations; failed attempts are not unique loss",
+            "boundary_note": "Collector phase boundaries and receiver sample windows differ; do not subtract these windows as exact unique loss"}
+    return result
 
 
 def signal_accounting(record):

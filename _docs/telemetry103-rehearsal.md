@@ -151,3 +151,20 @@ checks whether the next retry starts before its elapsed bound; the
 applies timeout to each attempt. Empty queue size alone cannot exclude in-flight
 work. Late counter changes restart the entire quiet window within the same12s;
 the controller fails instead of extending its deadline or claiming a drain.
+
+Actual becdbe6 preflight44366924230 passed the scoped wire/privacy audit:
+334 unique spans,93 unique logs and1336 timestamped metric datapoint observations
+were decoded post-Collector in both environments;93 logs and112 exemplars resolved
+to received spans. All12 canaries were absent from strict decoded and diagnostic
+audits. Actual final drain took8.589s (8.056s unchanged signature); verified cleanup
+took52.695s. This did not establish full outage or capacity acceptance.
+
+It also observed real healthy-burst metric loss: SDK/Collector accepted1352
+datapoint observations, metric receipt stored1336, and the metric OTLP exporter's
+enqueue-failed counter was16. Prometheus received1352. This is neither zero loss
+nor presumed coalescing/retry duplication. Per-phase tables retain actual
+before/after exporter counters and separately timed receiver sample windows;
+lazy/absent initial counters and resets have unknown deltas, never invented zero.
+Final post-stop totals preserve preparation/transition/privacy/shutdown burst loss
+outside measured phase boundaries. Metric observations are distinguished from
+individual generated spans/logs and from application requests or metric increments.
