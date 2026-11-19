@@ -168,3 +168,22 @@ lazy/absent initial counters and resets have unknown deltas, never invented zero
 Final post-stop totals preserve preparation/transition/privacy/shutdown burst loss
 outside measured phase boundaries. Metric observations are distinguished from
 individual generated spans/logs and from application requests or metric increments.
+
+The first full run44369563520 at8b438d9 failed both parts without accepting
+capacity: capacity's first trace-handler request was reset7.8ms after connection
+and recorded no samples; a single probe could not distinguish a startup race
+from permanent failure. Functional completed its15s healthy baseline, then failed
+before backpressure sampling: the already-paused Collector's initial1s metrics
+probe consumed its offered-work clock and triggered the unchanged0.5s target-gap
+guard. Both jobs verified owned cleanup; ordinary regression44369563564 passed.
+
+Receiver startup now polls actual handler health under one shared<=5s deadline
+clamped to preparation/controller deadlines. Every attempt retains fixed role,
+class, numeric duration and timestamp; never-ready still fails. Every connect/read
+has a<=0.5s subdeadline; success requires the actual bounded health schema. No
+arbitrary delay substitutes for handler readiness. Phase entry metadata precedes
+the actual offered-load clock and records entry duration, while its complete cost
+remains charged to the same ledger stage. A known stopped/paused Collector's
+initial/final metrics are explicitly unavailable, with no attempted self probe.
+Rates, four-request concurrency,0.5s dispatch-gap,<=5s requests/samples, mandatory
+phase durations and the outer job/cleanup budgets are unchanged.

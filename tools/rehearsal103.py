@@ -533,16 +533,20 @@ print(json.dumps(r))'''
 
     def _phase(self, name, seconds, rate=2, stopped=None):
         self.record["active_stage"] = name
+        entry_started = time.monotonic()
         self.refresh_if_needed(seconds)
+        # Metadata is charged to this ledger stage but precedes the actual
+        # offered workload. A known stopped/paused Collector is unavailable.
+        initial = self.collector_metrics() if stopped != "collector" else None
+        initial_store = stored_counts(self.obs["directory"])
+        self.sampler.begin(name)
+        entry_seconds = time.monotonic() - entry_started
         started = time.monotonic()
         started_unix = time.time()
         pending = {s["name"]: [] for s in self.stacks}
         outcomes = {s["name"]: [] for s in self.stacks}
         targets = {s["name"]: 0 for s in self.stacks}
         next_read = started
-        self.sampler.begin(name)
-        initial = self.collector_metrics()
-        initial_store = stored_counts(self.obs["directory"])
         graph_futures = []
         next_graph = started + 2
         from tools.rehearsal103_sampling import SnapshotPump
@@ -591,8 +595,10 @@ print(json.dumps(r))'''
                         self.record["failed_sampler_join_seconds"] = self.failed_sampler_join_seconds
         elapsed = time.monotonic() - started
         summary = {"duration_seconds": elapsed, "target_seconds": seconds, "target_requests_per_second_per_environment": rate,
+            "entry_metadata_seconds": entry_seconds,
             "started_unix": started_unix, "finished_unix": time.time(),
-            "concurrency_per_environment": 4, "collector_before": initial, "collector_after": self.collector_metrics(),
+            "concurrency_per_environment": 4, "collector_before": initial,
+            "collector_after": self.collector_metrics() if stopped != "collector" else None,
             "store_before": initial_store, "store_after": stored_counts(self.obs["directory"]), "environments": {}}
         summary["grafana"] = {"queries": len(graph_futures), "queries_with_actual_stored_value": sum(graph_values),
             "availability": "intentionally-unavailable" if stopped == "prometheus" else "queried"}
@@ -844,16 +850,15 @@ print(json.dumps(r))'''
         self.record["receiver_startup_health"] = {}
         # Probe every actual handler before expensive snapshots; a listener alone
         # cannot establish that its absolute-entry dependency imports work.
-        for signal in SIGNALS:
-            began = time.monotonic()
-            try:
-                value, instant = Sampler(self).receiver_health(signal)
-                self.record["receiver_startup_health"][signal] = {"ready": True,
-                    "elapsed_seconds": time.monotonic() - began, "timestamp_unix": instant[1]}
-            except Exception as error:
-                self.record["receiver_startup_health"][signal] = {"ready": False,
-                    "elapsed_seconds": time.monotonic() - began, **failure_metadata(error)}
-                raise Failure("receiver-startup-" + signal) from None
+        from tools.rehearsal103_readiness import wait_for_receivers
+        def probe(signal, deadline):
+            status, _, raw = self.drain_request(self.obs["endpoints"][signal], "/health", deadline)
+            require(status == 200, "receiver-handler-not-ready")
+            value = json.loads(raw)
+            require(set(value) == {"accepted", "refused_requests", "refused_records", "unknown_refused_requests", "evicted_files"}
+                and all(type(v) is int and v >= 0 for v in value.values()), "receiver-health-schema")
+        wait_for_receivers(probe, self.record["receiver_startup_health"], deadline=min(self.deadline,
+            self.controller_started + self.ledger.limits["preparation"], time.monotonic() + 5))
         self.stacks = [self.stack(name) for name in ("dev", "prod")]
         for stack in self.stacks:
             enabled = self.part != "capacity"
